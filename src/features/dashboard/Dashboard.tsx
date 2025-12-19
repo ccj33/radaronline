@@ -148,7 +148,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </h3>
           <div className="space-y-4">
             {statusData.map((item, _i) => (
-              <div key={i} className="flex items-center gap-4">
+              <div key={_i} className="flex items-center gap-4">
                 <div className="w-24 text-xs font-medium text-slate-600">{item.label}</div>
                 <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
                   <div 

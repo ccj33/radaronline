@@ -297,14 +297,7 @@ export async function updateUser(
     }
 
     // ✅ FASE 2: Buscar dados originais antes de atualizar (para rollback)
-    if (Object.keys(userUpdates).length > 0) {
-      const { data: original } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      originalData = original as ProfileDTO;
-    }
+    // Nota: originalData removido pois não é usado para rollback (senha é atualizada primeiro)
 
     // Converter camelCase para snake_case
     const updateData: any = {
@@ -335,7 +328,6 @@ export async function updateUser(
         .single();
 
       if (error) {
-        profileUpdateError = error;
         console.error('[authService] Erro ao atualizar usuário:', error);
         // ✅ FASE 2: Se senha foi atualizada mas profile falhou, não fazer rollback da senha
         // (senha é mais crítico, profile pode ser corrigido depois)

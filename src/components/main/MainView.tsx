@@ -48,7 +48,7 @@ interface MainViewProps {
   checkCanCreate: () => boolean;
   checkCanEdit: (action: Action) => boolean;
   checkCanDelete: (action: Action) => boolean;
-  onUpdateTeam: (microId: string, updatedTeam: TeamMember[]) => void;
+  onUpdateTeam?: (microId: string, updatedTeam: TeamMember[]) => void;
   setTeamsByMicro: React.Dispatch<React.SetStateAction<Record<string, TeamMember[]>>>;
 }
 
@@ -141,10 +141,10 @@ export function MainView({
             <TeamView 
               team={currentTeam} 
               microId={currentMicroId}
-              onUpdateTeam={(microId, updatedTeam) => {
+              onUpdateTeam={onUpdateTeam || ((microId, updatedTeam) => {
                 if (!microId) return;
                 setTeamsByMicro(prev => ({ ...prev, [microId]: updatedTeam }));
-              }}
+              })}
               readOnly={isViewingAllMicros && !isAdmin}
             />
           </ErrorBoundary>
