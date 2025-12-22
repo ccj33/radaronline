@@ -70,11 +70,11 @@ function AppContent() {
   const user = authContext?.user ?? null;
   const isAdmin = authContext?.isAdmin ?? false;
   const isAuthenticated = authContext?.isAuthenticated ?? false;
-  const isLoading = authContext?.isLoading ?? true;
+  const _isLoading = authContext?.isLoading ?? true;
   const currentMicrorregiao = authContext?.currentMicrorregiao ?? null;
   const logout = authContext?.logout ?? (() => { });
   const viewingMicroregiaoId = authContext?.viewingMicroregiaoId ?? null;
-  const isContextLoading = !authContext || authContext.isLoading;
+  const _isContextLoading = !authContext || authContext.isLoading;
 
   // --- NAVIGATION STATE ---
   const [currentPage, setCurrentPage] = useState<'main' | 'admin' | 'lgpd'>('main');
@@ -93,8 +93,8 @@ function AppContent() {
   const actionsRef = useRef<Action[]>(actions); // Referência atualizada para callbacks
   const [teamsByMicro, setTeamsByMicro] = useState<Record<string, TeamMember[]>>({});
   const [expandedActionUid, setExpandedActionUid] = useState<string | null>(null);
-  const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
-  const [dataError, setDataError] = useState<string | null>(null);
+  const [_isDataLoading, setIsDataLoading] = useState<boolean>(true);
+  const [_dataError, setDataError] = useState<string | null>(null);
 
   // Manter ref sincronizada com state
   useEffect(() => {
