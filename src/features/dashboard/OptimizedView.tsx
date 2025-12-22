@@ -24,6 +24,7 @@ import {
 import { Action, Activity, Objective, TeamMember, Status, RaciRole, ActionComment } from '../../types';
 import { formatDateBr, parseDateLocal, getTodayStr } from '../../lib/date';
 import { useAuth } from '../../auth';
+import { getAvatarUrl } from '../settings/UserSettingsModal';
 
 interface OptimizedViewProps {
   objectives: Objective[];
@@ -94,12 +95,13 @@ const formatRelativeTime = (dateStr: string) => {
 };
 
 const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
-  const initials = comment.authorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   return (
     <div className="flex gap-3 py-3 border-b border-slate-100 last:border-0">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-        {initials}
-      </div>
+      <img
+        src={getAvatarUrl(comment.authorAvatarId || 'p22')}
+        alt={comment.authorName}
+        className="w-8 h-8 rounded-full bg-white border border-slate-200 shrink-0"
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-sm text-slate-800">{comment.authorName}</span>
@@ -345,6 +347,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
       authorId: user.id,
       authorName: user.nome,
       authorMunicipio: user.microregiaoId || 'N/A',
+      authorAvatarId: user.avatarId || 'p22',
       content: newComment.trim(),
       createdAt: new Date().toISOString(),
     };

@@ -1,0 +1,205 @@
+-- =====================================
+-- RADAR 2.0 - MIGRAÇÃO SUPERADMIN COMPLETA
+-- Documentação do estado atual do Supabase
+-- Executado em: 2025-12-22
+-- =====================================
+
+-- =====================================
+-- PASSO 1: CONSTRAINT DO ROLE
+-- =====================================
+-- ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+-- ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check 
+-- CHECK (role IN ('superadmin', 'admin', 'gestor', 'usuario'));
+-- COMMENT ON CONSTRAINT profiles_role_check ON public.profiles 
+-- IS 'Constraint para validar roles do sistema - superadmin tem todas as permissões';
+
+-- =====================================
+-- PASSO 2: FUNÇÃO is_superadmin()
+-- =====================================
+-- CREATE OR REPLACE FUNCTION public.is_superadmin()
+-- RETURNS BOOLEAN AS $$
+-- BEGIN
+--   RETURN (
+--     SELECT role = 'superadmin'
+--     FROM public.profiles
+--     WHERE id = auth.uid()
+--   );
+-- END;
+-- $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- =====================================
+-- PASSO 3: RLS POLICIES - PROFILES
+-- =====================================
+
+-- Policy 3.1: "Admins can insert profiles"
+-- DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
+-- CREATE POLICY "Admins can insert profiles"
+-- ON public.profiles FOR INSERT
+-- WITH CHECK (auth.uid() IN (
+--   SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')
+-- ));
+
+-- Policy 3.2: "Admin vê tudo"
+-- DROP POLICY IF EXISTS "Admin vê tudo" ON public.profiles;
+-- CREATE POLICY "Admin vê tudo"
+-- ON public.profiles FOR SELECT
+-- TO authenticated
+-- USING (
+--   (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')))
+-- );
+
+-- Policy 3.3: "Admin edita tudo"
+-- DROP POLICY IF EXISTS "Admin edita tudo" ON public.profiles;
+-- CREATE POLICY "Admin edita tudo"
+-- ON public.profiles FOR UPDATE
+-- TO authenticated
+-- USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')))
+-- WITH CHECK (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')));
+
+-- =====================================
+-- PASSO 4: RLS POLICIES - ACTIONS
+-- =====================================
+
+-- Policy 4.1: "Admins podem tudo"
+-- DROP POLICY IF EXISTS "Admins podem tudo" ON public.actions;
+-- CREATE POLICY "Admins podem tudo"
+-- ON public.actions FOR ALL
+-- TO authenticated
+-- USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')))
+-- WITH CHECK (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')));
+
+-- Policy 4.2: "Gestores podem inserir ações em sua microrregião"
+-- DROP POLICY IF EXISTS "Gestores podem inserir ações em sua microrregião" ON public.actions;
+-- CREATE POLICY "Gestores podem inserir ações em sua microrregião"
+-- ON public.actions FOR INSERT
+-- WITH CHECK (
+--   auth.uid() IN (
+--     SELECT id FROM public.profiles 
+--     WHERE role IN ('admin', 'superadmin', 'gestor')
+--   )
+-- );
+
+-- Policy 4.3: "Usuários podem ver ações de sua microrregião"
+-- DROP POLICY IF EXISTS "Usuários podem ver ações de sua microrregião" ON public.actions;
+-- CREATE POLICY "Usuários podem ver ações de sua microrregião"
+-- ON public.actions FOR SELECT
+-- TO authenticated
+-- USING (
+--   auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')) OR
+--   auth.uid() IN (
+--     SELECT p.id FROM public.profiles p
+--     WHERE p.microregiao_id = (
+--       SELECT microregiao_id FROM public.profiles WHERE id = auth.uid()
+--     )
+--   )
+-- );
+
+-- =====================================
+-- PASSO 5: RLS POLICIES - TEAMS
+-- =====================================
+
+-- Policy 5.1: "Admin gerencia equipes"
+-- DROP POLICY IF EXISTS "Admin gerencia equipes" ON public.teams;
+-- CREATE POLICY "Admin gerencia equipes"
+-- ON public.teams FOR ALL
+-- TO authenticated
+-- USING (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')))
+-- WITH CHECK (auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')));
+
+-- Policy 5.2: "Ver equipes"
+-- DROP POLICY IF EXISTS "Ver equipes" ON public.teams;
+-- CREATE POLICY "Ver equipes"
+-- ON public.teams FOR SELECT
+-- TO authenticated
+-- USING (
+--   auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')) OR
+--   auth.uid() IN (SELECT id FROM public.profiles)
+-- );
+
+-- =====================================
+-- PASSO 6: RLS POLICIES - ACTION_RACI
+-- =====================================
+
+-- Policy 6.1: "Acesso baseado na ação"
+-- DROP POLICY IF EXISTS "Acesso baseado na ação" ON public.action_raci;
+-- CREATE POLICY "Acesso baseado na ação"
+-- ON public.action_raci FOR ALL
+-- TO authenticated
+-- USING (
+--   auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')) OR
+--   EXISTS (SELECT 1 FROM public.actions a WHERE a.id = action_raci.action_id)
+-- )
+-- WITH CHECK (
+--   auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin'))
+-- );
+
+-- =====================================
+-- PASSO 7: RLS POLICIES - ACTION_COMMENTS
+-- =====================================
+
+-- Policy 7.1: "Inserir comentários"
+-- DROP POLICY IF EXISTS "Inserir comentários" ON public.action_comments;
+-- CREATE POLICY "Inserir comentários"
+-- ON public.action_comments FOR INSERT
+-- WITH CHECK (
+--   auth.uid() IN (
+--     SELECT id FROM public.profiles 
+--     WHERE role IN ('admin', 'superadmin', 'gestor', 'usuario')
+--   )
+-- );
+
+-- Policy 7.2: "Ler comentários"
+-- DROP POLICY IF EXISTS "Ler comentários" ON public.action_comments;
+-- CREATE POLICY "Ler comentários"
+-- ON public.action_comments FOR SELECT
+-- TO authenticated
+-- USING (
+--   auth.uid() IN (SELECT id FROM public.profiles WHERE role IN ('admin', 'superadmin')) OR
+--   auth.uid() IN (SELECT id FROM public.profiles)
+-- );
+
+-- =====================================
+-- ESTADO ATUAL DO BANCO
+-- =====================================
+-- 
+-- Tabelas:
+--   - profiles (11 colunas)
+--   - actions
+--   - action_raci
+--   - action_comments
+--   - teams
+-- 
+-- Funções SQL:
+--   - handle_new_user() - Trigger ao criar usuário
+--   - is_admin() - Verifica se é admin
+--   - is_superadmin() - Verifica se é superadmin
+-- 
+-- Roles Disponíveis:
+--   - superadmin: Acesso total, não pode ser excluído/desativado
+--   - admin: Administrador com acesso amplo
+--   - gestor: Gerencia sua microrregião
+--   - usuario: Visualização básica
+-- 
+-- Total de Policies: 16
+--   - Profiles: 6 policies
+--   - Actions: 5 policies
+--   - Teams: 2 policies
+--   - Action RACI: 1 policy
+--   - Action Comments: 2 policies
+-- 
+-- =====================================
+-- PERMISSÕES DO SUPERADMIN
+-- =====================================
+-- ✅ Ver TODOS os profiles
+-- ✅ Criar/editar QUALQUER profile
+-- ✅ Ver TODAS as ações (sem limite de microrregião)
+-- ✅ Criar/editar/deletar QUALQUER ação
+-- ✅ Gerenciar TODAS as equipes
+-- ✅ Ver/criar RACI de qualquer ação
+-- ✅ Ver/criar comentários em qualquer ação
+-- ✅ NÃO pode ser excluído
+-- ✅ NÃO pode ter senha alterada por outros
+-- 
+-- =====================================
+-- FIM DA DOCUMENTAÇÃO
+-- =====================================

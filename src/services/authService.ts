@@ -56,6 +56,7 @@ function mapProfileToUser(profile: ProfileDTO): User {
     // App sempre vê como string, DB armazena null para 'all'
     microregiaoId: profile.microregiao_id || 'all',
     ativo: profile.ativo,
+    avatarId: profile.avatar_id || 'p22',
     lgpdConsentimento: profile.lgpd_consentimento,
     lgpdConsentimentoData: profile.lgpd_consentimento_data || undefined,
     createdBy: profile.created_by || undefined,
@@ -137,12 +138,12 @@ export async function createUser(userData: {
       console.error('[authService] Erro ao verificar permissões:', profileError);
       throw new Error(`Erro ao verificar permissões: ${profileError.message}`);
     }
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
       throw new Error('Apenas administradores podem criar usuários');
     }
     // ✅ Converter 'all' para null antes de enviar
     const microregiao_id = userData.microregiaoId === 'all' ||
-                          (userData.role === 'admin' && !userData.microregiaoId)
+      (userData.role === 'admin' && !userData.microregiaoId)
       ? null
       : userData.microregiaoId || null;
     // ✅ Log para debug
@@ -151,7 +152,7 @@ export async function createUser(userData: {
       role: userData.role,
       microregiao_id,
     });
-    
+
     // ✅ Chamar Edge Function com timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
@@ -192,7 +193,7 @@ export async function createUser(userData: {
         // Extrair body
         try {
           const body = error.context?.body ? (typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body)
-                     : (error.context?.response ? await error.context.response.json().catch(() => null) : null);
+            : (error.context?.response ? await error.context.response.json().catch(() => null) : null);
           errorMessage = body?.error || errorMessage;
         } catch (e) {
           log('[authService] Não foi possível parsear body do erro:', String(e));
@@ -210,7 +211,7 @@ export async function createUser(userData: {
         throw error;
       }
     }
-    
+
     // ✅ Fallback unificado (remove duplicatas)
     if (functionError) {
       logError('[authService]', 'Erro na Edge Function', functionError);
@@ -273,13 +274,29 @@ export async function createUser(userData: {
  * ```
  * 
  * PADRÃO: App envia 'all' como string, mas converte para null no DB.
+ * 
+ * SUPERADMIN: Não pode ter senha alterada por outros usuários.
  */
 export async function updateUser(
   userId: string,
-  updates: Partial<User> & { senha?: string }
+  updates: Partial<User> & { senha?: string },
+  currentUserId?: string
 ): Promise<User> {
   try {
     const { senha, ...userUpdates } = updates;
+
+    // ✅ PROTEÇÃO SUPERADMIN: Verificar se está tentando alterar senha de superadmin
+    if (senha) {
+      const { data: targetProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (targetProfile?.role === 'superadmin' && currentUserId !== userId) {
+        throw new Error('Não é possível alterar a senha do Super Admin. Apenas ele mesmo pode alterá-la.');
+      }
+    }
 
     // ✅ FASE 2: Se senha foi fornecida, atualizar PRIMEIRO (mais crítico)
     // Se falhar, não atualiza o profile = evita inconsistência
@@ -291,7 +308,7 @@ export async function updateUser(
 
       console.log('[authService] Atualizando senha para userId:', userId);
       log('[authService]', `Atualizando senha para usuário ${userId}`);
-      
+
       // Chamar Edge Function com timeout
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -341,12 +358,12 @@ export async function updateUser(
     if (userUpdates.nome !== undefined) updateData.nome = userUpdates.nome;
     if (userUpdates.email !== undefined) updateData.email = userUpdates.email;
     if (userUpdates.role !== undefined) updateData.role = userUpdates.role;
-    
+
     // ✅ JÁ ESTÁ OK: Converte 'all' para null (padrão consistente)
     if (userUpdates.microregiaoId !== undefined) {
       updateData.microregiao_id = userUpdates.microregiaoId === 'all' ? null : userUpdates.microregiaoId;
     }
-    
+
     if (userUpdates.ativo !== undefined) updateData.ativo = userUpdates.ativo;
     if (userUpdates.lgpdConsentimento !== undefined) {
       updateData.lgpd_consentimento = userUpdates.lgpdConsentimento;
@@ -397,12 +414,24 @@ export async function updateUser(
 
 /**
  * Desativa usuário (apenas admin)
+ * SUPERADMIN: Não pode ser desativado.
  */
 export async function deactivateUser(userId: string): Promise<boolean> {
   try {
+    // ✅ PROTEÇÃO SUPERADMIN: Verificar se é superadmin
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (targetProfile?.role === 'superadmin') {
+      throw new Error('Não é possível desativar o Super Admin.');
+    }
+
     const { error } = await supabase
       .from('profiles')
-      .update({ 
+      .update({
         ativo: false,
         updated_at: new Date().toISOString(),
       })
@@ -416,6 +445,59 @@ export async function deactivateUser(userId: string): Promise<boolean> {
     return true;
   } catch (error: any) {
     console.error('[authService] Erro inesperado ao desativar usuário:', error);
+    throw error;
+  }
+}
+
+/**
+ * Exclui usuário permanentemente (apenas SUPERADMIN)
+ * SUPERADMIN: Não pode ser excluído.
+ */
+export async function deleteUser(userId: string): Promise<boolean> {
+  try {
+    // ✅ Verificar se usuário atual é superadmin
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      throw new Error('Não autenticado.');
+    }
+
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUser.id)
+      .single();
+
+    if (currentProfile?.role !== 'superadmin') {
+      throw new Error('Apenas o Super Admin pode excluir usuários.');
+    }
+
+    // ✅ PROTEÇÃO: Não permitir excluir superadmin
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (targetProfile?.role === 'superadmin') {
+      throw new Error('Não é possível excluir o Super Admin.');
+    }
+
+    console.log('[authService] Excluindo usuário:', userId);
+
+    // ✅ Chamar Edge Function para deletar usuário (precisa de Admin API)
+    const { error: functionError } = await supabase.functions.invoke('delete-user', {
+      body: { userId },
+    });
+
+    if (functionError) {
+      console.error('[authService] Erro ao excluir usuário:', functionError);
+      throw new Error(`Erro ao excluir usuário: ${functionError.message}`);
+    }
+
+    console.log('[authService] Usuário excluído com sucesso');
+    return true;
+  } catch (error: any) {
+    console.error('[authService] Erro inesperado ao excluir usuário:', error);
     throw error;
   }
 }

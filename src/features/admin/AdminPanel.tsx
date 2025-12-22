@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, 
-  MapPin, 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Shield, 
-  UserCheck, 
+import {
+  Users,
+  MapPin,
+  Plus,
+  Search,
+  MoreVertical,
+  Shield,
+  UserCheck,
   UserX,
   ChevronDown,
   ArrowLeft,
@@ -24,11 +24,11 @@ import { Action, TeamMember } from '../../types';
 import { MICROREGIOES, getMicroregiaoById, getMacrorregioes } from '../../data/microregioes';
 import * as authService from '../../services/authService';
 import { UserFormModal } from './UserFormModal';
-import { 
-  AdminOverview, 
-  MacroRegionMap, 
-  AlertsPanel, 
-  RankingPanel, 
+import {
+  AdminOverview,
+  MacroRegionMap,
+  AlertsPanel,
+  RankingPanel,
   ActivityLog,
   ActivityCenter,
 } from './dashboard';
@@ -45,9 +45,9 @@ interface AdminPanelProps {
 
 export function AdminPanel(props: AdminPanelProps) {
   const { onBack, actions = [], teams = {} } = props;
-  const { user: currentUser, setViewingMicrorregiao, isAdmin } = useAuth();
+  const { user: currentUser, setViewingMicrorregiao, isAdmin, isSuperAdmin } = useAuth();
   const { showToast } = useToast();
-  
+
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,8 +57,10 @@ export function AdminPanel(props: AdminPanelProps) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<{ open: boolean; user?: User | null; nextStatus?: boolean }>({ open: false });
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; user?: User | null }>({ open: false });
 
   // Carrega usuários
   useEffect(() => {
@@ -82,7 +84,7 @@ export function AdminPanel(props: AdminPanelProps) {
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
       const matchSearch = u.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         u.email.toLowerCase().includes(searchTerm.toLowerCase());
+        u.email.toLowerCase().includes(searchTerm.toLowerCase());
       const matchRole = filterRole === 'all' || u.role === filterRole;
       return matchSearch && matchRole;
     });
@@ -119,7 +121,7 @@ export function AdminPanel(props: AdminPanelProps) {
 
   const handleSaveUser = async (userData: Partial<User> & { senha?: string }) => {
     setActionLoadingId('save-user'); // ✅ FORA do try para garantir reset
-    
+
     try {
       if (editingUser) {
         await authService.updateUser(editingUser.id, userData);
@@ -131,7 +133,7 @@ export function AdminPanel(props: AdminPanelProps) {
           setActionLoadingId(null); // ✅ Resetar loading antes de return
           return;
         }
-        
+
         // ✅ CORREÇÃO: Garantir que senha está presente
         log('[AdminPanel]', 'Iniciando criação de usuário...');
         await authService.createUser({
@@ -161,19 +163,21 @@ export function AdminPanel(props: AdminPanelProps) {
   };
 
   const getRoleBadge = (role: User['role']) => {
-    const styles = {
+    const styles: Record<string, string> = {
+      superadmin: 'bg-purple-100 text-purple-700 border-purple-200',
       admin: 'bg-slate-100 text-slate-700 border-slate-200',
       gestor: 'bg-slate-100 text-slate-700 border-slate-200',
       usuario: 'bg-slate-100 text-slate-700 border-slate-200',
     };
-    const labels = {
+    const labels: Record<string, string> = {
+      superadmin: 'Super Admin',
       admin: 'Administrador',
       gestor: 'Gestor',
       usuario: 'Usuário',
     };
     return (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[role]}`}>
-        {labels[role]}
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[role] || styles.usuario}`}>
+        {labels[role] || role}
       </span>
     );
   };
@@ -239,7 +243,7 @@ export function AdminPanel(props: AdminPanelProps) {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               {activeTab === 'usuarios' && (
                 <button
@@ -250,7 +254,7 @@ export function AdminPanel(props: AdminPanelProps) {
                   Novo Usuário
                 </button>
               )}
-              
+
               <button
                 onClick={loadUsers}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -258,7 +262,7 @@ export function AdminPanel(props: AdminPanelProps) {
               >
                 <RefreshCw className={`w-5 h-5 text-slate-500 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
-              
+
               <button
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 title="Exportar relatório"
@@ -278,20 +282,18 @@ export function AdminPanel(props: AdminPanelProps) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? 'border-teal-500 text-teal-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
+                className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === tab.id
+                  ? 'border-teal-500 text-teal-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
                 {tab.count !== null && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded-full ${
-                    activeTab === tab.id
-                      ? 'bg-teal-100 text-teal-700'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}>
+                  <span className={`px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id
+                    ? 'bg-teal-100 text-teal-700'
+                    : 'bg-slate-100 text-slate-500'
+                    }`}>
                     {tab.count}
                   </span>
                 )}
@@ -310,12 +312,12 @@ export function AdminPanel(props: AdminPanelProps) {
           <StatsCard title="Admins" value={kpis.admins} subtitle={`${kpis.gestores} gestores`} color="slate" icon={<Shield className="w-4 h-4 text-slate-600" />} />
           <StatsCard title="Microrregiões" value={MICROREGIOES.length} subtitle="Cobertura total" color="slate" icon={<MapPin className="w-4 h-4 text-slate-600" />} />
         </div>
-        
+
         {/* Tab: Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Overview com KPIs */}
-            <AdminOverview 
+            <AdminOverview
               actions={actions}
               users={users}
               teams={teams}
@@ -323,7 +325,7 @@ export function AdminPanel(props: AdminPanelProps) {
 
             {/* Grid com Alertas e Activity Log */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AlertsPanel 
+              <AlertsPanel
                 actions={actions}
                 users={users}
                 onViewMicrorregiao={handleViewMicrorregiao}
@@ -332,7 +334,7 @@ export function AdminPanel(props: AdminPanelProps) {
             </div>
 
             {/* Mapa de Microrregiões */}
-            <MacroRegionMap 
+            <MacroRegionMap
               actions={actions}
               onViewMicrorregiao={handleViewMicrorregiao}
             />
@@ -361,7 +363,7 @@ export function AdminPanel(props: AdminPanelProps) {
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
-              
+
               <div className="relative">
                 <select
                   value={filterRole}
@@ -394,14 +396,13 @@ export function AdminPanel(props: AdminPanelProps) {
                   {filteredUsers.map(user => {
                     const microrregiao = getMicroregiaoById(user.microregiaoId);
                     const isExpanded = expandedUserId === user.id;
-                    
+
                     return (
                       <div key={user.id} className="hover:bg-slate-50 transition-colors">
                         <div className="p-4 flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              user.ativo ? 'bg-teal-100' : 'bg-slate-100'
-                            }`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.ativo ? 'bg-teal-100' : 'bg-slate-100'
+                              }`}>
                               {user.ativo ? (
                                 <UserCheck className="w-5 h-5 text-teal-600" />
                               ) : (
@@ -422,7 +423,7 @@ export function AdminPanel(props: AdminPanelProps) {
                               <div className="text-sm text-slate-500">{user.email}</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-4">
                             <div className="text-right hidden sm:block">
                               <div className="text-sm font-medium text-slate-700">
@@ -432,17 +433,39 @@ export function AdminPanel(props: AdminPanelProps) {
                                 {user.microregiaoId === 'all' ? 'Microrregiões' : microrregiao?.macrorregiao || '-'}
                               </div>
                             </div>
-                            
+
                             <div className="relative">
                               <button
-                                onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
+                                onClick={(e) => {
+                                  if (isExpanded) {
+                                    setExpandedUserId(null);
+                                    setDropdownPosition(null);
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                    const openUp = spaceBelow < 200;  // Se tem menos de 200px abaixo, abre pra cima
+                                    setDropdownPosition({
+                                      top: openUp ? rect.top : rect.bottom,
+                                      left: rect.right - 192,  // 192 = w-48 (12rem = 192px)
+                                      openUp
+                                    });
+                                    setExpandedUserId(user.id);
+                                  }
+                                }}
                                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                               >
                                 <MoreVertical className="w-4 h-4 text-slate-400" />
                               </button>
-                              
-                              {isExpanded && (
-                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+
+                              {isExpanded && dropdownPosition && (
+                                <div
+                                  className="fixed w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50"
+                                  style={{
+                                    top: dropdownPosition.openUp ? 'auto' : dropdownPosition.top,
+                                    bottom: dropdownPosition.openUp ? (window.innerHeight - dropdownPosition.top) : 'auto',
+                                    left: Math.max(8, dropdownPosition.left),  // Garante pelo menos 8px da borda
+                                  }}
+                                >
                                   <button
                                     onClick={() => {
                                       handleEditUser(user);
@@ -469,12 +492,24 @@ export function AdminPanel(props: AdminPanelProps) {
                                       setExpandedUserId(null);
                                     }}
                                     disabled={actionLoadingId === user.id}
-                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 ${
-                                      user.ativo ? 'text-red-600' : 'text-green-600'
-                                    }`}
+                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 ${user.ativo ? 'text-red-600' : 'text-green-600'
+                                      }`}
                                   >
                                     {user.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                                   </button>
+                                  {/* Botão Excluir - apenas para SuperAdmin e não pode excluir superadmin */}
+                                  {isSuperAdmin && user.role !== 'superadmin' && (
+                                    <button
+                                      onClick={() => {
+                                        setConfirmDelete({ open: true, user });
+                                        setExpandedUserId(null);
+                                      }}
+                                      disabled={actionLoadingId === user.id}
+                                      className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 border-t border-slate-100"
+                                    >
+                                      Excluir permanentemente
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -504,7 +539,7 @@ export function AdminPanel(props: AdminPanelProps) {
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
-              
+
               <div className="relative">
                 <select
                   value={filterMacro}
@@ -532,9 +567,9 @@ export function AdminPanel(props: AdminPanelProps) {
                   if (a.status === 'Concluído') return false;
                   return new Date(a.plannedEndDate) < new Date();
                 }).length;
-                
+
                 return (
-                  <div 
+                  <div
                     key={micro.id}
                     className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg transition-all hover:scale-[1.02] group"
                   >
@@ -575,7 +610,7 @@ export function AdminPanel(props: AdminPanelProps) {
                     {microActions.length > 0 && (
                       <div className="mb-3">
                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full transition-all bg-teal-500"
                             style={{ width: `${progressoMedio}%` }}
                           />
@@ -590,7 +625,7 @@ export function AdminPanel(props: AdminPanelProps) {
                         {atrasadas} ação(ões) atrasada(s)
                       </div>
                     )}
-                    
+
                     <button
                       onClick={() => handleViewMicrorregiao(micro.id)}
                       className="w-full text-xs text-teal-600 hover:text-teal-700 hover:bg-teal-50 font-medium py-2 rounded-lg transition-colors"
@@ -608,7 +643,7 @@ export function AdminPanel(props: AdminPanelProps) {
         {activeTab === 'alertas' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <AlertsPanel 
+              <AlertsPanel
                 actions={actions}
                 users={users}
                 onViewMicrorregiao={handleViewMicrorregiao}
@@ -622,7 +657,7 @@ export function AdminPanel(props: AdminPanelProps) {
 
         {/* Tab: Ranking */}
         {activeTab === 'ranking' && (
-          <RankingPanel 
+          <RankingPanel
             actions={actions}
             onViewMicrorregiao={handleViewMicrorregiao}
           />
@@ -667,10 +702,39 @@ export function AdminPanel(props: AdminPanelProps) {
         type={confirmToggle.nextStatus ? 'info' : 'danger'}
       />
 
+      {/* Confirmar exclusão permanente */}
+      <ConfirmModal
+        isOpen={confirmDelete.open}
+        onClose={() => setConfirmDelete({ open: false })}
+        onConfirm={async () => {
+          if (!confirmDelete.user) return;
+          try {
+            setActionLoadingId(confirmDelete.user.id);
+            await authService.deleteUser(confirmDelete.user.id);
+            showToast('Usuário excluído permanentemente', 'success');
+            await loadUsers();
+            setConfirmDelete({ open: false });
+          } catch (error: any) {
+            console.error(error);
+            showToast(error?.message || 'Erro ao excluir usuário', 'error');
+          } finally {
+            setActionLoadingId(null);
+          }
+        }}
+        title="Excluir usuário permanentemente"
+        message={
+          confirmDelete.user
+            ? `ATENÇÃO: Esta ação é IRREVERSÍVEL! O usuário "${confirmDelete.user.nome}" será excluído permanentemente do sistema. Tem certeza?`
+            : ''
+        }
+        confirmText="Sim, excluir permanentemente"
+        type="danger"
+      />
+
       {/* Overlay para fechar menu expandido */}
       {expandedUserId && (
-        <div 
-          className="fixed inset-0 z-0" 
+        <div
+          className="fixed inset-0 z-0"
           onClick={() => setExpandedUserId(null)}
         />
       )}

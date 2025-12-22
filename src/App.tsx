@@ -54,6 +54,7 @@ import { GanttChart } from './features/gantt/GanttChart';
 import { ActionTable } from './features/actions/ActionTable';
 import { LoginPage, LgpdConsent } from './features/login';
 import { AdminPanel } from './features/admin';
+import { UserSettingsModal } from './features/settings/UserSettingsModal';
 
 // =====================================
 // COMPONENTE PRINCIPAL DO APP
@@ -117,6 +118,7 @@ function AppContent() {
   const [ganttStatusFilter, setGanttStatusFilter] = useState<Status | 'all'>('all');
   const [isCreateActionModalOpen, setIsCreateActionModalOpen] = useState(false);
   const [createActionMicroId, setCreateActionMicroId] = useState<string>('');
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // --- REFS ---
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
@@ -669,9 +671,13 @@ function AppContent() {
     if (isAdmin) {
       setCurrentPage('admin');
     } else {
-      showToast('Editar perfil em breve!', 'info');
+      setIsSettingsModalOpen(true);
     }
-  }, [isAdmin, showToast]);
+  }, [isAdmin]);
+
+  const handleOpenSettings = useCallback(() => {
+    setIsSettingsModalOpen(true);
+  }, []);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -871,8 +877,16 @@ function AppContent() {
         isMobile={isMobile}
         userName={user?.nome}
         userRole={user?.role}
+        userAvatarId={user?.avatarId}
         onLogout={handleLogout}
         isAdmin={isAdmin}
+        onOpenSettings={handleOpenSettings}
+      />
+
+      {/* USER SETTINGS MODAL */}
+      <UserSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
 
       {/* MAIN CONTENT */}

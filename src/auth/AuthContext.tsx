@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, AuthContextType, Microrregiao } from '../types/auth.types';
+
+// Tipo estendido para incluir refreshUser
+interface ExtendedAuthContextType extends AuthContextType {
+  refreshUser: () => Promise<void>;
+}
 import { getMicroregiaoById } from '../data/microregioes';
 import { supabase } from '../lib/supabase';
 import * as authService from '../services/authService';
@@ -62,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, created_by, created_at')
+        .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, avatar_id, created_by, created_at')
         .eq('id', userId)
         .single();
 
@@ -92,6 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ativo: data.ativo,
         lgpdConsentimento: data.lgpd_consentimento,
         lgpdConsentimentoData: data.lgpd_consentimento_data || undefined,
+        avatarId: data.avatar_id || 'p22', // Default avatar
         createdBy: data.created_by || undefined,
         createdAt: data.created_at,
       };
@@ -108,12 +114,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  // ✅ FASE 1: Função para invalidar cache (útil quando perfil é atualizado)
-  // Exportada para uso futuro quando perfil for atualizado externamente
-  // const invalidateProfileCache = useCallback((userId: string) => {
-  //   profileCache.delete(userId);
-  //   console.log(`[AuthContext] Cache invalidado para userId: ${userId}`);
-  // }, []);
+  // ✅ FUNÇÃO: Refresh do usuário (atualiza perfil sem reload da página)
+  const refreshUser = useCallback(async (): Promise<void> => {
+    if (!user) return;
+
+    // Invalida o cache primeiro
+    profileCache.delete(user.id);
+    console.log(`[AuthContext] Cache invalidado para userId: ${user.id}, recarregando perfil...`);
+
+    // Recarrega o perfil do banco
+    const profile = await loadUserProfile(user.id, false);
+
+    if (profile) {
+      setUser(profile);
+      console.log('[AuthContext] Perfil atualizado com sucesso!');
+    }
+  }, [user, loadUserProfile]);
 
   // ✅ CORREÇÃO: Flag para evitar processamento duplo
   const [isInitialized, setIsInitialized] = useState(false);
@@ -347,9 +363,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [user]);
 
-  // Trocar microrregião visualizada (apenas admin)
+  // Trocar microrregião visualizada (admin ou superadmin)
   const setViewingMicrorregiao = useCallback((microregiaoId: string) => {
-    if (user?.role !== 'admin') {
+    if (user?.role !== 'admin' && user?.role !== 'superadmin') {
       console.warn('[AuthContext] Apenas admins podem trocar microrregião visualizada');
       return;
     }
@@ -358,7 +374,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Computed values
   const isAuthenticated = user !== null;
-  const isAdmin = user?.role === 'admin';
+  const isSuperAdmin = user?.role === 'superadmin';
+  const isAdmin = user?.role === 'admin' || isSuperAdmin;
 
   // Microrregião atual (a que está sendo visualizada)
   // Verifica se existe no array de microrregiões antes de retornar
@@ -369,17 +386,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       : null;
 
   // ✅ CORREÇÃO: Sempre fornecer um contexto válido para evitar loops de renderização
-  const value: AuthContextType = {
+  const value: ExtendedAuthContextType = {
     user,
     isLoading,
     isAuthenticated,
     isAdmin,
+    isSuperAdmin,
     currentMicrorregiao,
     login,
     logout,
     acceptLgpd,
     setViewingMicrorregiao,
     viewingMicroregiaoId,
+    refreshUser,
   };
 
   return (
@@ -389,20 +408,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 }
 
-export function useAuth(): AuthContextType {
+export function useAuth(): ExtendedAuthContextType {
   const context = useContext(AuthContext);
 
   if (!context) {
     throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
 
-  return context;
+  return context as ExtendedAuthContextType;
 }
 
 // ✅ CORREÇÃO: Hook de emergência para casos onde o contexto falha
-export function useAuthSafe(): AuthContextType | null {
+export function useAuthSafe(): ExtendedAuthContextType | null {
   const context = useContext(AuthContext);
-  return context;
+  return context as ExtendedAuthContextType | null;
 }
 
 export { AuthContext };

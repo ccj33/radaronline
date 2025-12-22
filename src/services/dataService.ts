@@ -42,6 +42,7 @@ interface ActionCommentDTO {
     author?: {
         nome: string;
         microregiao_id: string | null;
+        avatar_id: string | null;
     };
 }
 
@@ -86,6 +87,7 @@ function mapActionDTOToAction(
             authorId: c.author_id,
             authorName: c.author?.nome || 'Usuário',
             authorMunicipio: c.author?.microregiao_id || '',
+            authorAvatarId: c.author?.avatar_id || 'p22',
             content: c.content,
             createdAt: c.created_at,
         })),
@@ -150,7 +152,7 @@ export async function loadActions(microregiaoId?: string): Promise<Action[]> {
             .from('action_comments')
             .select(`
         *,
-        author:profiles(nome, microregiao_id)
+        author:profiles(nome, microregiao_id, avatar_id)
       `)
             .in('action_id', actionIds)
             .order('created_at', { ascending: true });
@@ -274,7 +276,7 @@ export async function updateAction(
             .from('action_comments')
             .select(`
         *,
-        author:profiles(nome, microregiao_id)
+        author:profiles(nome, microregiao_id, avatar_id)
       `)
             .eq('action_id', data.id)
             .order('created_at', { ascending: true });
@@ -412,10 +414,10 @@ export async function addComment(
             throw new Error('Usuário não autenticado');
         }
 
-        // Buscar perfil do usuário para nome e município
+        // Buscar perfil do usuário para nome, município e avatar
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('nome, microregiao_id')
+            .select('nome, microregiao_id, avatar_id')
             .eq('id', user.id)
             .single();
 
@@ -454,6 +456,7 @@ export async function addComment(
             authorId: user.id,
             authorName: profile?.nome || 'Usuário',
             authorMunicipio: profile?.microregiao_id || '',
+            authorAvatarId: profile?.avatar_id || 'p22',
             content: data.content,
             createdAt: data.created_at,
         };

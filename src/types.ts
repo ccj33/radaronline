@@ -7,8 +7,8 @@ export type Status = 'Concluído' | 'Em Andamento' | 'Não Iniciado' | 'Atrasado
 export type RaciRole = 'R' | 'A' | 'C' | 'I';
 
 // --- RACI ---
-export type RaciMember = { 
-  name: string; 
+export type RaciMember = {
+  name: string;
   role: RaciRole;
 };
 
@@ -18,6 +18,7 @@ export type ActionComment = {
   authorId: string;         // ID do usuário que comentou
   authorName: string;       // Nome do autor
   authorMunicipio: string;  // Município do autor
+  authorAvatarId: string;   // Avatar do autor
   content: string;          // Conteúdo do comentário
   createdAt: string;        // ISO datetime: "2025-01-15T14:30:00Z"
 };
@@ -43,24 +44,24 @@ export type Action = {
 };
 
 // --- ESTRUTURAS AUXILIARES ---
-export type Activity = { 
-  id: string; 
-  title: string; 
-  description: string; 
+export type Activity = {
+  id: string;
+  title: string;
+  description: string;
 };
 
-export type Objective = { 
-  id: number; 
-  title: string; 
-  status: 'on-track' | 'delayed'; 
+export type Objective = {
+  id: number;
+  title: string;
+  status: 'on-track' | 'delayed';
 };
 
 // TeamMember agora pertence a uma microrregião específica
-export type TeamMember = { 
-  id: number; 
-  name: string; 
-  role: string; 
-  email: string; 
+export type TeamMember = {
+  id: number;
+  name: string;
+  role: string;
+  email: string;
   municipio: string;
   microregiaoId: string;  // Microrregião a qual pertence
 };
@@ -155,14 +156,14 @@ export function getNextActionNumber(actions: Action[], activityId: string, micro
   const activityActions = actions.filter(
     a => a.activityId === activityId && a.microregiaoId === microregiaoId
   );
-  
+
   if (activityActions.length === 0) return 1;
-  
+
   const numbers = activityActions.map(a => {
     const parts = a.id.split('.');
     const lastPart = parts[parts.length - 1];
     return parseInt(lastPart, 10) || 0;
   });
-  
+
   return Math.max(...numbers) + 1;
 }
