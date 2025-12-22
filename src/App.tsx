@@ -7,11 +7,9 @@ import {
   RaciRole,
   Action,
   GanttRange,
-  ActionComment,
   TeamMember,
   filterActionsByMicro,
   findActionByUid,
-  createAction,
   getNextActionNumber
 } from './types';
 
@@ -22,6 +20,9 @@ import { clampProgress } from './lib/validation';
 // Data
 import { INITIAL_DATA } from './data/mockData';
 import { MICROREGIOES } from './data/microregioes';
+
+// Services
+import * as dataService from './services/dataService';
 
 // Auth
 import { AuthProvider, canEditAction, canDeleteAction, canCreateAction, canManageTeam } from './auth';
@@ -88,9 +89,17 @@ function AppContent() {
   const activityTabsRef = useRef<HTMLDivElement | null>(null);
 
   // --- DATA STATE ---
-  const [actions, setActions] = useState<Action[]>(INITIAL_DATA.actions);
-  const [teamsByMicro, setTeamsByMicro] = useState<Record<string, TeamMember[]>>(INITIAL_DATA.teams);
+  const [actions, setActions] = useState<Action[]>([]);
+  const actionsRef = useRef<Action[]>(actions); // Referência atualizada para callbacks
+  const [teamsByMicro, setTeamsByMicro] = useState<Record<string, TeamMember[]>>({});
   const [expandedActionUid, setExpandedActionUid] = useState<string | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  // Manter ref sincronizada com state
+  useEffect(() => {
+    actionsRef.current = actions;
+  }, [actions]);
 
   // --- FILTER STATE ---
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -251,6 +260,46 @@ function AppContent() {
   }, [viewMode, expandedActionUid]);
 
   // =====================================
+  // CARREGAR DADOS DO SUPABASE
+  // =====================================
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActions([]);
+      setTeamsByMicro({});
+      setIsDataLoading(false);
+      return;
+    }
+
+    const loadData = async () => {
+      setIsDataLoading(true);
+      setDataError(null);
+
+      try {
+        // Carregar ações (filtradas por micro se não for admin vendo todas)
+        const microId = isViewingAllMicros ? undefined : currentMicroId;
+        const [actionsData, teamsData] = await Promise.all([
+          dataService.loadActions(microId),
+          dataService.loadTeams(microId),
+        ]);
+
+        setActions(actionsData);
+        setTeamsByMicro(teamsData);
+      } catch (error: any) {
+        console.error('[App] Erro ao carregar dados:', error);
+        setDataError(error.message || 'Erro ao carregar dados');
+        // Fallback para dados mock em caso de erro
+        setActions(INITIAL_DATA.actions);
+        setTeamsByMicro(INITIAL_DATA.teams);
+        showToast('Usando dados offline (erro ao conectar)', 'warning');
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+  }, [isAuthenticated, currentMicroId, isViewingAllMicros]);
+
+  // =====================================
   // PERMISSION HELPERS
   // =====================================
 
@@ -353,15 +402,44 @@ function AppContent() {
     }));
   }, [actions, checkCanEdit, showToast, currentMicroId, isViewingAllMicros, isAdmin]);
 
-  const handleSaveAction = useCallback(async () => {
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setExpandedActionUid(null);
-    setIsSaving(false);
-    showToast('Ação salva com sucesso!', 'success');
-  }, [showToast]);
+  const handleSaveAction = useCallback(async (uid?: string) => {
+    if (!uid && !expandedActionUid) {
+      showToast('Nenhuma ação selecionada', 'error');
+      return;
+    }
 
-  const handleCreateAction = useCallback(() => {
+    const actionUid = uid || expandedActionUid!;
+    // Usar actionsRef.current para ter a versão mais atualizada (evita closure stale)
+    const action = findActionByUid(actionsRef.current, actionUid);
+
+    if (!action) {
+      console.error('[App] Ação não encontrada para UID:', actionUid, 'Actions disponíveis:', actionsRef.current.map(a => a.uid));
+      showToast('Ação não encontrada', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await dataService.updateAction(actionUid, {
+        title: action.title,
+        status: action.status,
+        startDate: action.startDate,
+        plannedEndDate: action.plannedEndDate,
+        endDate: action.endDate,
+        progress: action.progress,
+        notes: action.notes,
+      });
+      showToast('Ação salva com sucesso!', 'success');
+      setExpandedActionUid(null);
+    } catch (error: any) {
+      console.error('[App] Erro ao salvar ação:', error);
+      showToast(`Erro ao salvar: ${error.message}`, 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [expandedActionUid, showToast]);
+
+  const handleCreateAction = useCallback(async () => {
     // Admin visualizando "todas": abre modal para escolher a microrregião da nova ação
     if (isAdmin && isViewingAllMicros) {
       setIsCreateActionModalOpen(true);
@@ -382,29 +460,47 @@ function AppContent() {
       return;
     }
 
-    const nextNum = getNextActionNumber(actions, selectedActivity, currentMicroId);
-    const newAction = createAction(currentMicroId, selectedActivity, nextNum);
+    try {
+      const nextNum = getNextActionNumber(actions, selectedActivity, currentMicroId);
+      const newAction = await dataService.createAction({
+        microregiaoId: currentMicroId,
+        activityId: selectedActivity,
+        actionNumber: nextNum,
+      });
 
-    setActions(prev => [...prev, newAction]);
-    if (viewMode === 'gantt') setViewMode('table');
-    setExpandedActionUid(newAction.uid);
-    showToast('Nova ação criada!', 'success');
+      setActions(prev => [...prev, newAction]);
+      if (viewMode === 'gantt') setViewMode('table');
+      setExpandedActionUid(newAction.uid);
+      showToast('Nova ação criada!', 'success');
+    } catch (error: any) {
+      console.error('[App] Erro ao criar ação:', error);
+      showToast(`Erro ao criar ação: ${error.message}`, 'error');
+    }
   }, [actions, checkCanCreate, currentMicroId, isAdmin, isViewingAllMicros, selectedActivity, viewMode, showToast]);
 
-  const handleConfirmCreateInMicro = useCallback(() => {
+  const handleConfirmCreateInMicro = useCallback(async () => {
     if (!createActionMicroId) {
       showToast('Selecione uma microrregião', 'error');
       return;
     }
 
-    const nextNum = getNextActionNumber(actions, selectedActivity, createActionMicroId);
-    const newAction = createAction(createActionMicroId, selectedActivity, nextNum);
+    try {
+      const nextNum = getNextActionNumber(actions, selectedActivity, createActionMicroId);
+      const newAction = await dataService.createAction({
+        microregiaoId: createActionMicroId,
+        activityId: selectedActivity,
+        actionNumber: nextNum,
+      });
 
-    setActions(prev => [...prev, newAction]);
-    if (viewMode === 'gantt') setViewMode('table');
-    setExpandedActionUid(newAction.uid);
-    showToast('Nova ação criada!', 'success');
-    setIsCreateActionModalOpen(false);
+      setActions(prev => [...prev, newAction]);
+      if (viewMode === 'gantt') setViewMode('table');
+      setExpandedActionUid(newAction.uid);
+      showToast('Nova ação criada!', 'success');
+      setIsCreateActionModalOpen(false);
+    } catch (error: any) {
+      console.error('[App] Erro ao criar ação:', error);
+      showToast(`Erro ao criar ação: ${error.message}`, 'error');
+    }
   }, [actions, createActionMicroId, selectedActivity, viewMode, showToast]);
 
   const handleDeleteAction = useCallback((uid: string) => {
@@ -434,15 +530,21 @@ function AppContent() {
       isOpen: true,
       title: 'Excluir Ação',
       message: `Tem certeza que deseja excluir "${action.title}"? Esta ação não pode ser desfeita.`,
-      onConfirm: () => {
-        setActions(prev => prev.filter(a => a.uid !== uid));
-        setExpandedActionUid(null);
-        showToast('Ação excluída!', 'success');
+      onConfirm: async () => {
+        try {
+          await dataService.deleteAction(uid);
+          setActions(prev => prev.filter(a => a.uid !== uid));
+          setExpandedActionUid(null);
+          showToast('Ação excluída!', 'success');
+        } catch (error: any) {
+          console.error('[App] Erro ao excluir ação:', error);
+          showToast(`Erro ao excluir: ${error.message}`, 'error');
+        }
       }
     });
   }, [actions, showToast, checkCanDelete, currentMicroId, isViewingAllMicros, isAdmin]);
 
-  const handleAddRaci = useCallback((uid: string, memberId: string, role: RaciRole) => {
+  const handleAddRaci = useCallback(async (uid: string, memberId: string, role: RaciRole) => {
     if (isViewingAllMicros && !isAdmin) {
       showToast('Selecione uma microrregião específica para gerenciar equipe', 'error');
       return;
@@ -479,13 +581,19 @@ function AppContent() {
       return;
     }
 
-    setActions(prev => prev.map(a =>
-      a.uid === uid
-        ? { ...a, raci: [...a.raci, { name: member.name, role }] }
-        : a
-    ));
-    showToast(`${member.name} adicionado à equipe!`, 'info');
-  }, [currentTeam, showToast, actions, checkCanManageTeam, currentMicroId, isViewingAllMicros, isAdmin]);
+    try {
+      await dataService.addRaciMember(uid, member.name, role);
+      setActions(prev => prev.map(a =>
+        a.uid === uid
+          ? { ...a, raci: [...a.raci, { name: member.name, role }] }
+          : a
+      ));
+      showToast(`${member.name} adicionado à equipe!`, 'info');
+    } catch (error: any) {
+      console.error('[App] Erro ao adicionar membro RACI:', error);
+      showToast(`Erro ao adicionar membro: ${error.message}`, 'error');
+    }
+  }, [currentTeam, showToast, actions, checkCanManageTeam, currentMicroId, isViewingAllMicros, isAdmin, allTeams]);
 
   const handleRemoveRaci = useCallback((uid: string, idx: number, memberName: string) => {
     if (isViewingAllMicros && !isAdmin) {
@@ -514,30 +622,43 @@ function AppContent() {
       isOpen: true,
       title: 'Remover Membro',
       message: `Remover ${memberName} desta ação?`,
-      onConfirm: () => {
-        setActions(prev => prev.map(a =>
-          a.uid === uid
-            ? { ...a, raci: a.raci.filter((_, i) => i !== idx) }
-            : a
-        ));
-        showToast('Membro removido!', 'info');
+      onConfirm: async () => {
+        try {
+          await dataService.removeRaciMember(uid, memberName);
+          setActions(prev => prev.map(a =>
+            a.uid === uid
+              ? { ...a, raci: a.raci.filter((_, i) => i !== idx) }
+              : a
+          ));
+          showToast('Membro removido!', 'info');
+        } catch (error: any) {
+          console.error('[App] Erro ao remover membro RACI:', error);
+          showToast(`Erro ao remover membro: ${error.message}`, 'error');
+        }
       }
     });
   }, [showToast, actions, checkCanManageTeam, currentMicroId, isViewingAllMicros, isAdmin]);
 
   // Handler para adicionar comentários
-  const handleAddComment = useCallback((uid: string, comment: ActionComment) => {
+  const handleAddComment = useCallback(async (uid: string, content: string) => {
     const action = findActionByUid(actions, uid);
     if (!action) {
       showToast('Ação não encontrada', 'error');
       return;
     }
 
-    setActions(prev => prev.map(a =>
-      a.uid === uid
-        ? { ...a, comments: [...(a.comments || []), comment] }
-        : a
-    ));
+    try {
+      const newComment = await dataService.addComment(uid, content);
+      setActions(prev => prev.map(a =>
+        a.uid === uid
+          ? { ...a, comments: [...(a.comments || []), newComment] }
+          : a
+      ));
+      showToast('Comentário adicionado!', 'success');
+    } catch (error: any) {
+      console.error('[App] Erro ao adicionar comentário:', error);
+      showToast(`Erro ao adicionar comentário: ${error.message}`, 'error');
+    }
   }, [actions, showToast]);
 
   // =====================================

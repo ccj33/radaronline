@@ -43,7 +43,7 @@ interface MainViewProps {
   onDeleteAction: (uid: string) => void;
   onAddRaci: (uid: string, memberId: string, role: any) => void;
   onRemoveRaci: (uid: string, idx: number, memberName: string) => void;
-  onAddComment: (uid: string, comment: any) => void;
+  onAddComment: (uid: string, content: string) => void;
   isSaving: boolean;
   checkCanCreate: () => boolean;
   checkCanEdit: (action: Action) => boolean;
@@ -103,7 +103,7 @@ export function MainView({
           <ActivityTabs
             activities={activities[1] || []}
             selectedActivity={selectedActivity}
-            setSelectedActivity={() => {}}
+            setSelectedActivity={() => { }}
           />
         </div>
       )}
@@ -120,7 +120,7 @@ export function MainView({
             />
           </ErrorBoundary>
 
-        /* GANTT VIEW */
+          /* GANTT VIEW */
         ) : viewMode === 'gantt' && currentNav === 'strategy' ? (
           <ErrorBoundary>
             <GanttChart
@@ -138,8 +138,8 @@ export function MainView({
 
         ) : viewMode === 'team' ? (
           <ErrorBoundary>
-            <TeamView 
-              team={currentTeam} 
+            <TeamView
+              team={currentTeam}
               microId={currentMicroId}
               onUpdateTeam={onUpdateTeam || ((microId, updatedTeam) => {
                 if (!microId) return;
@@ -177,7 +177,7 @@ export function MainView({
           <ErrorBoundary>
             <div className="max-w-5xl mx-auto">
               {currentActivity && <ExpandableDescription text={currentActivity.description} />}
-              
+
               <ActionTable
                 actions={microActions}
                 selectedActivity={selectedActivity}

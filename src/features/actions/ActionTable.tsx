@@ -2,11 +2,11 @@ import React, { useMemo, useCallback } from 'react';
 import { Calendar, Plus, Trash2, Lock, Eye, MessageCircle, Send } from 'lucide-react';
 import { Action, Status, RaciRole, TeamMember, ActionComment } from '../../types';
 import { formatDateBr, getTodayStr } from '../../lib/date';
-import { 
-  StatusBadge, 
-  RaciCompactPill, 
-  RaciTag, 
-  SearchFilter 
+import {
+  StatusBadge,
+  RaciCompactPill,
+  RaciTag,
+  SearchFilter
 } from '../../components/common';
 import { LoadingButton } from '../../components/common/LoadingSpinner';
 import { Tooltip } from '../../components/common/Tooltip';
@@ -35,7 +35,7 @@ interface ActionTableProps {
   onDeleteAction: (uid: string) => void;
   onAddRaci: (uid: string, memberId: string, role: RaciRole) => void;
   onRemoveRaci: (uid: string, idx: number, memberName: string) => void;
-  onAddComment: (uid: string, comment: ActionComment) => void;
+  onAddComment: (uid: string, content: string) => void;
   isSaving?: boolean;
   // Permissões
   canCreate?: boolean;
@@ -162,16 +162,8 @@ export const ActionTable: React.FC<ActionTableProps> = ({
     const draft = commentDrafts[action.uid]?.trim();
     if (!draft || !user) return;
 
-    const comment: ActionComment = {
-      id: `c${Date.now()}`,
-      authorId: user.id,
-      authorName: user.nome,
-      authorMunicipio: user.microregiaoId || 'N/A',
-      content: draft,
-      createdAt: new Date().toISOString(),
-    };
-
-    onAddComment(action.uid, comment);
+    // Agora passa apenas o conteúdo - o backend cria o comentário com dados do usuário
+    onAddComment(action.uid, draft);
     setCommentDrafts(prev => ({ ...prev, [action.uid]: '' }));
   }, [commentDrafts, onAddComment, user]);
 
@@ -237,7 +229,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
             // Em modo readOnly, ninguém pode editar
             const userCanEdit = !readOnly && canEdit(action);
             const userCanDelete = !readOnly && canDelete(action);
-            
+
             return (
               <div
                 key={action.uid}
@@ -246,11 +238,11 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                 role="row"
               >
                 {/* Desktop row */}
-                <div 
-                  onClick={() => toggleRow(action.uid)} 
-                  className="hidden sm:grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer" 
-                  role="button" 
-                  tabIndex={0} 
+                <div
+                  onClick={() => toggleRow(action.uid)}
+                  className="hidden sm:grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer"
+                  role="button"
+                  tabIndex={0}
                   onKeyDown={e => { if (e.key === 'Enter') toggleRow(action.uid); }}
                 >
                   <div className="col-span-1 font-mono text-xs text-slate-400">{action.id}</div>
@@ -268,7 +260,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                     {[...action.raci].sort((a, b) => rolePriority[a.role] - rolePriority[b.role]).map((r, i) => <RaciCompactPill key={i} person={r} />)}
                   </div>
                 </div>
-                
+
                 {/* Mobile row */}
                 <div onClick={() => toggleRow(action.uid)} className="sm:hidden p-4 cursor-pointer">
                   <div className="flex items-start justify-between gap-3 mb-2">
@@ -297,8 +289,8 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-700 text-sm">
                         <Lock size={16} />
                         <span>
-                          {readOnly 
-                            ? "Modo somente leitura. Selecione uma microrregião para editar." 
+                          {readOnly
+                            ? "Modo somente leitura. Selecione uma microrregião para editar."
                             : "Você não tem permissão para editar esta ação."}
                         </span>
                       </div>
@@ -307,10 +299,10 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div>
                         <label className="text-xs font-bold text-slate-500 uppercase">Título</label>
-                        <textarea 
-                          className="w-full border-b border-slate-200 focus:border-blue-500 outline-none py-2 text-sm font-medium bg-transparent disabled:opacity-60 disabled:cursor-not-allowed" 
-                          value={action.title} 
-                          onChange={e => onUpdateAction(action.uid, 'title', e.target.value)} 
+                        <textarea
+                          className="w-full border-b border-slate-200 focus:border-blue-500 outline-none py-2 text-sm font-medium bg-transparent disabled:opacity-60 disabled:cursor-not-allowed"
+                          value={action.title}
+                          onChange={e => onUpdateAction(action.uid, 'title', e.target.value)}
                           rows={2}
                           disabled={!userCanEdit}
                         />
@@ -370,30 +362,30 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                           <div>
                             <label className="text-xs font-bold text-slate-500 uppercase">Início</label>
-                            <input 
-                              type="date" 
-                              className="w-full border rounded p-2 text-sm mt-1 disabled:opacity-60 disabled:cursor-not-allowed" 
-                              value={action.startDate} 
+                            <input
+                              type="date"
+                              className="w-full border rounded p-2 text-sm mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                              value={action.startDate}
                               onChange={e => onUpdateAction(action.uid, 'startDate', e.target.value)}
                               disabled={!userCanEdit}
                             />
                           </div>
                           <div>
                             <label className="text-xs font-bold text-blue-600 uppercase">Término Planejado</label>
-                            <input 
-                              type="date" 
-                              className="w-full border border-blue-200 rounded p-2 text-sm mt-1 bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed" 
-                              value={action.plannedEndDate || action.endDate} 
+                            <input
+                              type="date"
+                              className="w-full border border-blue-200 rounded p-2 text-sm mt-1 bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                              value={action.plannedEndDate || action.endDate}
                               onChange={e => onUpdateAction(action.uid, 'plannedEndDate', e.target.value)}
                               disabled={!userCanEdit}
                             />
                           </div>
                           <div>
                             <label className="text-xs font-bold text-orange-600 uppercase">Término Real</label>
-                            <input 
-                              type="date" 
-                              className="w-full border border-orange-200 rounded p-2 text-sm mt-1 bg-orange-50 disabled:opacity-60 disabled:cursor-not-allowed" 
-                              value={action.endDate} 
+                            <input
+                              type="date"
+                              className="w-full border border-orange-200 rounded p-2 text-sm mt-1 bg-orange-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                              value={action.endDate}
                               onChange={e => onUpdateAction(action.uid, 'endDate', e.target.value)}
                               disabled={!userCanEdit}
                             />
@@ -402,9 +394,9 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                         <div>
                           <label className="text-xs font-bold text-slate-500 uppercase">Progresso & Status</label>
                           <div className="flex gap-2 mt-1">
-                            <Select 
-                              className="flex-1 text-sm" 
-                              value={action.status} 
+                            <Select
+                              className="flex-1 text-sm"
+                              value={action.status}
                               onChange={e => onUpdateAction(action.uid, 'status', e.target.value as Status)}
                               disabled={!userCanEdit}
                             >
@@ -413,12 +405,12 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                               <option>Concluído</option>
                               <option>Atrasado</option>
                             </Select>
-                            <input 
-                              type="number" 
-                              className="w-20 border rounded p-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed" 
-                              value={action.progress} 
-                              onChange={e => onUpdateAction(action.uid, 'progress', e.target.value)} 
-                              min="0" 
+                            <input
+                              type="number"
+                              className="w-20 border rounded p-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                              value={action.progress}
+                              onChange={e => onUpdateAction(action.uid, 'progress', e.target.value)}
+                              min="0"
                               max="100"
                               disabled={!userCanEdit}
                             />
@@ -430,10 +422,10 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                           </div>
                           <div className="flex flex-wrap gap-2 mb-2">
                             {[...action.raci].sort((a, b) => rolePriority[a.role] - rolePriority[b.role]).map((r, i) => (
-                              <RaciTag 
-                                key={i} 
-                                person={r} 
-                                onRemove={userCanEdit ? () => onRemoveRaci(action.uid, i, r.name) : undefined} 
+                              <RaciTag
+                                key={i}
+                                person={r}
+                                onRemove={userCanEdit ? () => onRemoveRaci(action.uid, i, r.name) : undefined}
                               />
                             ))}
                             {action.raci.length === 0 && (
@@ -450,9 +442,9 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                                 <option>R</option><option>A</option><option>C</option><option>I</option>
                               </Select>
                               <Tooltip content="Adicionar membro à equipe">
-                                <button 
-                                  onClick={() => handleAddRaci(action.uid)} 
-                                  className="bg-blue-100 text-blue-600 p-2 rounded hover:bg-blue-200 transition-colors" 
+                                <button
+                                  onClick={() => handleAddRaci(action.uid)}
+                                  className="bg-blue-100 text-blue-600 p-2 rounded hover:bg-blue-200 transition-colors"
                                   aria-label="Adicionar membro"
                                 >
                                   <Plus size={14} />
@@ -461,14 +453,14 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Action buttons */}
                         <div className="flex flex-col sm:flex-row justify-between gap-3 pt-3 border-t border-slate-200">
                           {/* Botão Excluir */}
                           {userCanDelete ? (
                             <Tooltip content="Excluir esta ação permanentemente">
-                              <button 
-                                onClick={() => onDeleteAction(action.uid)} 
+                              <button
+                                onClick={() => onDeleteAction(action.uid)}
                                 className="flex items-center justify-center gap-2 text-sm text-rose-600 hover:text-white hover:bg-rose-500 px-4 py-2 rounded-lg border border-rose-200 hover:border-rose-500 transition-all"
                               >
                                 <Trash2 size={16} />
@@ -476,20 +468,20 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                               </button>
                             </Tooltip>
                           ) : (
-                            <div /> 
+                            <div />
                           )}
-                          
+
                           {/* Botões Cancelar e Salvar */}
                           <div className="flex gap-2">
-                            <button 
-                              onClick={() => toggleRow(action.uid)} 
+                            <button
+                              onClick={() => toggleRow(action.uid)}
                               className="text-sm text-slate-600 hover:text-slate-800 px-4 py-2 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
                             >
                               {userCanEdit ? 'Cancelar' : 'Fechar'}
                             </button>
                             {userCanEdit && (
                               <LoadingButton
-                                onClick={onSaveAction}
+                                onClick={() => onSaveAction()}
                                 isLoading={isSaving}
                                 loadingText="Salvando..."
                                 className="text-sm bg-teal-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-teal-700 transition-colors shadow-sm"
@@ -508,12 +500,12 @@ export const ActionTable: React.FC<ActionTableProps> = ({
           })}
         </div>
       </div>
-      
+
       {/* Botão Nova Ação */}
       {canCreate && !readOnly && (
         <div className="mt-4 flex justify-end">
-          <button 
-            onClick={onCreateAction} 
+          <button
+            onClick={onCreateAction}
             className="flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-teal-700 transition-colors shadow-sm"
           >
             <Plus size={18} /> Nova Ação

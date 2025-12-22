@@ -34,7 +34,7 @@ interface OptimizedViewProps {
   onDeleteAction?: (uid: string) => void;
   onAddRaci?: (uid: string, memberId: string, role: RaciRole) => void;
   onRemoveRaci?: (uid: string, idx: number, memberName: string) => void;
-  onAddComment?: (uid: string, comment: ActionComment) => void;
+  onAddComment?: (uid: string, content: string) => void;
   readOnly?: boolean;
 }
 
@@ -338,7 +338,9 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   const handleAddCommentLocal = () => {
     if (!localAction || !selectedUid || !onAddComment || !user) return;
     if (!newComment.trim()) return;
-    const comment: ActionComment = {
+
+    // Cria comentário local para atualização otimista da UI
+    const optimisticComment: ActionComment = {
       id: `c${Date.now()}`,
       authorId: user.id,
       authorName: user.nome,
@@ -346,8 +348,12 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
       content: newComment.trim(),
       createdAt: new Date().toISOString(),
     };
-    onAddComment(selectedUid, comment);
-    setLocalAction(prev => prev ? { ...prev, comments: [...(prev.comments || []), comment] } : prev);
+
+    // Passa apenas o conteúdo para o handler - o backend cria o comentário completo
+    onAddComment(selectedUid, newComment.trim());
+
+    // Atualiza UI otimisticamente
+    setLocalAction(prev => prev ? { ...prev, comments: [...(prev.comments || []), optimisticComment] } : prev);
     setNewComment('');
   };
 
@@ -461,361 +467,361 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
 
       <div className="flex-1 w-full">
         <div className={`mx-auto w-full max-w-6xl grid ${hasSelection ? 'grid-cols-1 lg:grid-cols-[44%_56%]' : 'grid-cols-1'} gap-4 p-4 overflow-hidden transition-all`}>
-        {/* Lista / Cards / Árvore */}
-        <div className={`bg-white rounded-xl border border-slate-200 h-full overflow-auto p-2.5 space-y-3 ${hasSelection ? '' : 'lg:col-span-1'}`}>
-          {viewMode === 'tree' && (
-            <div className="space-y-3">
-              {groupedData.map(obj => (
-                <div key={obj.id} className={`bg-white rounded-xl border overflow-hidden ${OBJECTIVE_COLORS[obj.id]?.border || 'border-slate-200'}`}>
-                  <button onClick={() => setExpandedObjectives(prev => prev.includes(obj.id) ? prev.filter(x => x !== obj.id) : [...prev, obj.id])} className="w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-slate-50 transition-colors">
-                    <span className="text-slate-400">{expandedObjectives.includes(obj.id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-teal-500'}`}>{obj.id}</div>
-                    <div className="flex-1 text-left">
-                      <h3 className="font-semibold text-slate-800">{obj.title}</h3>
-                      <p className="text-xs text-slate-500">{obj.actionCount} ações • {obj.activities.length} atividades {obj.lateCount > 0 && <span className="text-rose-500 ml-2">• {obj.lateCount} atrasadas</span>}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-24"><MiniProgress value={obj.progress} size="md" /></div>
-                      <span className="text-sm font-bold text-slate-600 w-10 text-right">{obj.progress}%</span>
-                    </div>
-                  </button>
-                  {expandedObjectives.includes(obj.id) && (
-                    <div className="border-t border-slate-100">
-                      {obj.activities.map(act => (
-                        <div key={act.id} className="border-b border-slate-50 last:border-0">
-                          <button onClick={() => setExpandedActivities(prev => prev.includes(act.id) ? prev.filter(x => x !== act.id) : [...prev, act.id])} className="w-full px-3.5 py-2.5 pl-11 flex items-center gap-3 hover:bg-slate-50 transition-colors">
-                            <span className="text-slate-300">{expandedActivities.includes(act.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
-                            <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center relative">
-                              <Layers size={12} className="text-slate-500" />
-                              <span className={`absolute -left-2 w-2 h-2 rounded-full ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-slate-400'}`}></span>
-                            </div>
-                            <div className="flex-1 text-left">
-                              <h4 className="text-sm font-medium text-slate-700">{act.id}. {act.title}</h4>
-                              <p className="text-xs text-slate-400">{act.actions.length} ações {act.lateCount > 0 && <span className="text-rose-500 ml-1">• {act.lateCount} atrasadas</span>}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-16"><MiniProgress value={act.progress} /></div>
-                              <span className="text-xs font-medium text-slate-500 w-8 text-right">{act.progress}%</span>
-                            </div>
-                          </button>
-                          {expandedActivities.includes(act.id) && act.actions.length > 0 && (
-                            <div className="px-3.5 pb-3 pl-16">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {act.actions.map(action => {
-                                  const isSelected = selectedUid === action.uid && showDetail;
-                                  return (
-                                    <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
-                                      <ActionCard action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
-                                    </div>
-                                  );
-                                })}
+          {/* Lista / Cards / Árvore */}
+          <div className={`bg-white rounded-xl border border-slate-200 h-full overflow-auto p-2.5 space-y-3 ${hasSelection ? '' : 'lg:col-span-1'}`}>
+            {viewMode === 'tree' && (
+              <div className="space-y-3">
+                {groupedData.map(obj => (
+                  <div key={obj.id} className={`bg-white rounded-xl border overflow-hidden ${OBJECTIVE_COLORS[obj.id]?.border || 'border-slate-200'}`}>
+                    <button onClick={() => setExpandedObjectives(prev => prev.includes(obj.id) ? prev.filter(x => x !== obj.id) : [...prev, obj.id])} className="w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                      <span className="text-slate-400">{expandedObjectives.includes(obj.id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-teal-500'}`}>{obj.id}</div>
+                      <div className="flex-1 text-left">
+                        <h3 className="font-semibold text-slate-800">{obj.title}</h3>
+                        <p className="text-xs text-slate-500">{obj.actionCount} ações • {obj.activities.length} atividades {obj.lateCount > 0 && <span className="text-rose-500 ml-2">• {obj.lateCount} atrasadas</span>}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24"><MiniProgress value={obj.progress} size="md" /></div>
+                        <span className="text-sm font-bold text-slate-600 w-10 text-right">{obj.progress}%</span>
+                      </div>
+                    </button>
+                    {expandedObjectives.includes(obj.id) && (
+                      <div className="border-t border-slate-100">
+                        {obj.activities.map(act => (
+                          <div key={act.id} className="border-b border-slate-50 last:border-0">
+                            <button onClick={() => setExpandedActivities(prev => prev.includes(act.id) ? prev.filter(x => x !== act.id) : [...prev, act.id])} className="w-full px-3.5 py-2.5 pl-11 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                              <span className="text-slate-300">{expandedActivities.includes(act.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
+                              <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center relative">
+                                <Layers size={12} className="text-slate-500" />
+                                <span className={`absolute -left-2 w-2 h-2 rounded-full ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-slate-400'}`}></span>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {viewMode === 'cards' && (
-            <div className={`grid ${hasSelection ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'} gap-2.5`}>
-              {filteredActions.map(action => {
-                const isSelected = selectedUid === action.uid && showDetail;
-                return (
-                  <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
-                    <ActionCard action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
+                              <div className="flex-1 text-left">
+                                <h4 className="text-sm font-medium text-slate-700">{act.id}. {act.title}</h4>
+                                <p className="text-xs text-slate-400">{act.actions.length} ações {act.lateCount > 0 && <span className="text-rose-500 ml-1">• {act.lateCount} atrasadas</span>}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16"><MiniProgress value={act.progress} /></div>
+                                <span className="text-xs font-medium text-slate-500 w-8 text-right">{act.progress}%</span>
+                              </div>
+                            </button>
+                            {expandedActivities.includes(act.id) && act.actions.length > 0 && (
+                              <div className="px-3.5 pb-3 pl-16">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {act.actions.map(action => {
+                                    const isSelected = selectedUid === action.uid && showDetail;
+                                    return (
+                                      <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
+                                        <ActionCard action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-
-          {viewMode === 'list' && (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-3 text-xs font-semibold text-slate-500 uppercase">
-                <span className="w-5"></span>
-                <span className="w-12">ID</span>
-                <span className="flex-1">Ação</span>
-                <span className="w-28">Progresso</span>
-                <span className="w-8">💬</span>
-                <span className="w-24">Responsável</span>
-                <span className="w-20 text-right">Prazo</span>
-                <span className="w-5"></span>
+                ))}
               </div>
-              <div className="divide-y divide-slate-50">
+            )}
+
+            {viewMode === 'cards' && (
+              <div className={`grid ${hasSelection ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'} gap-2.5`}>
                 {filteredActions.map(action => {
                   const isSelected = selectedUid === action.uid && showDetail;
                   return (
                     <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
-                      <ActionRow action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
+                      <ActionCard action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
+            )}
 
-          {viewMode === 'kanban' && (
-            <div className="pb-1">
-              <div className="grid grid-cols-4 gap-3">
-                {KANBAN_COLUMNS.map(col => {
-                  const colActions = filteredActions.filter(a => a.status === col.key);
-                  return (
-                    <div
-                      key={col.key}
-                      className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col"
-                    >
-                      <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-200 ${STATUS_CONFIG[col.key].header}`}>
-                        <span className="text-sm font-semibold flex items-center gap-2">
-                          {STATUS_CONFIG[col.key].icon}
-                          {col.label}
-                        </span>
-                        <span className="text-xs font-semibold bg-white/70 text-slate-600 px-2 py-0.5 rounded-full">
-                          {colActions.length}
-                        </span>
+            {viewMode === 'list' && (
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-3 text-xs font-semibold text-slate-500 uppercase">
+                  <span className="w-5"></span>
+                  <span className="w-12">ID</span>
+                  <span className="flex-1">Ação</span>
+                  <span className="w-28">Progresso</span>
+                  <span className="w-8">💬</span>
+                  <span className="w-24">Responsável</span>
+                  <span className="w-20 text-right">Prazo</span>
+                  <span className="w-5"></span>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {filteredActions.map(action => {
+                    const isSelected = selectedUid === action.uid && showDetail;
+                    return (
+                      <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
+                        <ActionRow action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
                       </div>
-                      <div className="p-2 space-y-2">
-                        {colActions.length === 0 && (
-                          <div className="text-xs text-slate-400 italic px-2 py-4 text-center">
-                            Nenhuma ação
-                          </div>
-                        )}
-                        {colActions.map(action => {
-                          const isSelected = selectedUid === action.uid && showDetail;
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'kanban' && (
+              <div className="pb-1">
+                <div className="grid grid-cols-4 gap-3">
+                  {KANBAN_COLUMNS.map(col => {
+                    const colActions = filteredActions.filter(a => a.status === col.key);
+                    return (
+                      <div
+                        key={col.key}
+                        className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col"
+                      >
+                        <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-200 ${STATUS_CONFIG[col.key].header}`}>
+                          <span className="text-sm font-semibold flex items-center gap-2">
+                            {STATUS_CONFIG[col.key].icon}
+                            {col.label}
+                          </span>
+                          <span className="text-xs font-semibold bg-white/70 text-slate-600 px-2 py-0.5 rounded-full">
+                            {colActions.length}
+                          </span>
+                        </div>
+                        <div className="p-2 space-y-2">
+                          {colActions.length === 0 && (
+                            <div className="text-xs text-slate-400 italic px-2 py-4 text-center">
+                              Nenhuma ação
+                            </div>
+                          )}
+                          {colActions.map(action => {
+                            const isSelected = selectedUid === action.uid && showDetail;
+                            return (
+                              <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
+                                <ActionCard
+                                  action={action}
+                                  onClick={() => handleSelectAction(action.uid)}
+                                  isLate={isActionLate(action)}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {filteredActions.length === 0 && (
+              <div className="text-center py-12 text-slate-500">
+                <Zap size={48} className="mx-auto mb-3 opacity-20" />
+                <p className="font-medium">Nenhuma ação encontrada</p>
+                <p className="text-sm">Tente ajustar os filtros</p>
+              </div>
+            )}
+          </div>
+
+          {/* Painel de Detalhes + Comentários */}
+          {hasSelection && (
+            <div className="bg-white rounded-xl border border-slate-200 h-full overflow-hidden flex flex-col">
+              {!selectedAction ? (
+                <div className="flex-1 flex items-center justify-center text-slate-400">Selecione uma ação para visualizar</div>
+              ) : (
+                <>
+                  <div className="border-b border-slate-200 px-5 py-4 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded shrink-0">{selectedAction.id}</span>
+                      <h2 className="font-semibold text-slate-800 text-lg truncate">{selectedAction.title}</h2>
+                      {savedFeedback && (
+                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          Salvo
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap justify-start md:justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setShowDetail(false);
+                          setSelectedUid(null);
+                          setLocalAction(null);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors shadow-sm"
+                        title="Fechar painel e expandir lista"
+                      >
+                        <X size={14} />
+                        Fechar
+                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition-colors shadow-sm"
+                        >
+                          <Trash2 size={14} />
+                          Excluir
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSave}
+                        disabled={readOnly}
+                        className={`flex items-center gap-2 px-3 py-1.5 bg-teal-500 text-white text-sm rounded-lg shadow-sm hover:bg-teal-600 transition-colors font-medium ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Save size={14} />
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-auto px-4 py-4 space-y-5 w-full max-w-4xl mx-auto">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5">Título</label>
+                      <input
+                        value={selectedAction.title === localAction?.title ? localAction.title : selectedAction.title}
+                        onChange={(e) => setLocalAction(prev => prev ? { ...prev, title: e.target.value } : prev)}
+                        disabled={readOnly}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Status</label>
+                        <select
+                          value={localAction?.status || selectedAction.status}
+                          onChange={(e) => setLocalAction(prev => prev ? { ...prev, status: e.target.value as Status } : prev)}
+                          disabled={readOnly}
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 bg-white disabled:bg-slate-50"
+                        >
+                          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Progresso: <span className="text-teal-600 font-bold">{localAction?.progress ?? selectedAction.progress}%</span></label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={localAction?.progress ?? selectedAction.progress}
+                          onChange={(e) => setLocalAction(prev => prev ? { ...prev, progress: Number(e.target.value) } : prev)}
+                          disabled={readOnly}
+                          className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-500 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Data Início</label>
+                        <input
+                          type="date"
+                          value={localAction?.startDate ?? selectedAction.startDate}
+                          onChange={(e) => setLocalAction(prev => prev ? { ...prev, startDate: e.target.value } : prev)}
+                          disabled={readOnly}
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 disabled:bg-slate-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Data Fim Prevista</label>
+                        <input
+                          type="date"
+                          value={localAction?.plannedEndDate ?? selectedAction.plannedEndDate}
+                          onChange={(e) => setLocalAction(prev => prev ? { ...prev, plannedEndDate: e.target.value } : prev)}
+                          disabled={readOnly}
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 disabled:bg-slate-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-2">Equipe RACI</label>
+                      <div className="space-y-1.5 mb-2">
+                        {selectedAction.raci.map((member, idx) => {
+                          const roleConfig = RACI_ROLES.find(r => r.role === member.role);
                           return (
-                            <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
-                              <ActionCard
-                                action={action}
-                                onClick={() => handleSelectAction(action.uid)}
-                                isLate={isActionLate(action)}
-                              />
+                            <div key={idx} className="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-6 h-6 ${roleConfig?.color || 'bg-slate-400'} text-white text-xs font-bold rounded flex items-center justify-center`}>{member.role}</span>
+                                <span className="text-sm text-slate-700">{member.name}</span>
+                              </div>
+                              {!readOnly && (
+                                <button onClick={() => handleRemoveRaciMember(idx, member.name)} className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-rose-500">
+                                  <span className="sr-only">Remover</span>×
+                                </button>
+                              )}
                             </div>
                           );
                         })}
+                        {selectedAction.raci.length === 0 && <p className="text-xs text-slate-400 italic px-3 py-2">Nenhum membro adicionado</p>}
                       </div>
+                      {!readOnly && availableTeam.length > 0 && (
+                        <div className="flex gap-2">
+                          <select value={newRaciMember} onChange={(e) => setNewRaciMember(e.target.value)} className="flex-1 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                            <option value="">Selecionar membro...</option>
+                            {availableTeam.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+                          </select>
+                          <select value={newRaciRole} onChange={(e) => setNewRaciRole(e.target.value as RaciRole)} className="w-24 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                            {RACI_ROLES.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
+                          </select>
+                          <button onClick={handleAddRaciMember} disabled={!newRaciMember} className="px-3 py-2 bg-teal-500 text-white text-sm rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed">+</button>
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
-          {filteredActions.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
-              <Zap size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="font-medium">Nenhuma ação encontrada</p>
-              <p className="text-sm">Tente ajustar os filtros</p>
-            </div>
-          )}
-        </div>
-
-        {/* Painel de Detalhes + Comentários */}
-        {hasSelection && (
-          <div className="bg-white rounded-xl border border-slate-200 h-full overflow-hidden flex flex-col">
-            {!selectedAction ? (
-              <div className="flex-1 flex items-center justify-center text-slate-400">Selecione uma ação para visualizar</div>
-            ) : (
-            <>
-              <div className="border-b border-slate-200 px-5 py-4 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded shrink-0">{selectedAction.id}</span>
-                  <h2 className="font-semibold text-slate-800 text-lg truncate">{selectedAction.title}</h2>
-                  {savedFeedback && (
-                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                      Salvo
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap justify-start md:justify-end gap-2">
-                  <button
-                    onClick={() => { 
-                      setShowDetail(false);
-                      setSelectedUid(null);
-                      setLocalAction(null);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors shadow-sm"
-                    title="Fechar painel e expandir lista"
-                  >
-                    <X size={14} />
-                    Fechar
-                  </button>
-                  {!readOnly && (
-                    <button 
-                      onClick={handleDelete} 
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition-colors shadow-sm"
-                    >
-                      <Trash2 size={14} />
-                      Excluir
-                    </button>
-                  )}
-                  <button 
-                    onClick={handleSave} 
-                    disabled={readOnly}
-                    className={`flex items-center gap-2 px-3 py-1.5 bg-teal-500 text-white text-sm rounded-lg shadow-sm hover:bg-teal-600 transition-colors font-medium ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <Save size={14} />
-                    Salvar
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-auto px-4 py-4 space-y-5 w-full max-w-4xl mx-auto">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Título</label>
-                  <input
-                    value={selectedAction.title === localAction?.title ? localAction.title : selectedAction.title}
-                    onChange={(e) => setLocalAction(prev => prev ? { ...prev, title: e.target.value } : prev)}
-                    disabled={readOnly}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-slate-50"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Status</label>
-                    <select
-                      value={localAction?.status || selectedAction.status}
-                      onChange={(e) => setLocalAction(prev => prev ? { ...prev, status: e.target.value as Status } : prev)}
-                      disabled={readOnly}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 bg-white disabled:bg-slate-50"
-                    >
-                      {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Progresso: <span className="text-teal-600 font-bold">{localAction?.progress ?? selectedAction.progress}%</span></label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={localAction?.progress ?? selectedAction.progress}
-                      onChange={(e) => setLocalAction(prev => prev ? { ...prev, progress: Number(e.target.value) } : prev)}
-                      disabled={readOnly}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-500 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Data Início</label>
-                    <input
-                      type="date"
-                      value={localAction?.startDate ?? selectedAction.startDate}
-                      onChange={(e) => setLocalAction(prev => prev ? { ...prev, startDate: e.target.value } : prev)}
-                      disabled={readOnly}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 disabled:bg-slate-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Data Fim Prevista</label>
-                    <input
-                      type="date"
-                      value={localAction?.plannedEndDate ?? selectedAction.plannedEndDate}
-                      onChange={(e) => setLocalAction(prev => prev ? { ...prev, plannedEndDate: e.target.value } : prev)}
-                      disabled={readOnly}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 disabled:bg-slate-50"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-2">Equipe RACI</label>
-                  <div className="space-y-1.5 mb-2">
-                    {selectedAction.raci.map((member, idx) => {
-                      const roleConfig = RACI_ROLES.find(r => r.role === member.role);
-                      return (
-                        <div key={idx} className="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-6 h-6 ${roleConfig?.color || 'bg-slate-400'} text-white text-xs font-bold rounded flex items-center justify-center`}>{member.role}</span>
-                            <span className="text-sm text-slate-700">{member.name}</span>
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <MessageCircle size={16} />
+                        Comentários ({selectedAction.comments?.length || 0})
+                      </div>
+                      <div className="max-h-72 overflow-auto px-4 py-2">
+                        {(selectedAction.comments || []).length === 0 ? (
+                          <div className="flex flex-col items-center justify-center text-slate-400 py-6">
+                            <MessageCircle size={36} className="mb-2 opacity-30" />
+                            <p className="font-medium text-sm">Nenhum comentário ainda</p>
+                            <p className="text-xs">Seja o primeiro a comentar!</p>
                           </div>
-                          {!readOnly && (
-                            <button onClick={() => handleRemoveRaciMember(idx, member.name)} className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-rose-500">
-                              <span className="sr-only">Remover</span>×
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {selectedAction.raci.length === 0 && <p className="text-xs text-slate-400 italic px-3 py-2">Nenhum membro adicionado</p>}
-                  </div>
-                  {!readOnly && availableTeam.length > 0 && (
-                    <div className="flex gap-2">
-                      <select value={newRaciMember} onChange={(e) => setNewRaciMember(e.target.value)} className="flex-1 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                        <option value="">Selecionar membro...</option>
-                        {availableTeam.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
-                      </select>
-                      <select value={newRaciRole} onChange={(e) => setNewRaciRole(e.target.value as RaciRole)} className="w-24 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                        {RACI_ROLES.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
-                      </select>
-                      <button onClick={handleAddRaciMember} disabled={!newRaciMember} className="px-3 py-2 bg-teal-500 text-white text-sm rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed">+</button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <MessageCircle size={16} />
-                    Comentários ({selectedAction.comments?.length || 0})
-                  </div>
-                  <div className="max-h-72 overflow-auto px-4 py-2">
-                    {(selectedAction.comments || []).length === 0 ? (
-                      <div className="flex flex-col items-center justify-center text-slate-400 py-6">
-                        <MessageCircle size={36} className="mb-2 opacity-30" />
-                        <p className="font-medium text-sm">Nenhum comentário ainda</p>
-                        <p className="text-xs">Seja o primeiro a comentar!</p>
+                        ) : (
+                          <div>
+                            {selectedAction.comments!.map(c => <CommentItem key={c.id} comment={c} />)}
+                            <div ref={commentsEndRef} />
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div>
-                        {selectedAction.comments!.map(c => <CommentItem key={c.id} comment={c} />)}
-                        <div ref={commentsEndRef} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="border-t border-slate-200 px-4 py-3 bg-white">
-                    <div className="flex gap-3 items-start">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {user?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
-                      </div>
-                      <div className="flex-1">
-                        <textarea
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="Escreva um comentário..."
-                          rows={2}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleAddCommentLocal();
-                            }
-                          }}
-                        />
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-slate-400">Pressione Enter para enviar</span>
-                          <button
-                            onClick={handleAddCommentLocal}
-                            disabled={!newComment.trim()}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 text-white text-sm rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <Send size={14} />
-                            Enviar
-                          </button>
+                      <div className="border-t border-slate-200 px-4 py-3 bg-white">
+                        <div className="flex gap-3 items-start">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            {user?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1">
+                            <textarea
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              placeholder="Escreva um comentário..."
+                              rows={2}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleAddCommentLocal();
+                                }
+                              }}
+                            />
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs text-slate-400">Pressione Enter para enviar</span>
+                              <button
+                                onClick={handleAddCommentLocal}
+                                disabled={!newComment.trim()}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 text-white text-sm rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <Send size={14} />
+                                Enviar
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </>
+                </>
+              )}
+            </div>
           )}
-          </div>
-        )}
         </div>
       </div>
     </div>
