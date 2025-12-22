@@ -149,19 +149,6 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Info de teste (remover em produção) */}
-        <div className="lg:col-span-2 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <p className="text-amber-700 text-xs text-center mb-2 font-semibold">
-            🔧 Modo Desenvolvimento
-          </p>
-          <div className="text-slate-700 text-xs space-y-1 text-center lg:text-left">
-            <p><strong>Admin:</strong> admin@saude.mg.gov.br</p>
-            <p><strong>Gestor:</strong> gestor.pocos@saude.mg.gov.br</p>
-            <p><strong>Usuário:</strong> usuario.pocos@saude.mg.gov.br</p>
-            <p><strong>Senha:</strong> teste123</p>
-          </div>
-        </div>
-
         {/* Rodapé */}
         <p className="lg:col-span-2 mt-6 text-center text-slate-400 text-xs">
           © 2024 Secretaria de Estado de Saúde de Minas Gerais

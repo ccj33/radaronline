@@ -2,10 +2,10 @@ import { useState, useMemo, useRef, useEffect, useCallback, Suspense } from 'rea
 import { AlertTriangle } from 'lucide-react';
 
 // Types
-import { 
-  Status, 
-  RaciRole, 
-  Action, 
+import {
+  Status,
+  RaciRole,
+  Action,
   GanttRange,
   ActionComment,
   TeamMember,
@@ -24,7 +24,8 @@ import { INITIAL_DATA } from './data/mockData';
 import { MICROREGIOES } from './data/microregioes';
 
 // Auth
-import { AuthProvider, useAuth, canEditAction, canDeleteAction, canCreateAction, canManageTeam } from './auth';
+import { AuthProvider, canEditAction, canDeleteAction, canCreateAction, canManageTeam } from './auth';
+import { useAuthSafe } from './auth/AuthContext';
 
 // Hooks
 import { useResponsive } from './hooks/useMediaQuery';
@@ -34,7 +35,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 
 // Common Components
-import { 
+import {
   ExpandableDescription,
   ToastProvider,
   useToast,
@@ -59,8 +60,21 @@ import { AdminPanel } from './features/admin';
 function AppContent() {
   const { isMobile } = useResponsive();
   const { showToast } = useToast();
-  const { user, isAdmin, isAuthenticated, isLoading, currentMicrorregiao, logout, viewingMicroregiaoId } = useAuth();
-  
+  const authContext = useAuthSafe();
+
+  // =====================================
+  // ⚠️ REGRAS DE HOOKS: Extrair valores do contexto ANTES de todos os hooks
+  // Usando valores padrão seguros quando o contexto não está disponível
+  // =====================================
+  const user = authContext?.user ?? null;
+  const isAdmin = authContext?.isAdmin ?? false;
+  const isAuthenticated = authContext?.isAuthenticated ?? false;
+  const isLoading = authContext?.isLoading ?? true;
+  const currentMicrorregiao = authContext?.currentMicrorregiao ?? null;
+  const logout = authContext?.logout ?? (() => { });
+  const viewingMicroregiaoId = authContext?.viewingMicroregiaoId ?? null;
+  const isContextLoading = !authContext || authContext.isLoading;
+
   // --- NAVIGATION STATE ---
   const [currentPage, setCurrentPage] = useState<'main' | 'admin' | 'lgpd'>('main');
   const [didAutoOpenAdmin, setDidAutoOpenAdmin] = useState(false);
@@ -90,7 +104,7 @@ function AppContent() {
     title: string;
     message: string;
     onConfirm: () => void;
-  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
   const [ganttStatusFilter, setGanttStatusFilter] = useState<Status | 'all'>('all');
   const [isCreateActionModalOpen, setIsCreateActionModalOpen] = useState(false);
   const [createActionMicroId, setCreateActionMicroId] = useState<string>('');
@@ -102,7 +116,7 @@ function AppContent() {
   // =====================================
   // DERIVADOS DE MICRORREGIÃO
   // =====================================
-  
+
   // Microrregião atual (para filtrar dados)
   const currentMicroId = useMemo(() => {
     // Se admin está visualizando uma micro específica
@@ -139,7 +153,7 @@ function AppContent() {
     const objectiveActivityIds = INITIAL_DATA.activities[selectedObjective]?.map(a => a.id) || [];
     return microActions
       .filter(a => objectiveActivityIds.includes(a.activityId))
-      .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })); 
+      .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
   }, [microActions, selectedObjective]);
 
   const currentActivity = INITIAL_DATA.activities[selectedObjective]?.find(a => a.id === selectedActivity) || INITIAL_DATA.activities[selectedObjective][0];
@@ -239,7 +253,7 @@ function AppContent() {
   // =====================================
   // PERMISSION HELPERS
   // =====================================
-  
+
   // ✅ FASE 3: Otimizar permissions com useMemo (evita recriação de funções)
   const permissions = useMemo(() => {
     const checkCanEdit = (action: Action) => {
@@ -286,7 +300,7 @@ function AppContent() {
   // =====================================
   // ACTION HANDLERS (usam UID)
   // =====================================
-  
+
   type EditableActionField = 'title' | 'status' | 'startDate' | 'plannedEndDate' | 'endDate' | 'progress' | 'notes';
 
   const handleUpdateAction = useCallback((uid: string, field: EditableActionField | string, value: string | number) => {
@@ -466,8 +480,8 @@ function AppContent() {
     }
 
     setActions(prev => prev.map(a =>
-      a.uid === uid 
-        ? { ...a, raci: [...a.raci, { name: member.name, role }] } 
+      a.uid === uid
+        ? { ...a, raci: [...a.raci, { name: member.name, role }] }
         : a
     ));
     showToast(`${member.name} adicionado à equipe!`, 'info');
@@ -502,8 +516,8 @@ function AppContent() {
       message: `Remover ${memberName} desta ação?`,
       onConfirm: () => {
         setActions(prev => prev.map(a =>
-          a.uid === uid 
-            ? { ...a, raci: a.raci.filter((_, i) => i !== idx) } 
+          a.uid === uid
+            ? { ...a, raci: a.raci.filter((_, i) => i !== idx) }
             : a
         ));
         showToast('Membro removido!', 'info');
@@ -520,8 +534,8 @@ function AppContent() {
     }
 
     setActions(prev => prev.map(a =>
-      a.uid === uid 
-        ? { ...a, comments: [...(a.comments || []), comment] } 
+      a.uid === uid
+        ? { ...a, comments: [...(a.comments || []), comment] }
         : a
     ));
   }, [actions, showToast]);
@@ -565,10 +579,10 @@ function AppContent() {
     () => setViewMode('table'),
   );
 
-  const microregiaoNome = currentMicrorregiao 
+  const microregiaoNome = currentMicrorregiao
     ? currentMicrorregiao.nome
-    : isViewingAllMicros 
-      ? 'Todas as microrregiões (somente leitura)' 
+    : isViewingAllMicros
+      ? 'Todas as microrregiões (somente leitura)'
       : INITIAL_DATA.micro;
 
   const macrorregiaoNome = currentMicrorregiao
@@ -580,16 +594,10 @@ function AppContent() {
   // =====================================
   // RENDERIZAÇÃO CONDICIONAL
   // =====================================
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-slate-600">Carregando...</p>
-        </div>
-      </div>
-    );
+
+  // ✅ CORREÇÃO: Usar isContextLoading para verificar loading do auth
+  if (isContextLoading) {
+    return <LoadingFallback />;
   }
 
   if (!isAuthenticated) {
@@ -602,7 +610,7 @@ function AppContent() {
 
   if (currentPage === 'admin' && isAdmin) {
     return (
-      <AdminPanel 
+      <AdminPanel
         onBack={handleNavigateToMain}
         actions={actions}
         teams={INITIAL_DATA.teams}
@@ -709,8 +717,8 @@ function AppContent() {
       )}
 
       {/* Skip to main content - Accessibility */}
-      <a 
-        href="#main-content" 
+      <a
+        href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-teal-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg"
       >
         Ir para conteúdo principal
@@ -762,14 +770,14 @@ function AppContent() {
 
         {/* SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
-          
+
           {/* Breadcrumb */}
           {currentNav === 'strategy' && (
             <div className="px-4 sm:px-6 py-2 bg-white border-b border-slate-100">
               <Breadcrumb items={breadcrumbItems} />
             </div>
           )}
-          
+
           {/* Indicador sticky da atividade atual */}
           {currentNav === 'strategy' && viewMode === 'table' && showStickyActivity && (
             <div className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-3 shadow-sm">
@@ -781,7 +789,7 @@ function AppContent() {
               </span>
             </div>
           )}
-          
+
           {/* ACTIVITY TABS */}
           {currentNav === 'strategy' && viewMode === 'table' && (
             <div ref={activityTabsRef}>
@@ -806,7 +814,7 @@ function AppContent() {
                 />
               </ErrorBoundary>
 
-            /* --- GANTT VIEW --- */
+              /* --- GANTT VIEW --- */
             ) : viewMode === 'gantt' && currentNav === 'strategy' ? (
               <ErrorBoundary>
                 <GanttChart
@@ -824,8 +832,8 @@ function AppContent() {
 
             ) : viewMode === 'team' ? (
               <ErrorBoundary>
-                <TeamView 
-                  team={currentTeam} 
+                <TeamView
+                  team={currentTeam}
                   microId={currentMicroId}
                   onUpdateTeam={(microId, updatedTeam) => {
                     if (!microId) return;
@@ -864,7 +872,7 @@ function AppContent() {
               <ErrorBoundary>
                 <div className="max-w-5xl mx-auto">
                   {currentActivity && <ExpandableDescription text={currentActivity.description} />}
-                  
+
                   <ActionTable
                     actions={microActions}
                     selectedActivity={selectedActivity}
@@ -903,12 +911,70 @@ function AppContent() {
 // =====================================
 // LOADING FALLBACK COMPONENT
 // =====================================
+// ✅ CORREÇÃO: LoadingFallback com botão de escape para evitar loading infinito
 function LoadingFallback() {
+  const [showRetry, setShowRetry] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+
+  useEffect(() => {
+    // Mostrar botão de retry após 5 segundos
+    const retryTimer = setTimeout(() => setShowRetry(true), 5000);
+    // Mostrar botão de logout após 10 segundos
+    const logoutTimer = setTimeout(() => setShowLogout(true), 10000);
+
+    return () => {
+      clearTimeout(retryTimer);
+      clearTimeout(logoutTimer);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    // Limpa localStorage do Supabase e recarrega
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      console.error('Erro ao limpar sessão:', e);
+    }
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-slate-600">Carregando...</p>
+        <p className="text-slate-600 mb-4">Carregando...</p>
+
+        {showRetry && !showLogout && (
+          <p className="text-xs text-slate-400 mb-3">Está demorando mais que o esperado...</p>
+        )}
+
+        {showRetry && (
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        )}
+
+        {showLogout && (
+          <div className="mt-3">
+            <p className="text-xs text-slate-400 mb-2">Problemas com a sessão?</p>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition-colors"
+            >
+              Fazer Logout
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

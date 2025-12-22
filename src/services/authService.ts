@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
 import type { User, ProfileDTO, UserRole } from '../types/auth.types';
 import { log, logError } from '../lib/logger';
+// ✅ ADICIONAR: Importar classes de erro do Supabase
+import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 
 // =====================================
 // CONFIGURAÇÃO: Timeout para Edge Functions
@@ -14,6 +16,31 @@ const getEnvTimeout = (): number => {
   }
 };
 const EDGE_FUNCTION_TIMEOUT_MS = getEnvTimeout();
+
+// =====================================
+// HELPER: Mapeamento de mensagens de erro
+// =====================================
+
+// ✅ ADIÇÃO: Helper pra extrair e mapear mensagens de erro (remove duplicatas)
+const getErrorMessage = (errorMsg: string | undefined): string => {
+  if (!errorMsg) return 'Erro desconhecido ao criar usuário';
+  if (errorMsg.includes('already registered') || errorMsg.includes('already exists') || errorMsg.includes('já está cadastrado')) {
+    return 'Este email já está cadastrado';
+  } else if (errorMsg.includes('password') || errorMsg.includes('senha')) {
+    return 'Senha muito fraca. Use pelo menos 6 caracteres';
+  } else if (errorMsg.includes('Formato de email')) {
+    return 'Formato de email inválido';
+  } else if (errorMsg.includes('Role inválido')) {
+    return 'Nível de acesso inválido';
+  } else if (errorMsg.includes('Microrregião')) {
+    return 'Microrregião inválida ou obrigatória';
+  } else if (errorMsg.includes('Não autenticado')) {
+    return 'Sessão expirada. Faça login novamente.';
+  } else if (errorMsg.includes('administradores')) {
+    return 'Apenas administradores podem criar usuários';
+  }
+  return errorMsg;
+};
 
 // =====================================
 // HELPER: Converte Banco -> App
@@ -153,34 +180,41 @@ export async function createUser(userData: {
       functionData = result.data;
       functionError = result.error;
     } catch (error: any) {
-      // Se foi timeout ou outro erro
+      // Se foi timeout
       if (error.message?.includes('Timeout')) {
-        console.error('[authService] Timeout detectado - Edge Function pode estar lenta ou com problemas');
+        logError('[authService]', 'Timeout detectado - Edge Function pode estar lenta ou com problemas');
         throw new Error('A requisição demorou muito. Verifique sua conexão ou tente novamente.');
       }
-      throw error;
-    }
-    if (functionError) {
-      console.error('[authService] Erro na Edge Function:', functionError);
-      console.error('[authService] Detalhes do error:', { functionError });
-     
-      // ✅ Mensagens de erro mais específicas
-      if (functionError.message?.includes('already registered') ||
-          functionError.message?.includes('already exists') ||
-          functionError.message?.includes('já está cadastrado')) {
-        throw new Error('Este email já está cadastrado');
-      } else if (functionError.message?.includes('password') ||
-                 functionError.message?.includes('senha')) {
-        throw new Error('Senha muito fraca. Use pelo menos 6 caracteres');
-      } else if (functionError.message?.includes('Formato de email')) {
-        throw new Error('Formato de email inválido');
-      } else if (functionError.message?.includes('Role inválido')) {
-        throw new Error('Nível de acesso inválido');
-      } else if (functionError.message?.includes('Microrregião inválida')) {
-        throw new Error('Microrregião inválida');
+
+      // ✅ CORREÇÃO: Tratar erros do Supabase SDK
+      let errorMessage = 'Erro ao criar usuário';
+      if (error instanceof FunctionsHttpError) {
+        // Extrair body
+        try {
+          const body = error.context?.body ? (typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body)
+                     : (error.context?.response ? await error.context.response.json().catch(() => null) : null);
+          errorMessage = body?.error || errorMessage;
+        } catch (e) {
+          log('[authService] Não foi possível parsear body do erro:', String(e));
+        }
+        logError('[authService]', 'Edge Function retornou erro HTTP', { status: error.context?.status, message: errorMessage });
+        throw new Error(getErrorMessage(typeof errorMessage === 'string' ? errorMessage : undefined));  // Usa helper
+      } else if (error instanceof FunctionsRelayError) {
+        logError('[authService]', 'Erro de rede com Supabase', { message: error.message });
+        throw new Error('Erro de conexão com o servidor. Verifique sua internet.');
+      } else if (error instanceof FunctionsFetchError) {
+        logError('[authService]', 'Erro ao alcançar Edge Function', { message: error.message });
+        throw new Error('Não foi possível conectar ao servidor. Tente novamente.');
       } else {
-        throw new Error(`Erro ao criar usuário: ${functionError.message || 'Erro desconhecido'}`);
+        logError('[authService]', 'Erro desconhecido', error);
+        throw error;
       }
+    }
+    
+    // ✅ Fallback unificado (remove duplicatas)
+    if (functionError) {
+      logError('[authService]', 'Erro na Edge Function', functionError);
+      throw new Error(getErrorMessage(functionError.message));  // Usa helper
     }
     if (!functionData?.data?.user) {
       throw new Error('Erro ao criar usuário: dados não retornados da Edge Function');
