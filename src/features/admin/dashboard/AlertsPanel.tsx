@@ -135,7 +135,7 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
     const sevenDaysAgo = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
     const completedLastWeek = actions.filter(a =>
       a.status === 'Concluído' &&
-      new Date(a.endDate || a.updatedAt || '').getTime() >= sevenDaysAgo.getTime()
+      a.endDate && new Date(a.endDate).getTime() >= sevenDaysAgo.getTime()
     ).length;
 
     if (completedLastWeek > 0) {
