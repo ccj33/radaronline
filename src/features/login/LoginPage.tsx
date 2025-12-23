@@ -117,16 +117,7 @@ export function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  className="w-4 h-4 rounded border-white/30 bg-transparent text-white focus:ring-0 checked:bg-white"
-                />
-                <label htmlFor="terms" className="text-xs text-white/50 cursor-pointer select-none">
-                  Eu concordo com os Termos e Política.
-                </label>
-              </div>
+
 
               <button
                 type="submit"
@@ -136,17 +127,7 @@ export function LoginPage() {
                 {isSubmitting ? 'Entrando...' : 'Acessar Conta'}
               </button>
 
-              <div className="flex items-center justify-between text-xs text-white/40 mt-6 pt-6 border-t border-white/10">
-                <span>Ou entre com</span>
-                <div className="flex gap-4">
-                  <button type="button" className="hover:text-white transition-colors flex items-center gap-1">
-                    Google
-                  </button>
-                  <button type="button" className="hover:text-white transition-colors flex items-center gap-1">
-                    Apple
-                  </button>
-                </div>
-              </div>
+
             </form>
           </div>
 
