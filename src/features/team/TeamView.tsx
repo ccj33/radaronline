@@ -5,7 +5,7 @@ import { ConfirmModal } from '../../components/common';
 import {
   Mail, MapPin, Edit3, Trash2, Plus,
   User as UserIcon, Search, X,
-  ChevronDown, Filter
+  ChevronDown, Filter, Loader2
 } from 'lucide-react';
 
 // Melhores Práticas: Definir papeis padrão para evitar "Lider", "Chefe", "Resp." misturados
@@ -42,18 +42,23 @@ type TeamViewProps = {
   team: TeamMember[];
   microId: string;
   onUpdateTeam?: (microId: string, team: TeamMember[]) => void;
+  onAddMember?: (member: Omit<TeamMember, 'id'>) => Promise<TeamMember | null>;
+  onRemoveMember?: (memberId: string) => Promise<boolean>;
   readOnly?: boolean;
 };
 
 type NewMember = Pick<TeamMember, 'name' | 'role' | 'email' | 'municipio'>;
-const emptyMember: NewMember = { name: '', role: 'Consultado', email: '', municipio: '' };
+const emptyMember: NewMember = { name: '', role: '', email: '', municipio: '' };
 
-export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: TeamViewProps) {
+
+export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMember, readOnly = false }: TeamViewProps) {
   const [isAddOpen, setIsAddOpen] = useState(false); // UI State: Controla visibilidade do form
   const [form, setForm] = useState<NewMember>(emptyMember);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<NewMember>(emptyMember);
-  const [removeConfirm, setRemoveConfirm] = useState<{ open: boolean; memberId: number | null; memberName?: string }>({ open: false, memberId: null });
+  const [removeConfirm, setRemoveConfirm] = useState<{ open: boolean; memberId: string | null; memberName?: string }>({ open: false, memberId: null });
+  const [isAdding, setIsAdding] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // UX Melhorada: Busca única + Filtro de Role
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,26 +90,72 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
     });
   }, [team, searchTerm, roleFilter]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (readOnly || !microId) return;
     if (!form.name.trim()) return;
-    const next: TeamMember = {
-      id: Date.now(),
-      name: form.name.trim(),
-      role: form.role,
-      email: form.email.trim(),
-      municipio: form.municipio.trim(),
-      microregiaoId: microId,
-    };
-    onUpdateTeam?.(microId, [...team, next]);
-    setForm(emptyMember);
-    setIsAddOpen(false); // Fecha form após adicionar
+
+    setIsAdding(true);
+    try {
+      // Se tiver callback de adicionar (integração com Supabase)
+      if (onAddMember) {
+        const newMember = await onAddMember({
+          name: form.name.trim(),
+          role: form.role,
+          email: form.email.trim(),
+          municipio: form.municipio.trim(),
+          microregiaoId: microId,
+        });
+        // O estado já é atualizado pelo App.tsx dentro do onAddMember
+        // Apenas limpa o form se o membro foi criado com sucesso
+        if (newMember) {
+          setForm(emptyMember);
+          setIsAddOpen(false);
+        }
+      } else {
+        // Fallback: apenas estado local (sem persistência)
+        const next: TeamMember = {
+          id: crypto.randomUUID(),
+          name: form.name.trim(),
+          role: form.role,
+          email: form.email.trim(),
+          municipio: form.municipio.trim(),
+          microregiaoId: microId,
+        };
+        onUpdateTeam?.(microId, [...team, next]);
+        setForm(emptyMember);
+        setIsAddOpen(false);
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar membro:', error);
+    } finally {
+      setIsAdding(false);
+    }
   };
 
-  const handleRemove = (memberId: number) => {
+  const handleRemove = (memberId: string) => {
     if (readOnly || !microId) return;
     const member = team.find(m => m.id === memberId);
     setRemoveConfirm({ open: true, memberId, memberName: member?.name });
+  };
+
+  const confirmRemove = async () => {
+    if (!removeConfirm.memberId || !microId) return;
+
+    setIsRemoving(true);
+    try {
+      if (onRemoveMember) {
+        // O estado é atualizado pelo App.tsx dentro do onRemoveMember
+        await onRemoveMember(removeConfirm.memberId);
+      } else {
+        // Fallback: apenas estado local
+        onUpdateTeam?.(microId, team.filter(m => m.id !== removeConfirm.memberId));
+      }
+    } catch (error) {
+      console.error('Erro ao remover membro:', error);
+    } finally {
+      setIsRemoving(false);
+      setRemoveConfirm({ open: false, memberId: null });
+    }
   };
 
   const startEdit = (member: TeamMember) => {
@@ -112,7 +163,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
     setEditForm({ name: member.name, role: member.role, email: member.email, municipio: member.municipio });
   };
 
-  const saveEdit = (memberId: number) => {
+  const saveEdit = (memberId: string) => {
     if (readOnly || !microId) return;
     const updated = team.map(m =>
       m.id === memberId ? { ...m, ...editForm } : m
@@ -126,7 +177,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
       {/* Header com Design Elevado */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-indigo-600 mb-1">
+          <div className="flex items-center gap-2 text-teal-600 mb-1">
             <UserIcon size={20} className="stroke-[2.5]" />
             <span className="text-xs font-bold uppercase tracking-wider">Gestão de Equipe</span>
           </div>
@@ -151,11 +202,11 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
       {/* Barra de Ferramentas (Busca & Ações) */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-500 transition-colors" size={18} />
           <input
             type="text"
             placeholder="Buscar por nome, email ou cidade..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-400 transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -169,7 +220,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
         <div className="relative min-w-[160px]">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <select
-            className="w-full pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 shadow-sm cursor-pointer"
+            className="w-full pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-400 shadow-sm cursor-pointer"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
@@ -186,7 +237,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
             onClick={() => setIsAddOpen(!isAddOpen)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 ${isAddOpen
               ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+              : 'bg-teal-600 text-white hover:bg-teal-700 shadow-teal-200'
               }`}
           >
             {isAddOpen ? <X size={18} /> : <Plus size={18} />}
@@ -198,67 +249,64 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
 
       {/* Formulário de Adição (Colapsável) */}
       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAddOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-2xl p-5 md:p-6 shadow-inner">
+        <div className="bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-5 md:p-6 shadow-inner">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+            <h3 className="text-sm font-bold text-teal-900 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
               Adicionar Novo Colaborador
             </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-indigo-900/60 ml-1">Nome Completo</label>
+              <label className="text-xs font-semibold text-teal-900/60 ml-1">Nome Completo</label>
               <input
-                className="w-full px-3 py-2 bg-white border border-indigo-200/60 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all placeholder:text-slate-300"
+                className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all placeholder:text-slate-300"
                 placeholder="Ex: Maria Silva"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-indigo-900/60 ml-1">Cargo / Função</label>
-              <div className="relative">
-                <select
-                  className="w-full px-3 py-2 bg-white border border-indigo-200/60 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all appearance-none cursor-pointer"
-                  value={form.role}
-                  onChange={e => setForm({ ...form, role: e.target.value })}
-                >
-                  {ROLES_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none" size={14} />
-              </div>
+              <label className="text-xs font-semibold text-teal-900/60 ml-1">Cargo / Função</label>
+              <input
+                className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all placeholder:text-slate-300"
+                placeholder="Ex: Coordenador, Técnico, Gestor..."
+                value={form.role}
+                onChange={e => setForm({ ...form, role: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-indigo-900/60 ml-1">Email</label>
+              <label className="text-xs font-semibold text-teal-900/60 ml-1">Email</label>
               <input
-                className="w-full px-3 py-2 bg-white border border-indigo-200/60 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all placeholder:text-slate-300"
+                className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all placeholder:text-slate-300"
                 placeholder="maria@exemplo.com"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-indigo-900/60 ml-1">Município</label>
+              <label className="text-xs font-semibold text-teal-900/60 ml-1">Município</label>
               <div className="relative">
                 <select
-                  className="w-full px-3 py-2 bg-white border border-indigo-200/60 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all appearance-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all appearance-none cursor-pointer"
                   value={form.municipio}
                   onChange={e => setForm({ ...form, municipio: e.target.value })}
                 >
                   <option value="">Selecione o município...</option>
                   {municipiosOrdenados.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none" size={14} />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-300 pointer-events-none" size={14} />
               </div>
             </div>
           </div>
           <div className="flex justify-end mt-4">
             <button
               onClick={handleAdd}
-              disabled={!form.name.trim()}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!form.name.trim() || isAdding}
+              className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-teal-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Confirmar Adição
+              {isAdding && <Loader2 size={16} className="animate-spin" />}
+              {isAdding ? 'Salvando...' : 'Confirmar Adição'}
             </button>
           </div>
         </div>
@@ -272,33 +320,33 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
           if (isEditing) {
             // Card em Modo de Edição
             return (
-              <div key={member.id} className="bg-white rounded-2xl p-5 shadow-lg border-2 border-indigo-100 ring-2 ring-indigo-50 relative animate-in fade-in zoom-in-95 duration-200">
+              <div key={member.id} className="bg-white rounded-2xl p-5 shadow-lg border-2 border-teal-100 ring-2 ring-teal-50 relative animate-in fade-in zoom-in-95 duration-200">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-wide">Editando Membro</h4>
+                    <h4 className="text-xs font-bold text-teal-600 uppercase tracking-wide">Editando Membro</h4>
                   </div>
                   <input
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-200"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-teal-200"
                     value={editForm.name}
                     onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                     placeholder="Nome"
                   />
                   <select
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-200"
                     value={editForm.role}
                     onChange={e => setEditForm({ ...editForm, role: e.target.value })}
                   >
                     {ROLES_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                   <input
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-200"
                     value={editForm.email}
                     onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                     placeholder="Email"
                   />
                   <div className="relative">
                     <select
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 appearance-none cursor-pointer"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 appearance-none cursor-pointer"
                       value={editForm.municipio}
                       onChange={e => setEditForm({ ...editForm, municipio: e.target.value })}
                     >
@@ -308,7 +356,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <button onClick={() => saveEdit(member.id)} className="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700">Salvar</button>
+                    <button onClick={() => saveEdit(member.id)} className="flex-1 bg-teal-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-teal-700">Salvar</button>
                     <button onClick={() => setEditingId(null)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-50">Cancelar</button>
                   </div>
                 </div>
@@ -318,7 +366,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
 
           // Card em Modo de Visualização
           return (
-            <div key={member.id} className="group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-100 transition-all duration-300 relative">
+            <div key={member.id} className="group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md hover:border-teal-100 transition-all duration-300 relative">
 
               {/* Cabeçalho do Card */}
               <div className="flex items-start justify-between mb-4">
@@ -327,7 +375,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
                     {getInitials(member.name)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-indigo-700 transition-colors">
+                    <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-teal-700 transition-colors">
                       {member.name}
                     </h3>
                     <div className={`inline-flex items-center px-2 py-0.5 mt-1 rounded-md border text-[10px] font-bold uppercase tracking-wider ${getRoleBadgeColor(member.role)}`}>
@@ -339,7 +387,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
                 {/* Ações (Aparecem no hover em desktop, ou sempre visíveis se mobile) */}
                 {!readOnly && (
                   <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => startEdit(member)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                    <button onClick={() => startEdit(member)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
                       <Edit3 size={16} />
                     </button>
                     <button onClick={() => handleRemove(member.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
@@ -398,7 +446,7 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
             Tente ajustar seus filtros ou adicione um novo colaborador à equipe.
           </p>
           {!readOnly && (
-            <button onClick={() => { setSearchTerm(''); setRoleFilter(''); setIsAddOpen(true) }} className="mt-4 text-indigo-600 font-semibold text-sm hover:underline">
+            <button onClick={() => { setSearchTerm(''); setRoleFilter(''); setIsAddOpen(true) }} className="mt-4 text-teal-600 font-semibold text-sm hover:underline">
               Limpar filtros e adicionar novo
             </button>
           )}
@@ -409,14 +457,10 @@ export function TeamView({ team, microId, onUpdateTeam, readOnly = false }: Team
       <ConfirmModal
         isOpen={removeConfirm.open}
         onClose={() => setRemoveConfirm({ open: false, memberId: null })}
-        onConfirm={() => {
-          if (!removeConfirm.memberId || !microId) return;
-          onUpdateTeam?.(microId, team.filter(m => m.id !== removeConfirm.memberId));
-          setRemoveConfirm({ open: false, memberId: null });
-        }}
+        onConfirm={confirmRemove}
         title="Remover Colaborador"
         message={`Você está prestes a remover ${removeConfirm.memberName} da equipe. Esta ação não pode ser desfeita.`}
-        confirmText="Sim, Remover"
+        confirmText={isRemoving ? 'Removendo...' : 'Sim, Remover'}
         cancelText="Cancelar"
         type="danger"
       />

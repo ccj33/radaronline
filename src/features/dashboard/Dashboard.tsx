@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react';
-import { 
-  Target, CheckCircle2, Clock, AlertTriangle, Users, Calendar,
-  BarChart2, PieChart
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
+} from 'recharts';
+import {
+  Target, CheckCircle2, Clock, AlertTriangle, Calendar,
+  ArrowUpRight, ArrowDownRight, Activity as ActivityIcon, Users,
+  BarChart2, PieChart as PieChartIcon
 } from 'lucide-react';
 import { Action, TeamMember, Objective, Activity } from '../../types';
-import { StatsCard } from '../../components/common/StatsCard';
-import { ProgressRing } from '../../components/common/ProgressRing';
 import { parseDateLocal, getTodayStr } from '../../lib/date';
+import { useAuth } from '../../auth';
 
 interface DashboardProps {
   actions: Action[];
@@ -15,12 +18,23 @@ interface DashboardProps {
   activities: Record<number, Activity[]>;
 }
 
+const COLORS = {
+  concluido: '#10b981', // emerald-500
+  emAndamento: '#3b82f6', // blue-500
+  naoIniciado: '#94a3b8', // slate-400
+  atrasado: '#f43f5e', // rose-500
+  teal: '#14b8a6', // teal-500
+  violet: '#8b5cf6', // violet-500
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({
   actions,
   team,
   objectives,
   activities,
 }) => {
+  const { user } = useAuth();
+
   // Cálculo de métricas
   const metrics = useMemo(() => {
     const total = actions.length;
@@ -29,27 +43,53 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const naoIniciados = actions.filter(a => a.status === 'Não Iniciado').length;
     const atrasados = actions.filter(a => a.status === 'Atrasado').length;
 
-    const today = parseDateLocal(getTodayStr());
-    const proximosPrazos = actions.filter(a => {
-      const endDate = parseDateLocal(a.plannedEndDate || a.endDate);
-      if (!endDate || !today) return false;
-      const diffDays = (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
-      return diffDays >= 0 && diffDays <= 7 && a.status !== 'Concluído';
-    }).length;
-
-    const progressoGeral = total > 0 
-      ? actions.reduce((sum, a) => sum + a.progress, 0) / total 
-      : 0;
+    // Status Data para gráfico
+    const statusData = [
+      { name: 'Concluído', value: concluidos, color: COLORS.concluido },
+      { name: 'Em Andamento', value: emAndamento, color: COLORS.emAndamento },
+      { name: 'Não Iniciado', value: naoIniciados, color: COLORS.naoIniciado },
+      { name: 'Atrasado', value: atrasados, color: COLORS.atrasado },
+    ].filter(d => d.value > 0);
 
     // Progresso por objetivo
     const progressoPorObjetivo = objectives.map(obj => {
       const actIds = activities[obj.id]?.map(a => a.id) || [];
       const objActions = actions.filter(a => actIds.includes(a.activityId));
-      const objProgress = objActions.length > 0
-        ? objActions.reduce((sum, a) => sum + a.progress, 0) / objActions.length
+      const percentage = objActions.length > 0
+        ? Math.round(objActions.reduce((sum, a) => sum + a.progress, 0) / objActions.length)
         : 0;
-      return { ...obj, progress: objProgress, actionCount: objActions.length };
+      return {
+        name: `Obj ${obj.id}`,
+        fullName: obj.title,
+        progress: percentage,
+        count: objActions.length
+      };
     });
+
+    // Próximos prazos (7 dias)
+    const today = parseDateLocal(getTodayStr());
+    const upcomingDeadlines = actions.filter(a => {
+      const endDate = parseDateLocal(a.plannedEndDate || a.endDate);
+      if (!endDate || !today) return false;
+      const diffDays = (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+      return diffDays >= 0 && diffDays <= 7 && a.status !== 'Concluído';
+    }).sort((a, b) => {
+      const dateA = parseDateLocal(a.plannedEndDate || a.endDate)?.getTime() || 0;
+      const dateB = parseDateLocal(b.plannedEndDate || b.endDate)?.getTime() || 0;
+      return dateA - dateB;
+    }).slice(0, 5); // Top 5
+
+    // Ações por membro da equipe (Top 5)
+    // Considerando Membros com papel 'R' (Responsável)
+    const actionsByMember = team.map(member => {
+      const count = actions.filter(a =>
+        a.raci.some(r => r.name === member.name && r.role === 'R') &&
+        a.status !== 'Concluído'
+      ).length;
+      return { name: member.name.split(' ')[0], fullName: member.name, count };
+    }).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    const percentConcluido = total > 0 ? Math.round((concluidos / total) * 100) : 0;
 
     return {
       total,
@@ -57,221 +97,269 @@ export const Dashboard: React.FC<DashboardProps> = ({
       emAndamento,
       naoIniciados,
       atrasados,
-      proximosPrazos,
-      progressoGeral,
+      percentConcluido,
+      statusData,
       progressoPorObjetivo,
+      upcomingDeadlines,
+      actionsByMember
     };
-  }, [actions, objectives, activities]);
+  }, [actions, objectives, activities, team]);
 
-  // Dados para gráfico de barras de status
-  const statusData = [
-    { label: 'Concluído', value: metrics.concluidos, color: 'bg-emerald-500', percent: (metrics.concluidos / metrics.total) * 100 },
-    { label: 'Em Andamento', value: metrics.emAndamento, color: 'bg-blue-500', percent: (metrics.emAndamento / metrics.total) * 100 },
-    { label: 'Não Iniciado', value: metrics.naoIniciados, color: 'bg-slate-400', percent: (metrics.naoIniciados / metrics.total) * 100 },
-    { label: 'Atrasado', value: metrics.atrasados, color: 'bg-rose-500', percent: (metrics.atrasados / metrics.total) * 100 },
-  ];
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-lg text-xs">
+          <p className="font-bold text-slate-800">{label || payload[0].name}</p>
+          <p className="text-slate-600">
+            {payload[0].value} {payload[0].dataKey === 'progress' ? '%' : 'ações'}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 pb-8 animate-fade-in">
+      {/* Header com Boas-vindas */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800">Dashboard</h2>
-          <p className="text-sm text-slate-500 mt-1">Visão geral do plano de ação</p>
+          <h2 className="text-2xl font-bold text-slate-800">
+            Visão Geral <span className="text-teal-600">Estratégica</span>
+          </h2>
+          <p className="text-slate-500 mt-1">
+            Olá, <strong>{user?.nome || 'Gestor'}</strong>! Aqui está o resumo atualizado da sua microrregião.
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-500 bg-white px-3 py-2 rounded-lg border border-slate-200">
-          <Calendar size={16} />
-          <span>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 text-slate-600 text-sm font-medium">
+          <Calendar size={16} className="text-teal-600" />
+          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
+      {/* KPI Cards Modernos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
           title="Total de Ações"
           value={metrics.total}
-          subtitle={`${metrics.total} ações cadastradas`}
-          icon={<Target size={20} />}
-          color="teal"
+          icon={<Target size={24} className="text-white" />}
+          gradient="from-slate-700 to-slate-800"
+          subtext="No plano estratégico"
         />
-        <StatsCard
-          title="Concluídas"
-          value={metrics.concluidos}
-          subtitle={`${Math.round((metrics.concluidos / metrics.total) * 100) || 0}% do total`}
-          icon={<CheckCircle2 size={20} />}
-          color="emerald"
+        <KpiCard
+          title="Conclusão Geral"
+          value={`${metrics.percentConcluido}%`}
+          icon={<ActivityIcon size={24} className="text-white" />}
+          gradient="from-teal-500 to-emerald-500"
+          subtext={`${metrics.concluidos} concluídas`}
           trend="up"
-          trendValue={`+${metrics.concluidos} concluídas`}
         />
-        <StatsCard
-          title="Em Andamento"
+        <KpiCard
+          title="Em Execução"
           value={metrics.emAndamento}
-          subtitle="Ações em execução"
-          icon={<Clock size={20} />}
-          color="blue"
+          icon={<Clock size={24} className="text-white" />}
+          gradient="from-blue-500 to-indigo-500"
+          subtext="Ações ativas agora"
         />
-        <StatsCard
-          title="Atrasadas"
+        <KpiCard
+          title="Atenção Necessária"
           value={metrics.atrasados}
-          subtitle={metrics.atrasados > 0 ? 'Requer atenção!' : 'Tudo em dia!'}
-          icon={<AlertTriangle size={20} />}
-          color="rose"
-          trend={metrics.atrasados > 0 ? 'down' : 'neutral'}
-          trendValue={metrics.atrasados > 0 ? 'Verificar prazos' : 'Nenhum atraso'}
+          icon={<AlertTriangle size={24} className="text-white" />}
+          gradient={metrics.atrasados > 0 ? "from-rose-500 to-red-600" : "from-slate-400 to-slate-500"}
+          subtext={metrics.atrasados > 0 ? "Ações atrasadas" : "Tudo dentro do prazo!"}
+          trend={metrics.atrasados > 0 ? "down" : "neutral"}
         />
       </div>
 
-      {/* Progresso Geral + Distribuição de Status */}
+      {/* Área Principal de Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Progresso Geral */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-            <PieChart size={16} className="text-teal-600" />
-            Progresso Geral
+
+        {/* Status Chart (Donut) */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
+          <h3 className="text-base font-bold text-slate-800 mb-2 w-full flex items-center gap-2">
+            <PieChartIcon size={18} className="text-slate-400" />
+            Distribuição de Status
           </h3>
-          <div className="flex items-center justify-center py-4">
-            <ProgressRing 
-              progress={metrics.progressoGeral} 
-              size={160}
-              strokeWidth={12}
-              color="#0891b2"
-              label="Completo"
-            />
+          <div className="w-full h-[250px] relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={metrics.statusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {metrics.statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Total Center Label */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+              <span className="text-3xl font-bold text-slate-800">{metrics.total}</span>
+              <span className="text-xs text-slate-400 font-medium uppercase">Ações</span>
+            </div>
           </div>
         </div>
 
-        {/* Distribuição de Status */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-            <BarChart2 size={16} className="text-blue-600" />
-            Distribuição por Status
+        {/* Progresso por Objetivo (Bar Chart) */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 className="text-base font-bold text-slate-800 mb-6 w-full flex items-center gap-2">
+            <BarChart2 size={18} className="text-slate-400" />
+            Performance por Objetivo
+          </h3>
+          <div className="w-full h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={metrics.progressoPorObjetivo}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <XAxis type="number" domain={[0, 100]} hide />
+                <YAxis dataKey="name" type="category" width={50} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <RechartsTooltip
+                  cursor={{ fill: '#f8fafc' }}
+                  content={({ active, payload }) => {
+                    if (active && payload?.[0]) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs max-w-[200px]">
+                          <p className="font-bold text-slate-800 mb-1">{data.fullName}</p>
+                          <div className="flex justify-between gap-4">
+                            <span>Progresso:</span>
+                            <span className="font-bold text-teal-600">{data.progress}%</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>Ações:</span>
+                            <span className="font-bold">{data.count}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
+                  {metrics.progressoPorObjetivo.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.progress === 100 ? COLORS.concluido : COLORS.teal} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Linha Inferior: Equipe e Prazos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Próximas Entregas */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Clock size={18} className="text-amber-500" />
+            Próximos Prazos (7 dias)
+          </h3>
+          <div className="space-y-3">
+            {metrics.upcomingDeadlines.length > 0 ? (
+              metrics.upcomingDeadlines.map(action => (
+                <div key={action.uid} className="flex items-center p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 text-slate-600 font-bold text-xs shadow-sm">
+                    {action.id}
+                  </div>
+                  <div className="ml-3 flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{action.title}</p>
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                      <Calendar size={10} />
+                      {action.plannedEndDate || action.endDate}
+                    </p>
+                  </div>
+                  <div className="ml-2">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${action.status === 'Atrasado' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                      {action.status}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50 rounded-xl border-dashed border-2 border-slate-200">
+                <CheckCircle2 size={32} className="text-emerald-400 mb-2" />
+                <p className="text-slate-600 font-medium">Tudo tranquilo!</p>
+                <p className="text-xs text-slate-400">Nenhuma entrega urgente para os próximos dias.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Carga de Trabalho da Equipe */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Users size={18} className="text-violet-500" />
+            Ações Pendentes por Membro
           </h3>
           <div className="space-y-4">
-            {statusData.map((item, _i) => (
-              <div key={_i} className="flex items-center gap-4">
-                <div className="w-24 text-xs font-medium text-slate-600">{item.label}</div>
-                <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full ${item.color} rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
-                    style={{ width: `${item.percent || 0}%` }}
-                  >
-                    {item.percent >= 10 && (
-                      <span className="text-[10px] font-bold text-white">{item.value}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="w-12 text-right text-sm font-bold text-slate-700">{item.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Progresso por Objetivo */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <Target size={16} className="text-purple-600" />
-          Progresso por Objetivo Estratégico
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {metrics.progressoPorObjetivo.map((obj, _i) => (
-            <div 
-              key={obj.id} 
-              className="relative overflow-hidden rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow"
-            >
-              {/* Barra de progresso de fundo */}
-              <div 
-                className="absolute inset-0 bg-gradient-to-r from-teal-50 to-emerald-50 transition-all duration-500"
-                style={{ width: `${obj.progress}%` }}
-              />
-              
-              <div className="relative">
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Objetivo {obj.id}</p>
-                    <p className="text-sm font-bold text-slate-700 line-clamp-2 mt-1">{obj.title}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-2xl font-bold text-teal-600">{Math.round(obj.progress)}%</p>
-                  </div>
-                </div>
-                
-                {/* Progress bar */}
-                <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${obj.progress}%` }}
-                  />
-                </div>
-                
-                <p className="text-xs text-slate-500 mt-2">{obj.actionCount} ações</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Próximos Prazos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-            <Calendar size={16} className="text-amber-600" />
-            Próximos 7 Dias
-          </h3>
-          {metrics.proximosPrazos > 0 ? (
-            <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-                <AlertTriangle size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-700">{metrics.proximosPrazos}</p>
-                <p className="text-sm text-amber-600">ações com prazo nos próximos 7 dias</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                <CheckCircle2 size={24} className="text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-emerald-700">Tudo em dia!</p>
-                <p className="text-sm text-emerald-600">Nenhum prazo urgente</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Equipe */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-            <Users size={16} className="text-purple-600" />
-            Equipe
-          </h3>
-          <div className="flex items-center gap-4">
-            <div className="flex -space-x-2">
-              {team.slice(0, 5).map((member, _i) => (
-                <div 
-                  key={member.id}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 border-2 border-white flex items-center justify-center text-white text-xs font-bold shadow-sm"
-                  title={member.name}
-                >
+            {metrics.actionsByMember.map((member, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold border border-slate-200">
                   {member.name.charAt(0)}
                 </div>
-              ))}
-              {team.length > 5 && (
-                <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-slate-600 text-xs font-bold">
-                  +{team.length - 5}
+                <div className="flex-1">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-semibold text-slate-700">{member.fullName}</span>
+                    <span className="text-slate-500 font-medium">{member.count} ações</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 rounded-full"
+                      style={{ width: `${Math.min((member.count / 10) * 100, 100)}%` }} // Escala arbitrária de 10 como "muito"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800">{team.length}</p>
-              <p className="text-sm text-slate-500">membros</p>
-            </div>
+              </div>
+            ))}
+            {metrics.actionsByMember.length === 0 && (
+              <div className="text-center py-6 text-slate-400 text-sm italic">
+                Nenhuma ação atribuída ainda.
+              </div>
+            )}
           </div>
         </div>
+
       </div>
     </div>
   );
 };
 
+// Subcomponente de Card KPI
+const KpiCard = ({ title, value, icon, gradient, subtext, trend }: any) => (
+  <div className={`p-5 rounded-2xl shadow-lg bg-gradient-to-br ${gradient} text-white relative overflow-hidden group hover:scale-[1.02] transition-transform`}>
+    {/* Decoração de fundo */}
+    <div className="absolute -right-4 -top-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+
+    <div className="flex justify-between items-start relative z-10">
+      <div>
+        <p className="text-white/80 text-xs font-semibold uppercase tracking-wider mb-1">{title}</p>
+        <h3 className="text-3xl font-bold">{value}</h3>
+      </div>
+      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+        {icon}
+      </div>
+    </div>
+
+    <div className="mt-4 flex items-center gap-2 relative z-10">
+      {trend === 'up' && <div className="bg-emerald-500/20 p-0.5 rounded text-emerald-100"><ArrowUpRight size={14} /></div>}
+      {trend === 'down' && <div className="bg-rose-500/20 p-0.5 rounded text-rose-100"><ArrowDownRight size={14} /></div>}
+      <p className="text-xs text-white/70 font-medium">
+        {subtext}
+      </p>
+    </div>
+  </div>
+);

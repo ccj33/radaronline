@@ -182,6 +182,15 @@ code {
   scrollbar-color: #cbd5e1 transparent;
 }
 
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Focus visible for accessibility */
 :focus-visible {
   outline: 2px solid #0891b2;

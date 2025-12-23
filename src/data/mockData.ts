@@ -41,24 +41,24 @@ export const INITIAL_DATA: {
   teams: {
     // Equipe de Poços de Caldas (MR009)
     'MR009': [
-      { id: 1, name: "Lhays Rezende", role: "Responsável Eixo", email: "lhays@saude.mg.gov.br", municipio: "Poços de Caldas", microregiaoId: "MR009" },
-      { id: 2, name: "Grupo Poços", role: "Comitê Regional", email: "comite@pocos.mg.gov.br", municipio: "Poços de Caldas", microregiaoId: "MR009" },
-      { id: 3, name: "Ciclano", role: "Técnico", email: "ciclano@exemplo.com", municipio: "Botelhos", microregiaoId: "MR009" },
-      { id: 4, name: "Prefeitura", role: "Institucional", email: "contato@prefeitura.gov.br", municipio: "Poços de Caldas", microregiaoId: "MR009" },
-      { id: 5, name: "APS", role: "Atenção Primária", email: "aps@saude.gov.br", municipio: "Campestre", microregiaoId: "MR009" },
-      { id: 6, name: "Blabla", role: "Apoio", email: "blabla@apoio.com", municipio: "Machado", microregiaoId: "MR009" }
+      { id: "mock-001", name: "Lhays Rezende", role: "Responsável Eixo", email: "lhays@saude.mg.gov.br", municipio: "Poços de Caldas", microregiaoId: "MR009" },
+      { id: "mock-002", name: "Grupo Poços", role: "Comitê Regional", email: "comite@pocos.mg.gov.br", municipio: "Poços de Caldas", microregiaoId: "MR009" },
+      { id: "mock-003", name: "Ciclano", role: "Técnico", email: "ciclano@exemplo.com", municipio: "Botelhos", microregiaoId: "MR009" },
+      { id: "mock-004", name: "Prefeitura", role: "Institucional", email: "contato@prefeitura.gov.br", municipio: "Poços de Caldas", microregiaoId: "MR009" },
+      { id: "mock-005", name: "APS", role: "Atenção Primária", email: "aps@saude.gov.br", municipio: "Campestre", microregiaoId: "MR009" },
+      { id: "mock-006", name: "Blabla", role: "Apoio", email: "blabla@apoio.com", municipio: "Machado", microregiaoId: "MR009" }
     ],
     // Equipe de Belo Horizonte (MR001)
     'MR001': [
-      { id: 101, name: "Carlos Pereira", role: "Coordenador", email: "carlos@saude.mg.gov.br", municipio: "Belo Horizonte", microregiaoId: "MR001" },
-      { id: 102, name: "Ana Costa", role: "Gestora", email: "ana.costa@saude.mg.gov.br", municipio: "Belo Horizonte", microregiaoId: "MR001" },
-      { id: 103, name: "Paulo Mendes", role: "Técnico", email: "paulo@saude.mg.gov.br", municipio: "Contagem", microregiaoId: "MR001" },
-      { id: 104, name: "Fernanda Lima", role: "Apoio", email: "fernanda@saude.mg.gov.br", municipio: "Betim", microregiaoId: "MR001" }
+      { id: "mock-101", name: "Carlos Pereira", role: "Coordenador", email: "carlos@saude.mg.gov.br", municipio: "Belo Horizonte", microregiaoId: "MR001" },
+      { id: "mock-102", name: "Ana Costa", role: "Gestora", email: "ana.costa@saude.mg.gov.br", municipio: "Belo Horizonte", microregiaoId: "MR001" },
+      { id: "mock-103", name: "Paulo Mendes", role: "Técnico", email: "paulo@saude.mg.gov.br", municipio: "Contagem", microregiaoId: "MR001" },
+      { id: "mock-104", name: "Fernanda Lima", role: "Apoio", email: "fernanda@saude.mg.gov.br", municipio: "Betim", microregiaoId: "MR001" }
     ],
     // Equipe de Varginha (MR010)
     'MR010': [
-      { id: 201, name: "Roberto Silva", role: "Coordenador", email: "roberto@saude.mg.gov.br", municipio: "Varginha", microregiaoId: "MR010" },
-      { id: 202, name: "Juliana Santos", role: "Gestora", email: "juliana@saude.mg.gov.br", municipio: "Varginha", microregiaoId: "MR010" }
+      { id: "mock-201", name: "Roberto Silva", role: "Coordenador", email: "roberto@saude.mg.gov.br", municipio: "Varginha", microregiaoId: "MR010" },
+      { id: "mock-202", name: "Juliana Santos", role: "Gestora", email: "juliana@saude.mg.gov.br", municipio: "Varginha", microregiaoId: "MR010" }
     ]
   },
 

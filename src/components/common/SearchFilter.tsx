@@ -9,7 +9,7 @@ interface SearchFilterProps {
   onStatusFilterChange: (value: Status | 'all') => void;
   responsibleFilter: string;
   onResponsibleFilterChange: (value: string) => void;
-  teamMembers: { id: number; name: string }[];
+  teamMembers: { id: string; name: string }[];
 }
 
 export const SearchFilter: React.FC<SearchFilterProps> = ({

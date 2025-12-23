@@ -10,8 +10,8 @@ import { useToast } from '../../components/common/Toast';
 
 // Categorias de avatares
 export const AVATAR_CATEGORIES = [
+    { id: 'zeGotinha', label: '💧 Zé Gotinha' },
     { id: 'pessoas', label: '👤 Pessoas' },
-    { id: 'formas', label: '🔷 Formas' },
     { id: 'emojis', label: '👍 Emojis' },
     { id: 'robos', label: '🤖 Robôs' },
     { id: 'cores', label: '🎨 Cores' },
@@ -19,6 +19,24 @@ export const AVATAR_CATEGORIES = [
 ];
 
 export const AVATARS = [
+    // Zé Gotinha - avatares locais (PNG customizados)
+    { id: 'zg1', label: 'Zé Gotinha 1', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg1.png' },
+    { id: 'zg2', label: 'Zé Gotinha 2', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg2.png' },
+    { id: 'zg3', label: 'Zé Gotinha 3', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg3.png' },
+    { id: 'zg4', label: 'Zé Gotinha 4', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg4.png' },
+    { id: 'zg5', label: 'Zé Gotinha 5', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg5.png' },
+    { id: 'zg6', label: 'Zé Gotinha 6', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg6.png' },
+    { id: 'zg7', label: 'Zé Gotinha 7', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg7.png' },
+    { id: 'zg8', label: 'Zé Gotinha 8', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg8.png' },
+    { id: 'zg9', label: 'Zé Gotinha 9', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg9.png' },
+    { id: 'zg10', label: 'Zé Gotinha 10', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg10.png' },
+    { id: 'zg11', label: 'Zé Gotinha 11', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg11.png' },
+    { id: 'zg12', label: 'Zé Gotinha 12', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg12.png' },
+    { id: 'zg13', label: 'Zé Gotinha 13', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg13.png' },
+    { id: 'zg14', label: 'Zé Gotinha 14', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg14.png' },
+    { id: 'zg15', label: 'Zé Gotinha 15', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg15.png' },
+    { id: 'zg16', label: 'Zé Gotinha 16', category: 'zeGotinha', local: '/avatars/ze-gotinha/zg16.png' },
+
     // Pessoas - notionists-neutral style (profissional e variado)
     { id: 'p22', seed: 'Thiago', label: 'Pessoa 1', category: 'pessoas', style: 'notionists-neutral' },
     { id: 'p1', seed: 'Ana', label: 'Pessoa 2', category: 'pessoas', style: 'notionists-neutral' },
@@ -44,14 +62,6 @@ export const AVATARS = [
     { id: 'p21', seed: 'Isabela', label: 'Pessoa 22', category: 'pessoas', style: 'notionists-neutral' },
     { id: 'p23', seed: 'Amanda', label: 'Pessoa 23', category: 'pessoas', style: 'notionists-neutral' },
     { id: 'p24', seed: 'Eduardo', label: 'Pessoa 24', category: 'pessoas', style: 'notionists-neutral' },
-
-    // Formas - fun-emoji style
-    { id: 'a1', seed: 'cat', label: 'Forma 1', category: 'formas', style: 'fun-emoji' },
-    { id: 'a2', seed: 'dog', label: 'Forma 2', category: 'formas', style: 'fun-emoji' },
-    { id: 'a3', seed: 'lion', label: 'Forma 3', category: 'formas', style: 'fun-emoji' },
-    { id: 'a4', seed: 'panda', label: 'Forma 4', category: 'formas', style: 'fun-emoji' },
-    { id: 'a5', seed: 'fox', label: 'Forma 5', category: 'formas', style: 'fun-emoji' },
-    { id: 'a6', seed: 'owl', label: 'Forma 6', category: 'formas', style: 'fun-emoji' },
 
     // Emojis - thumbs style (mãos/emojis)
     { id: 'e1', seed: 'like', label: 'Joinha', category: 'emojis', style: 'thumbs' },
@@ -88,7 +98,14 @@ export const AVATARS = [
 
 export function getAvatarUrl(avatarId: string): string {
     const avatar = AVATARS.find(a => a.id === avatarId);
-    const seed = avatar?.seed || 'User';
+
+    // Se é um avatar local (Zé Gotinha), retorna o caminho local
+    if ((avatar as any)?.local) {
+        return (avatar as any).local;
+    }
+
+    // Senão, usa DiceBear
+    const seed = (avatar as any)?.seed || 'User';
     const style = (avatar as any)?.style || 'personas';
 
     // Cores vibrantes para fundo
@@ -111,7 +128,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
     const { user, refreshUser } = useAuth();
     const { showToast } = useToast();
 
-    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarId || 'p22');
+    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarId || 'zg10');
     const [isSaving, setIsSaving] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [changeRequest, setChangeRequest] = useState('');
@@ -149,7 +166,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
     // Resetar quando abrir
     useEffect(() => {
         if (isOpen && user) {
-            setSelectedAvatar(user.avatarId || 'p22');
+            setSelectedAvatar(user.avatarId || 'zg10');
             setSelectedCategory('all');
             setChangeRequest('');
             loadMyRequests();
@@ -225,7 +242,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
         }
     };
 
-    const hasChanges = selectedAvatar !== (user.avatarId || 'p22');
+    const hasChanges = selectedAvatar !== (user.avatarId || 'zg10');
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

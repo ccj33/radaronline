@@ -37,7 +37,7 @@ import { Header } from './components/layout/Header';
 
 // Common Components
 import {
-  ExpandableDescription,
+  // ExpandableDescription removido
   ToastProvider,
   useToast,
   ConfirmModal,
@@ -52,6 +52,7 @@ import { ActivityTabs } from './features/actions/ActivityTabs';
 import { Dashboard, OptimizedView } from './features/dashboard';
 import { GanttChart } from './features/gantt/GanttChart';
 import { ActionTable } from './features/actions/ActionTable';
+import { ActionDetailModal } from './features/actions/ActionDetailModal';
 import { LoginPage, LgpdConsent } from './features/login';
 import { AdminPanel } from './features/admin';
 import { UserSettingsModal } from './features/settings/UserSettingsModal';
@@ -571,7 +572,7 @@ function AppContent() {
 
     // Para admin vendo todas as micros, buscar membro em todas as equipes
     const teamToSearch = isAdmin && isViewingAllMicros ? allTeams : currentTeam;
-    const member = teamToSearch.find(m => m.id === parseInt(memberId));
+    const member = teamToSearch.find(m => m.id === memberId);
     if (!member) {
       showToast('Membro não encontrado', 'error');
       return;
@@ -911,23 +912,9 @@ function AppContent() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
 
           {/* Breadcrumb */}
-          {currentNav === 'strategy' && (
-            <div className="px-4 sm:px-6 py-2 bg-white border-b border-slate-100">
-              <Breadcrumb items={breadcrumbItems} />
-            </div>
-          )}
+          {/* Breadcrumb removido por redundância e estética */}
 
-          {/* Indicador sticky da atividade atual */}
-          {currentNav === 'strategy' && viewMode === 'table' && showStickyActivity && (
-            <div className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-2.5 flex items-center gap-3 shadow-sm">
-              <span className="bg-teal-500 text-white text-[11px] font-bold px-2 py-1 rounded">
-                Atividade {currentActivity?.id}
-              </span>
-              <span className="text-xs font-medium text-slate-700 truncate">
-                {currentActivity?.title}
-              </span>
-            </div>
-          )}
+          {/* Indicador sticky removido - substituído por ActivityTabs fixed */}
 
           {/* ACTIVITY TABS */}
           {currentNav === 'strategy' && viewMode === 'table' && (
@@ -978,6 +965,47 @@ function AppContent() {
                     if (!microId) return;
                     setTeamsByMicro(prev => ({ ...prev, [microId]: updatedTeam }));
                   }}
+                  onAddMember={async (member) => {
+                    try {
+                      const newMember = await dataService.addTeamMember({
+                        microregiaoId: member.microregiaoId,
+                        name: member.name,
+                        role: member.role,
+                        email: member.email,
+                        municipio: member.municipio,
+                      });
+                      // Atualiza estado local IMEDIATAMENTE após sucesso
+                      setTeamsByMicro(prev => ({
+                        ...prev,
+                        [member.microregiaoId]: [...(prev[member.microregiaoId] || []), newMember]
+                      }));
+                      showToast(`${member.name} adicionado à equipe!`, 'success');
+                      return newMember;
+                    } catch (error: any) {
+                      console.error('[App] Erro ao adicionar membro:', error);
+                      showToast(`Erro ao adicionar membro: ${error.message}`, 'error');
+                      return null;
+                    }
+                  }}
+                  onRemoveMember={async (memberId) => {
+                    try {
+                      await dataService.removeTeamMember(String(memberId));
+                      // Atualiza estado local IMEDIATAMENTE após sucesso
+                      setTeamsByMicro(prev => {
+                        const updated = { ...prev };
+                        Object.keys(updated).forEach(microId => {
+                          updated[microId] = updated[microId].filter(m => m.id !== memberId);
+                        });
+                        return updated;
+                      });
+                      showToast('Membro removido da equipe!', 'success');
+                      return true;
+                    } catch (error: any) {
+                      console.error('[App] Erro ao remover membro:', error);
+                      showToast(`Erro ao remover membro: ${error.message}`, 'error');
+                      return false;
+                    }
+                  }}
                   readOnly={isViewingAllMicros && !isAdmin}
                 />
               </ErrorBoundary>
@@ -1010,7 +1038,7 @@ function AppContent() {
               /* --- TABLE VIEW --- */
               <ErrorBoundary>
                 <div className="max-w-5xl mx-auto">
-                  {currentActivity && <ExpandableDescription text={currentActivity.description} />}
+                  {/* Descrição movida para ActivityTabs */}
 
                   <ActionTable
                     actions={microActions}
@@ -1043,6 +1071,33 @@ function AppContent() {
           </div>
         </div>
       </main>
+
+      {/* ACTION DETAIL MODAL (Drawer) */}
+      {(() => {
+        const selectedAction = expandedActionUid
+          ? microActions.find(a => a.uid === expandedActionUid)
+          : null;
+
+        return (
+          <ActionDetailModal
+            isOpen={!!selectedAction}
+            action={selectedAction || null}
+            team={currentTeam}
+            activityName={currentActivity?.title || 'Atividade'}
+            onClose={() => setExpandedActionUid(null)}
+            onUpdateAction={handleUpdateAction}
+            onSaveAction={handleSaveAction}
+            onDeleteAction={handleDeleteAction}
+            onAddRaci={handleAddRaci}
+            onRemoveRaci={handleRemoveRaci}
+            onAddComment={handleAddComment}
+            isSaving={isSaving}
+            canEdit={selectedAction ? checkCanEdit(selectedAction) : false}
+            canDelete={selectedAction ? checkCanDelete(selectedAction) : false}
+            readOnly={isViewingAllMicros && !isAdmin}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -35,7 +35,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
-  
+
   const ganttRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +49,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // Configuração do Gantt
   const ganttConfig = useMemo(() => {
     const TODAY = parseDateLocal(getTodayStr()) || new Date();
-    
+
     const actionDates = filteredActions.flatMap(a => [
       parseDateLocal(a.startDate),
       parseDateLocal(a.endDate),
@@ -61,27 +61,27 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     let daysCount: number;
 
     if (ganttRange === 'all') {
-      const minDate = actionDates.length 
-        ? new Date(Math.min(...actionDates.map(d => d.getTime()))) 
+      const minDate = actionDates.length
+        ? new Date(Math.min(...actionDates.map(d => d.getTime())))
         : TODAY;
-      const maxDate = actionDates.length 
-        ? new Date(Math.max(...actionDates.map(d => d.getTime()))) 
+      const maxDate = actionDates.length
+        ? new Date(Math.max(...actionDates.map(d => d.getTime())))
         : TODAY;
-      
+
       startDate = new Date(Math.min(minDate.getTime(), TODAY.getTime()));
       endDate = new Date(Math.max(maxDate.getTime(), TODAY.getTime()));
-      
+
       startDate.setDate(startDate.getDate() - 7);
       endDate.setDate(endDate.getDate() + 14);
-      
+
       daysCount = Math.max(30, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
     } else {
       daysCount = parseInt(ganttRange);
       const halfDays = Math.floor(daysCount / 2);
-      
+
       startDate = new Date(TODAY);
       startDate.setDate(startDate.getDate() - halfDays);
-      
+
       endDate = new Date(TODAY);
       endDate.setDate(endDate.getDate() + halfDays);
     }
@@ -95,7 +95,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     }
 
     const totalWidth = daysCount * columnWidth;
-    
+
     const days: Date[] = [];
     let curr = new Date(startDate);
     while (curr <= endDate) {
@@ -108,7 +108,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       let currentMonth = days[0].getMonth();
       let currentYear = days[0].getFullYear();
       let startIdx = 0;
-      
+
       days.forEach((day, i) => {
         if (day.getMonth() !== currentMonth || day.getFullYear() !== currentYear) {
           months.push({ date: new Date(currentYear, currentMonth, 1), startIdx, count: i - startIdx });
@@ -135,25 +135,25 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // Scroll para posição
   const scrollToPosition = useCallback((pos: number, smooth = true) => {
     if (!scrollContainerRef.current) return;
-    
+
     if (pos < 0 || pos > ganttConfig.totalWidth) {
       setGanttRange('all');
       return;
     }
-    
+
     const containerW = scrollContainerRef.current.clientWidth - 300;
     const centerOffset = Math.max(0, containerW / 2);
     const target = Math.max(0, pos - centerOffset);
-    scrollContainerRef.current.scrollTo({ 
-      left: target, 
-      behavior: smooth ? 'smooth' : 'auto' 
+    scrollContainerRef.current.scrollTo({
+      left: target,
+      behavior: smooth ? 'smooth' : 'auto'
     });
   }, [ganttConfig.totalWidth, setGanttRange]);
 
   // Scroll inicial
   useEffect(() => {
     if (!scrollContainerRef.current) return;
-    
+
     const timer = setTimeout(() => {
       if (ganttRange === 'all') {
         scrollContainerRef.current?.scrollTo({ left: 0, behavior: 'auto' });
@@ -162,32 +162,32 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         scrollToPosition(centerPos, false);
       }
     }, 50);
-    
+
     return () => clearTimeout(timer);
   }, [ganttRange, ganttConfig.totalWidth, scrollToPosition]);
 
   // Exportar PNG
   const exportAsPng = useCallback(async () => {
     if (!ganttRef.current || isExporting) return;
-    
+
     setIsExporting(true);
     showToast('Gerando imagem...', 'info');
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       const canvas = await html2canvas(ganttRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         useCORS: true,
       });
-      
+
       const link = document.createElement('a');
       link.download = `gantt-${new Date().toISOString().split('T')[0]}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-      
+
       showToast('Imagem exportada com sucesso!', 'success');
     } catch (error) {
       showToast('Erro ao exportar imagem', 'error');
@@ -201,7 +201,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     const isHeaderHover = target.closest('.gantt-header');
-    
+
     if (isHeaderHover || e.ctrlKey) {
       e.preventDefault();
       const currentIndex = ZOOM_LEVELS.indexOf(ganttRange);
@@ -220,7 +220,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (filteredActions.length === 0) return;
-    
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
@@ -290,7 +290,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const startDate = parseDateLocal(action.startDate);
               const endDate = parseDateLocal(action.plannedEndDate || action.endDate);
               const orderedRaci = [...action.raci].sort((a, b) => rolePriority[a.role] - rolePriority[b.role]);
-              
+
               let statusColor = 'bg-slate-100 text-slate-600';
               let statusBorder = 'border-l-slate-400';
               if (action.status === 'Concluído') { statusColor = 'bg-emerald-100 text-emerald-700'; statusBorder = 'border-l-emerald-500'; }
@@ -317,19 +317,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       <p className="text-lg font-bold text-teal-600">{action.progress}%</p>
                     </div>
                   </div>
-                  
+
                   {/* Progress bar */}
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
-                    <div 
-                      className={`h-full rounded-full transition-all ${
-                        action.status === 'Concluído' ? 'bg-emerald-500' :
+                    <div
+                      className={`h-full rounded-full transition-all ${action.status === 'Concluído' ? 'bg-emerald-500' :
                         action.status === 'Atrasado' ? 'bg-rose-500' :
-                        action.status === 'Em Andamento' ? 'bg-blue-500' : 'bg-slate-400'
-                      }`}
+                          action.status === 'Em Andamento' ? 'bg-blue-500' : 'bg-slate-400'
+                        }`}
                       style={{ width: `${action.progress}%` }}
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-[11px] text-slate-500">
                     <span className="flex items-center gap-1">
                       <Calendar size={12} />
@@ -355,7 +354,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   // Versão desktop completa
   return (
-    <div 
+    <div
       className={`flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all ${isFullscreen ? 'fixed inset-4 z-50' : 'h-full'}`}
       onWheel={handleWheel}
       onKeyDown={handleKeyDown}
@@ -383,7 +382,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               <option value="Concluído">Concluído</option>
               <option value="Atrasado">Atrasado</option>
             </select>
-            
+
             {/* Zoom */}
             <div className="flex bg-white border border-slate-200 rounded-md p-0.5 shadow-sm" role="tablist">
               {(['30d', '60d', '90d', 'all'] as const).map(r => (
@@ -402,7 +401,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             {/* Ações */}
             <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
               <Tooltip content="Exportar como PNG">
-                <button 
+                <button
                   onClick={exportAsPng}
                   disabled={isExporting}
                   className="p-1.5 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors disabled:opacity-50"
@@ -423,7 +422,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             </div>
           </div>
         </div>
-        
+
         {/* Legenda */}
         {showLegend && (
           <div className="flex flex-wrap items-center gap-3 text-[11px] pt-2 border-t border-slate-100">
@@ -471,8 +470,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       </div>
 
       {/* Chart */}
-      <div className="flex-1 relative overflow-x-auto overflow-y-visible" ref={scrollContainerRef}>
-        <div className="min-w-fit relative">
+      <div className="flex-1 relative overflow-x-auto" ref={scrollContainerRef} style={{ overflow: 'visible auto' }}>
+        <div className="min-w-fit relative" style={{ overflow: 'visible' }}>
           {/* Header Row */}
           <div className="flex border-b border-slate-200 h-16 bg-white sticky top-0 z-40 w-full gantt-header">
             <div className="sticky left-0 z-50 bg-white border-r border-slate-200 w-[300px] shrink-0 px-4 flex items-center text-[11px] font-bold text-slate-400 uppercase shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
@@ -516,7 +515,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           </div>
 
           {/* Body Rows */}
-          <div className="relative">
+          <div className="relative" style={{ overflow: 'visible' }}>
             <div className="absolute top-0 bottom-0 left-[300px] pointer-events-none z-0" style={{ width: ganttConfig.totalWidth }}>
               {ganttConfig.months.map((month, i) => (
                 <div
@@ -560,12 +559,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               const plannedWidth = effectivePlanned && startDate
                 ? getPosition(effectivePlanned) - getPosition(startDate) + ganttConfig.columnWidth
                 : 0;
-              
+
               const isLate = actualEnd && plannedEnd && actualEnd > plannedEnd;
               const isEarly = actualEnd && plannedEnd && actualEnd < plannedEnd && action.status === 'Concluído';
               const isDeviation = isLate || isEarly;
 
-              const durationDays = startDate && plannedEnd 
+              const durationDays = startDate && plannedEnd
                 ? Math.ceil((plannedEnd.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
                 : 0;
 
@@ -574,7 +573,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 const widthLate = Math.max(48, getPosition(actualEnd) - getPosition(plannedEnd));
                 const daysDiff = Math.max(1, Math.round((actualEnd.getTime() - plannedEnd.getTime()) / (1000 * 60 * 60 * 24)));
                 deviationBar = (
-                  <div 
+                  <div
                     className="absolute top-0 bottom-0 bg-orange-500 rounded-r-md shadow-sm z-20 flex items-center justify-center overflow-hidden"
                     style={{ left: '100%', width: widthLate, minWidth: 48 }}
                     title={`Atraso: ${daysDiff} dias`}
@@ -586,13 +585,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 const widthSaved = Math.max(48, getPosition(plannedEnd) - getPosition(actualEnd));
                 const daysDiff = Math.max(1, Math.round((plannedEnd.getTime() - actualEnd.getTime()) / (1000 * 60 * 60 * 24)));
                 deviationBar = (
-                  <div 
+                  <div
                     className="absolute top-0 bottom-0 bg-orange-200/60 border-l border-orange-300 z-20 flex items-center justify-center overflow-hidden"
-                    style={{ 
-                      right: 0, 
-                      width: widthSaved, 
+                    style={{
+                      right: 0,
+                      width: widthSaved,
                       minWidth: 48,
-                      backgroundImage: 'repeating-linear-gradient(45deg, rgba(249,115,22,0.25), rgba(249,115,22,0.25) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px)' 
+                      backgroundImage: 'repeating-linear-gradient(45deg, rgba(249,115,22,0.25), rgba(249,115,22,0.25) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px)'
                     }}
                     title={`Economia: ${daysDiff} dias`}
                   >
@@ -604,28 +603,29 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               let barColor = "bg-slate-500";
               let statusBorder = "#64748b";
               let statusBadge = { bg: 'bg-slate-100', text: 'text-slate-600' };
-              if (action.status === 'Concluído') { 
-                barColor = "bg-emerald-500"; 
-                statusBorder = "#10b981"; 
+              if (action.status === 'Concluído') {
+                barColor = "bg-emerald-500";
+                statusBorder = "#10b981";
                 statusBadge = { bg: 'bg-emerald-100', text: 'text-emerald-700' };
               }
-              else if (action.status === 'Em Andamento') { 
-                barColor = "bg-blue-500"; 
-                statusBorder = "#3b82f6"; 
+              else if (action.status === 'Em Andamento') {
+                barColor = "bg-blue-500";
+                statusBorder = "#3b82f6";
                 statusBadge = { bg: 'bg-blue-100', text: 'text-blue-700' };
               }
-              else if (action.status === 'Atrasado') { 
-                barColor = "bg-rose-500"; 
-                statusBorder = "#f43f5e"; 
+              else if (action.status === 'Atrasado') {
+                barColor = "bg-rose-500";
+                statusBorder = "#f43f5e";
                 statusBadge = { bg: 'bg-rose-100', text: 'text-rose-700' };
               }
 
               const isFocused = focusedIdx === idx;
 
               return (
-                <div 
-                  key={action.id} 
+                <div
+                  key={action.id}
                   className={`flex h-auto min-h-[4.5rem] border-b border-slate-100 relative hover:bg-slate-50/50 group ${isFocused ? 'bg-blue-50/50 ring-2 ring-blue-300 ring-inset' : ''}`}
+                  style={{ overflow: 'visible' }}
                 >
                   {/* Card da ação */}
                   <div className="sticky left-0 z-30 bg-white border-r border-slate-200 w-[300px] shrink-0 px-2 py-2 flex flex-col justify-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
@@ -671,27 +671,27 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="relative" style={{ width: ganttConfig.totalWidth }}>
+
+                  <div className="relative" style={{ width: ganttConfig.totalWidth, overflow: 'visible' }}>
                     {/* Linha de conexão */}
                     {startDate && leftStart > 0 && (
-                      <div 
+                      <div
                         className="absolute top-1/2 -translate-y-1/2 h-px border-t border-dashed border-slate-300"
                         style={{ left: 0, width: Math.max(0, leftStart) }}
                       />
                     )}
-                    
+
                     {/* Barra */}
                     {startDate && effectivePlanned && plannedWidth > 0 && (
                       <div
                         className="absolute top-1/2 -translate-y-1/2 h-6 rounded-md shadow-sm border border-slate-300 cursor-pointer hover:brightness-110 hover:shadow-md transition-all group/bar"
-                        style={{ 
-                          left: leftStart, 
+                        style={{
+                          left: leftStart,
                           width: Math.max(plannedWidth, ganttConfig.columnWidth * 0.6),
                           backgroundColor: action.status === 'Concluído' ? '#d1fae5' :
-                                          action.status === 'Em Andamento' ? '#3b82f6' :
-                                          action.status === 'Atrasado' ? '#ffe4e6' :
-                                          '#f1f5f9'
+                            action.status === 'Em Andamento' ? '#3b82f6' :
+                              action.status === 'Atrasado' ? '#ffe4e6' :
+                                '#f1f5f9'
                         }}
                         onClick={() => onActionClick(action)}
                         role="button"
@@ -721,7 +721,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                             {action.progress}%
                           </div>
                         )}
-                        
+
                         {/* Tooltip */}
                         <div className="absolute -top-20 left-0 bg-slate-800 text-white text-[10px] p-2.5 rounded-lg shadow-xl opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-50 min-w-[180px] max-w-[220px] whitespace-normal">
                           <div className="font-bold mb-1.5 text-[11px] border-b border-slate-600 pb-1 truncate">{action.title}</div>
@@ -746,8 +746,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                               <span className="text-slate-400">Status:</span>
                               <span className={
                                 action.status === 'Concluído' ? 'text-emerald-400' :
-                                action.status === 'Atrasado' ? 'text-rose-400' :
-                                action.status === 'Em Andamento' ? 'text-blue-400' : ''
+                                  action.status === 'Atrasado' ? 'text-rose-400' :
+                                    action.status === 'Em Andamento' ? 'text-blue-400' : ''
                               }>{action.status}</span>
                             </div>
                             {orderedRaci.length > 0 && (

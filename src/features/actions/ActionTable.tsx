@@ -31,7 +31,7 @@ interface ActionTableProps {
   setExpandedActionId: (uid: string | null) => void;
   // Handlers recebem UID ao invés de ID simples
   onUpdateAction: (uid: string, field: string, value: string | number) => void;
-  onSaveAction: () => void;
+  onSaveAction: (uid?: string) => void;
   onCreateAction: () => void;
   onDeleteAction: (uid: string) => void;
   onAddRaci: (uid: string, memberId: string, role: RaciRole) => void;
@@ -44,6 +44,8 @@ interface ActionTableProps {
   canDelete?: (action: Action) => boolean;
   // Modo somente leitura (admin vendo todas as micros)
   readOnly?: boolean;
+  // Se true, não expande inline - apenas define expandedActionId para modal externo
+  useModal?: boolean;
 }
 
 const rolePriority: Record<RaciRole, number> = { R: 0, A: 1, C: 2, I: 3 };
@@ -73,7 +75,7 @@ const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
   return (
     <div className="flex gap-3 py-3 border-b border-slate-100 last:border-0">
       <img
-        src={getAvatarUrl(comment.authorAvatarId || 'p22')}
+        src={getAvatarUrl(comment.authorAvatarId || 'zg10')}
         alt={comment.authorName}
         className="w-8 h-8 rounded-full bg-white border border-slate-200 shrink-0"
       />
@@ -119,6 +121,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
   canEdit = () => true,
   canDelete = () => true,
   readOnly = false,
+  useModal = true, // Por padrão, usa o modal (não expande inline)
 }) => {
   const { user } = useAuth();
   const [selectedRaciMemberId, setSelectedRaciMemberId] = React.useState<string>("");
@@ -283,8 +286,8 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                   </div>
                 </div>
 
-                {/* Expanded form */}
-                {isExpanded && (
+                {/* Expanded form - só mostra se não está usando modal */}
+                {isExpanded && !useModal && (
                   <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 border-t border-slate-100 animate-fade-in">
                     {/* Aviso de permissão */}
                     {!userCanEdit && (
@@ -483,7 +486,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                             </button>
                             {userCanEdit && (
                               <LoadingButton
-                                onClick={() => onSaveAction()}
+                                onClick={() => onSaveAction(action.uid)}
                                 isLoading={isSaving}
                                 loadingText="Salvando..."
                                 className="text-sm bg-teal-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-teal-700 transition-colors shadow-sm"

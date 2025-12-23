@@ -43,6 +43,7 @@ interface ActionCommentDTO {
         nome: string;
         microregiao_id: string | null;
         avatar_id: string | null;
+        role: string | null;
     };
 }
 
@@ -87,7 +88,8 @@ function mapActionDTOToAction(
             authorId: c.author_id,
             authorName: c.author?.nome || 'Usuário',
             authorMunicipio: c.author?.microregiao_id || '',
-            authorAvatarId: c.author?.avatar_id || 'p22',
+            authorAvatarId: c.author?.avatar_id || 'zg10',
+            authorRole: c.author?.role || undefined,
             content: c.content,
             createdAt: c.created_at,
         })),
@@ -96,7 +98,7 @@ function mapActionDTOToAction(
 
 function mapTeamDTOToTeamMember(dto: TeamDTO): TeamMember {
     return {
-        id: parseInt(dto.id.substring(0, 8), 16) || Math.random() * 10000, // Convert UUID to number for compatibility
+        id: dto.id, // Manter UUID original do banco
         name: dto.name,
         role: dto.role,
         email: dto.email || '',
@@ -152,7 +154,7 @@ export async function loadActions(microregiaoId?: string): Promise<Action[]> {
             .from('action_comments')
             .select(`
         *,
-        author:profiles(nome, microregiao_id, avatar_id)
+        author:profiles(nome, microregiao_id, avatar_id, role)
       `)
             .in('action_id', actionIds)
             .order('created_at', { ascending: true });
@@ -276,7 +278,7 @@ export async function updateAction(
             .from('action_comments')
             .select(`
         *,
-        author:profiles(nome, microregiao_id, avatar_id)
+        author:profiles(nome, microregiao_id, avatar_id, role)
       `)
             .eq('action_id', data.id)
             .order('created_at', { ascending: true });
@@ -414,10 +416,10 @@ export async function addComment(
             throw new Error('Usuário não autenticado');
         }
 
-        // Buscar perfil do usuário para nome, município e avatar
+        // Buscar perfil do usuário para nome, município, avatar e role
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('nome, microregiao_id, avatar_id')
+            .select('nome, microregiao_id, avatar_id, role')
             .eq('id', user.id)
             .single();
 
@@ -456,7 +458,8 @@ export async function addComment(
             authorId: user.id,
             authorName: profile?.nome || 'Usuário',
             authorMunicipio: profile?.microregiao_id || '',
-            authorAvatarId: profile?.avatar_id || 'p22',
+            authorAvatarId: profile?.avatar_id || 'zg10',
+            authorRole: profile?.role || undefined,
             content: data.content,
             createdAt: data.created_at,
         };

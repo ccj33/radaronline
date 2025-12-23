@@ -98,7 +98,7 @@ const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
   return (
     <div className="flex gap-3 py-3 border-b border-slate-100 last:border-0">
       <img
-        src={getAvatarUrl(comment.authorAvatarId || 'p22')}
+        src={getAvatarUrl(comment.authorAvatarId || 'zg10')}
         alt={comment.authorName}
         className="w-8 h-8 rounded-full bg-white border border-slate-200 shrink-0"
       />
@@ -347,7 +347,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
       authorId: user.id,
       authorName: user.nome,
       authorMunicipio: user.microregiaoId || 'N/A',
-      authorAvatarId: user.avatarId || 'p22',
+      authorAvatarId: user.avatarId || 'zg10',
       content: newComment.trim(),
       createdAt: new Date().toISOString(),
     };

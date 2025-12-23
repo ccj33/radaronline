@@ -221,34 +221,44 @@ export function AdminPanel(props: AdminPanelProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+      {/* Header Premium com Gradiente */}
+      <header className="bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 sticky top-0 z-10 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 title="Voltar ao painel"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
+                <ArrowLeft className="w-5 h-5 text-white" />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-teal-600" />
-                  Painel Administrativo
-                </h1>
-                <p className="text-sm text-slate-500">
-                  Gerencie todas as {MICROREGIOES.length} microrregiões de Minas Gerais
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-white" />
+                    </div>
+                    Painel Administrativo
+                  </h1>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isSuperAdmin
+                    ? 'bg-purple-400/30 text-purple-100 border border-purple-300/40'
+                    : 'bg-white/20 text-white/90 border border-white/30'
+                    }`}>
+                    {isSuperAdmin ? '👑 SUPER ADMIN' : '🛡️ ADMIN'}
+                  </span>
+                </div>
+                <p className="text-sm text-white/80 mt-0.5">
+                  Central de comando para {MICROREGIOES.length} microrregiões de Minas Gerais
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {activeTab === 'usuarios' && (
                 <button
                   onClick={handleCreateUser}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-teal-700 rounded-lg font-semibold transition-all hover:shadow-lg hover:scale-[1.02]"
                 >
                   <Plus className="w-4 h-4" />
                   Novo Usuário
@@ -257,42 +267,42 @@ export function AdminPanel(props: AdminPanelProps) {
 
               <button
                 onClick={loadUsers}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
                 title="Atualizar dados"
               >
-                <RefreshCw className={`w-5 h-5 text-slate-500 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-5 h-5 text-white ${isLoading ? 'animate-spin' : ''}`} />
               </button>
 
               <button
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
                 title="Exportar relatório"
               >
-                <Download className="w-5 h-5 text-slate-500" />
+                <Download className="w-5 h-5 text-white" />
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-slate-200">
+      {/* Tabs Modernizadas */}
+      <div className="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <nav className="flex gap-1 overflow-x-auto scrollbar-hide">
+          <nav className="flex gap-1 overflow-x-auto scrollbar-hide py-2">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === tab.id
-                  ? 'border-teal-500 text-teal-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                className={`px-4 py-2.5 font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2 rounded-lg ${activeTab === tab.id
+                  ? 'bg-teal-500 text-white shadow-md shadow-teal-500/25'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
                   }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
                 {tab.count !== null && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded-full ${activeTab === tab.id
-                    ? 'bg-teal-100 text-teal-700'
-                    : 'bg-slate-100 text-slate-500'
+                  <span className={`px-1.5 py-0.5 text-xs rounded-full font-semibold ${activeTab === tab.id
+                    ? 'bg-white/25 text-white'
+                    : 'bg-slate-200 text-slate-600'
                     }`}>
                     {tab.count}
                   </span>
@@ -305,12 +315,55 @@ export function AdminPanel(props: AdminPanelProps) {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* KPI cards rápidos */}
+        {/* KPI cards coloridos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatsCard title="Usuários" value={kpis.total} subtitle="Total cadastrado" color="slate" icon={<Users className="w-4 h-4 text-slate-600" />} />
-          <StatsCard title="Ativos" value={kpis.ativos} subtitle={`${kpis.inativos} inativos`} color="slate" icon={<UserCheck className="w-4 h-4 text-slate-600" />} />
-          <StatsCard title="Admins" value={kpis.admins} subtitle={`${kpis.gestores} gestores`} color="slate" icon={<Shield className="w-4 h-4 text-slate-600" />} />
-          <StatsCard title="Microrregiões" value={MICROREGIOES.length} subtitle="Cobertura total" color="slate" icon={<MapPin className="w-4 h-4 text-slate-600" />} />
+          {/* Usuários - Indigo */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:shadow-indigo-500/10 transition-all group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-5 h-5 text-indigo-600" />
+              </div>
+              <span className="text-2xl font-bold text-indigo-600">{kpis.total}</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-700">Usuários</p>
+            <p className="text-xs text-slate-400">Total cadastrado</p>
+          </div>
+
+          {/* Ativos - Emerald */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:shadow-emerald-500/10 transition-all group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <UserCheck className="w-5 h-5 text-emerald-600" />
+              </div>
+              <span className="text-2xl font-bold text-emerald-600">{kpis.ativos}</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-700">Ativos</p>
+            <p className="text-xs text-slate-400">{kpis.inativos} inativos</p>
+          </div>
+
+          {/* Admins - Purple */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:shadow-purple-500/10 transition-all group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Shield className="w-5 h-5 text-purple-600" />
+              </div>
+              <span className="text-2xl font-bold text-purple-600">{kpis.admins}</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-700">Admins</p>
+            <p className="text-xs text-slate-400">{kpis.gestores} gestores</p>
+          </div>
+
+          {/* Microrregiões - Amber */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:shadow-amber-500/10 transition-all group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <MapPin className="w-5 h-5 text-amber-600" />
+              </div>
+              <span className="text-2xl font-bold text-amber-600">{MICROREGIOES.length}</span>
+            </div>
+            <p className="text-sm font-semibold text-slate-700">Microrregiões</p>
+            <p className="text-xs text-slate-400">Cobertura total</p>
+          </div>
         </div>
 
         {/* Tab: Dashboard */}

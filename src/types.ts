@@ -19,6 +19,7 @@ export type ActionComment = {
   authorName: string;       // Nome do autor
   authorMunicipio: string;  // Município do autor
   authorAvatarId: string;   // Avatar do autor
+  authorRole?: string;      // Cargo do autor: gestor, adm, usuario
   content: string;          // Conteúdo do comentário
   createdAt: string;        // ISO datetime: "2025-01-15T14:30:00Z"
 };
@@ -58,7 +59,7 @@ export type Objective = {
 
 // TeamMember agora pertence a uma microrregião específica
 export type TeamMember = {
-  id: number;
+  id: string;             // UUID do banco
   name: string;
   role: string;
   email: string;

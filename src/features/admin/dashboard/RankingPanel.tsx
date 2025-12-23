@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { 
-  Trophy, 
-  TrendingUp, 
+import {
+  Trophy,
+  TrendingUp,
   TrendingDown,
   Medal,
   ArrowDown,
   Eye,
   ChevronDown
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { Action } from '../../../types';
 import { MICROREGIOES } from '../../../data/microregioes';
 
@@ -119,7 +120,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {rankings.slice(0, 3).map((micro, index) => (
-            <div 
+            <div
               key={micro.id}
               className={`relative p-4 rounded-xl border-2 ${getMedalBg(index)} transition-transform hover:scale-105`}
             >
@@ -140,14 +141,14 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                   {micro.nome}
                 </h4>
                 <p className="text-xs text-slate-500">{micro.macrorregiao}</p>
-                
+
                 <div className="mt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Progresso</span>
                     <span className="font-bold text-slate-700">{micro.progressoMedio}%</span>
                   </div>
                   <div className="h-2 bg-white/80 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-teal-500 transition-all"
                       style={{ width: `${micro.progressoMedio}%` }}
                     />
@@ -173,6 +174,76 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
         </div>
       </div>
 
+      {/* Gráfico de Barras Horizontais - Top 10 */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-teal-500" />
+            Top 10 por Progresso
+          </h3>
+          <span className="text-xs text-slate-500">Clique na barra para ver detalhes</span>
+        </div>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={rankings.slice(0, 10).map(m => ({
+                name: m.nome.length > 15 ? m.nome.substring(0, 15) + '...' : m.nome,
+                fullName: m.nome,
+                progresso: m.progressoMedio,
+                id: m.id,
+                concluidas: m.concluidas,
+                atrasadas: m.atrasadas,
+              }))}
+              layout="vertical"
+              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+            >
+              <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={120}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-slate-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg">
+                        <p className="font-semibold">{data.fullName}</p>
+                        <p className="text-teal-300">Progresso: {data.progresso}%</p>
+                        <p className="text-green-300">Concluídas: {data.concluidas}</p>
+                        {data.atrasadas > 0 && (
+                          <p className="text-red-300">Atrasadas: {data.atrasadas}</p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar
+                dataKey="progresso"
+                radius={[0, 4, 4, 0]}
+                onClick={(data) => data?.id && onViewMicrorregiao(data.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                {rankings.slice(0, 10).map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={
+                      entry.progressoMedio >= 75 ? '#10b981' :
+                        entry.progressoMedio >= 50 ? '#3b82f6' :
+                          entry.progressoMedio >= 25 ? '#f59e0b' : '#ef4444'
+                    }
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Tabela de Ranking */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -193,7 +264,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                 <th className="px-4 py-3 text-left font-semibold">Microrregião</th>
                 <th className="px-4 py-3 text-center font-semibold">Ações</th>
                 <th className="px-4 py-3 text-center font-semibold">
-                  <button 
+                  <button
                     onClick={() => setSortBy('concluidas')}
                     className={`hover:text-teal-600 ${sortBy === 'concluidas' ? 'text-teal-600' : ''}`}
                   >
@@ -201,7 +272,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                   </button>
                 </th>
                 <th className="px-4 py-3 text-center font-semibold">
-                  <button 
+                  <button
                     onClick={() => setSortBy('atraso')}
                     className={`hover:text-teal-600 ${sortBy === 'atraso' ? 'text-teal-600' : ''}`}
                   >
@@ -209,7 +280,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                   </button>
                 </th>
                 <th className="px-4 py-3 text-center font-semibold">
-                  <button 
+                  <button
                     onClick={() => setSortBy('progresso')}
                     className={`hover:text-teal-600 ${sortBy === 'progresso' ? 'text-teal-600' : ''}`}
                   >
@@ -254,12 +325,11 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all ${
-                            micro.progressoMedio >= 75 ? 'bg-green-500' :
+                        <div
+                          className={`h-full transition-all ${micro.progressoMedio >= 75 ? 'bg-green-500' :
                             micro.progressoMedio >= 50 ? 'bg-blue-500' :
-                            micro.progressoMedio >= 25 ? 'bg-amber-500' : 'bg-red-500'
-                          }`}
+                              micro.progressoMedio >= 25 ? 'bg-amber-500' : 'bg-red-500'
+                            }`}
                           style={{ width: `${micro.progressoMedio}%` }}
                         />
                       </div>
@@ -285,7 +355,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
 
         {rankings.length > 10 && !showAll && (
           <div className="p-3 border-t border-slate-100 text-center">
-            <button 
+            <button
               onClick={() => setShowAll(true)}
               className="flex items-center gap-1 mx-auto text-sm text-teal-600 hover:text-teal-700 font-medium"
             >
@@ -318,7 +388,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                 <p className="text-xs text-slate-500 mb-2">{micro.atrasadas} atrasadas</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-red-100 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-red-500"
                       style={{ width: `${micro.progressoMedio}%` }}
                     />

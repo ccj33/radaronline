@@ -56,7 +56,7 @@ function mapProfileToUser(profile: ProfileDTO): User {
     // App sempre vê como string, DB armazena null para 'all'
     microregiaoId: profile.microregiao_id || 'all',
     ativo: profile.ativo,
-    avatarId: profile.avatar_id || 'p22',
+    avatarId: profile.avatar_id || 'zg10',
     lgpdConsentimento: profile.lgpd_consentimento,
     lgpdConsentimentoData: profile.lgpd_consentimento_data || undefined,
     createdBy: profile.created_by || undefined,

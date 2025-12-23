@@ -230,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="relative shrink-0">
                     <img
-                      src={getAvatarUrl(userAvatarId || 'p22')}
+                      src={getAvatarUrl(userAvatarId || 'zg10')}
                       alt="User"
                       className="w-9 h-9 rounded-full bg-white border-2 border-white/50 shadow-sm"
                       loading="lazy"
@@ -270,7 +270,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="relative">
                     <img
-                      src={getAvatarUrl(userAvatarId || 'p22')}
+                      src={getAvatarUrl(userAvatarId || 'zg10')}
                       alt="User"
                       className="w-9 h-9 rounded-full bg-white border-2 border-white/50 shadow-sm"
                       loading="lazy"

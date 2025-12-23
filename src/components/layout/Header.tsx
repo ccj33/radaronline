@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, BarChart2, Users, Target, Menu, Shield, MapPin, Zap } from 'lucide-react';
+import { List, BarChart2, Users, Menu, Shield, MapPin, Zap, ChevronRight } from 'lucide-react';
 import { Objective } from '../../types';
 import { UserRole } from '../../types/auth.types';
 
@@ -32,110 +32,125 @@ export const Header: React.FC<HeaderProps> = ({
   userRole,
   onAdminClick,
 }) => {
+  const objectiveTitle = objectives.find(o => o.id === selectedObjective)?.title;
+
   return (
-    <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center shrink-0 shadow-sm z-20">
-      <div className="flex items-center gap-3">
+    <header className="bg-white border-b border-slate-200 px-4 sm:px-6 h-[72px] flex justify-between items-center shrink-0 z-30 sticky top-0">
+      <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
         {/* Menu hamburger mobile */}
         {isMobile && onMenuClick && (
           <button
             onClick={onMenuClick}
-            className="p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
+            className="p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg shrink-0"
             aria-label="Abrir menu"
           >
             <Menu size={20} />
           </button>
         )}
 
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-            {micro ? (
-              <>
-                <span className="flex items-center gap-1 text-teal-600">
-                  <MapPin size={10} />
-                  {micro}
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-slate-500 font-semibold">{macro}</span>
-              </>
-            ) : (
-              <span className="text-teal-600">{macro}</span>
-            )}
-          </div>
-          {currentNav === 'strategy' ? (
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5 flex items-center gap-1 hidden sm:flex">
-                <Target size={10} /> Objetivo Estratégico
-              </span>
-              <h1 className="text-base sm:text-xl font-bold text-slate-800 leading-tight line-clamp-1">
-                {objectives.find(o => o.id === selectedObjective)?.title}
-              </h1>
+        <div className="flex-1 min-w-0">
+          {/* Breadcrumb de Localização */}
+          {/* Badge de Localização Moderno */}
+          <div className="flex items-center gap-2 mb-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200/60 text-xs font-medium text-slate-600 hover:bg-white hover:shadow-sm transition-all group cursor-default">
+              <div className="p-0.5 rounded-full bg-teal-100 text-teal-600 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                <MapPin size={10} />
+              </div>
+              <span className="text-slate-500 uppercase tracking-wide text-[10px]">{macro}</span>
+              {micro && (
+                <>
+                  <ChevronRight size={10} className="text-slate-300" />
+                  <span className="text-slate-800 font-bold">{micro}</span>
+                </>
+              )}
             </div>
+          </div>
+
+          {currentNav === 'strategy' ? (
+            <h1 className="text-lg font-bold text-slate-900 leading-tight truncate" title={objectiveTitle}>
+              {objectiveTitle}
+            </h1>
           ) : (
-            <h1 className="text-base sm:text-lg font-bold text-slate-800">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">
               {currentNav === 'home' ? 'Visão Geral' : 'Configurações'}
             </h1>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Botão Admin (desktop) */}
+      <div className="flex items-center gap-6 shrink-0">
+        {/* Navigation Tabs - Desktop Style */}
+        {currentNav === 'strategy' && !isMobile && (
+          <div className="flex h-[72px] items-stretch gap-1">
+            <TabButton
+              active={viewMode === 'table'}
+              onClick={() => setViewMode('table')}
+              icon={<List size={16} />}
+              label="Tabela"
+            />
+            <TabButton
+              active={viewMode === 'gantt'}
+              onClick={() => setViewMode('gantt')}
+              icon={<BarChart2 size={16} />}
+              label="Cronograma"
+            />
+            {(userRole === 'admin' || userRole === 'superadmin' || userRole === 'gestor') && (
+              <TabButton
+                active={viewMode === 'team'}
+                onClick={() => setViewMode('team')}
+                icon={<Users size={16} />}
+                label="Equipe"
+              />
+            )}
+            <TabButton
+              active={viewMode === 'optimized'}
+              onClick={() => setViewMode('optimized')}
+              icon={<Zap size={16} />}
+              label="Visão Rápida"
+            />
+          </div>
+        )}
+
+        {/* View mode dropdown mobile - Simplificado */}
+        {isMobile && currentNav === 'strategy' && (
+          <div className="flex bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode(viewMode === 'table' ? 'gantt' : 'table')}
+              className="p-2 text-slate-700"
+            >
+              {viewMode === 'table' ? <BarChart2 size={20} /> : <List size={20} />}
+            </button>
+          </div>
+        )}
+
+        {/* Botão Admin */}
         {isAdmin && !isMobile && onAdminClick && (
           <button
             onClick={onAdminClick}
-            className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-xs font-medium transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-full text-xs font-bold transition-colors border border-purple-100"
           >
             <Shield size={14} />
-            Admin
+            <span>ADMIN</span>
           </button>
-        )}
-
-        {/* View mode tabs - responsivo - só mostra quando na estratégia */}
-        {currentNav === 'strategy' && (
-          <div className="flex bg-slate-100 p-0.5 sm:p-1 rounded-lg border border-slate-200" role="tablist" aria-label="Modo de visualização">
-            <button
-              onClick={() => setViewMode('table')}
-              role="tab"
-              aria-selected={viewMode === 'table'}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium flex items-center gap-1 sm:gap-2 transition-all ${viewMode === 'table' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <List size={14} />
-              <span className="hidden sm:inline">Tabela</span>
-            </button>
-            <button
-              onClick={() => setViewMode('gantt')}
-              role="tab"
-              aria-selected={viewMode === 'gantt'}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium flex items-center gap-1 sm:gap-2 transition-all ${viewMode === 'gantt' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <BarChart2 size={14} />
-              <span className="hidden sm:inline">Cronograma</span>
-            </button>
-            {/* Aba Equipe - só para admin e gestor */}
-            {(userRole === 'admin' || userRole === 'superadmin' || userRole === 'gestor') && (
-              <button
-                onClick={() => setViewMode('team')}
-                role="tab"
-                aria-selected={viewMode === 'team'}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium flex items-center gap-1 sm:gap-2 transition-all ${viewMode === 'team' ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <Users size={14} />
-                <span className="hidden sm:inline">Equipe</span>
-              </button>
-            )}
-            <button
-              onClick={() => setViewMode('optimized')}
-              role="tab"
-              aria-selected={viewMode === 'optimized'}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium flex items-center gap-1 sm:gap-2 transition-all ${viewMode === 'optimized' ? 'bg-white shadow text-teal-600' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Zap size={14} />
-              <span className="hidden sm:inline">Visão Rápida</span>
-            </button>
-          </div>
         )}
       </div>
     </header>
   );
 };
+
+// Componente auxiliar para abas limpas
+const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
+    className={`
+      flex items-center gap-2 px-4 transition-all border-b-2 font-medium text-sm
+      ${active
+        ? 'border-teal-500 text-teal-700 bg-teal-50/30'
+        : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+      }
+    `}
+  >
+    {icon}
+    <span>{label}</span>
+  </button>
+);

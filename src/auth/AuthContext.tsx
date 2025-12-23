@@ -97,7 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ativo: data.ativo,
         lgpdConsentimento: data.lgpd_consentimento,
         lgpdConsentimentoData: data.lgpd_consentimento_data || undefined,
-        avatarId: data.avatar_id || 'p22', // Default avatar
+        avatarId: data.avatar_id || 'zg10', // Default avatar
         createdBy: data.created_by || undefined,
         createdAt: data.created_at,
       };

@@ -4,8 +4,9 @@ import { GanttChart } from '../../features/gantt/GanttChart';
 import { TeamView } from '../../features/team/TeamView';
 import { OptimizedView } from '../../features/dashboard/OptimizedView';
 import { ActionTable } from '../../features/actions/ActionTable';
+import { ActionDetailModal } from '../../features/actions/ActionDetailModal';
 import { ActivityTabs } from '../../features/actions/ActivityTabs';
-import { ExpandableDescription } from '../common/ExpandableDescription';
+// ExpandableDescription removido
 import { Action, TeamMember, Objective, Activity, GanttRange } from '../../types';
 
 interface MainViewProps {
@@ -95,6 +96,11 @@ export function MainView({
   onUpdateTeam,
   setTeamsByMicro,
 }: MainViewProps) {
+  // Encontrar a ação selecionada para o modal
+  const selectedAction = expandedActionUid
+    ? microActions.find(a => a.uid === expandedActionUid)
+    : null;
+
   return (
     <>
       {/* ACTIVITY TABS */}
@@ -176,7 +182,7 @@ export function MainView({
           /* TABLE VIEW */
           <ErrorBoundary>
             <div className="max-w-5xl mx-auto">
-              {currentActivity && <ExpandableDescription text={currentActivity.description} />}
+              {/* Descrição movida para ActivityTabs */}
 
               <ActionTable
                 actions={microActions}
@@ -207,7 +213,25 @@ export function MainView({
           </ErrorBoundary>
         )}
       </div>
+
+      {/* ACTION DETAIL MODAL (Drawer) */}
+      <ActionDetailModal
+        isOpen={!!selectedAction}
+        action={selectedAction || null}
+        team={currentTeam}
+        activityName={currentActivity?.title || 'Atividade'}
+        onClose={() => setExpandedActionUid(null)}
+        onUpdateAction={onUpdateAction}
+        onSaveAction={onSaveAction}
+        onDeleteAction={onDeleteAction}
+        onAddRaci={onAddRaci}
+        onRemoveRaci={onRemoveRaci}
+        onAddComment={onAddComment}
+        isSaving={isSaving}
+        canEdit={selectedAction ? checkCanEdit(selectedAction) : false}
+        canDelete={selectedAction ? checkCanDelete(selectedAction) : false}
+        readOnly={isViewingAllMicros && !isAdmin}
+      />
     </>
   );
 }
-

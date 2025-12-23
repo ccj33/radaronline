@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity } from '../../types';
+import { Info } from 'lucide-react';
 
 interface ActivityTabsProps {
   activities: Activity[];
@@ -12,43 +13,58 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
   selectedActivity,
   setSelectedActivity,
 }) => {
+  const currentActivity = activities?.find(a => a.id === selectedActivity);
+
   return (
-    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex gap-3 sm:gap-4 overflow-x-auto shrink-0 items-start">
-      {activities?.map(act => {
-        const isActive = selectedActivity === act.id;
-        return (
-          <button 
-            key={act.id} 
-            onClick={() => setSelectedActivity(act.id)} 
-            className={`
-              group flex flex-col text-left p-2 sm:p-3 rounded-xl border transition-all duration-200 
-              min-w-[180px] sm:min-w-[240px] max-w-[180px] sm:max-w-[240px] relative overflow-hidden shrink-0
-              ${isActive 
-                ? "bg-white border-teal-500 shadow-md ring-1 ring-teal-500/20 z-10" 
-                : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm opacity-80 hover:opacity-100"
-              }
-            `}
-          >
-            {isActive && <div className="absolute top-0 left-0 w-1 h-full bg-teal-500"></div>}
-            
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isActive ? 'bg-teal-50 text-teal-700' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>
-                Atividade {act.id}
-              </span>
-              {isActive && <span className="text-[9px] font-bold text-teal-600 uppercase tracking-wider hidden sm:inline">Selecionado</span>}
-            </div>
-            
-            <div className={`text-xs font-bold leading-snug ${isActive ? 'text-slate-800' : 'text-slate-600'}`}>
-              {act.title}
-            </div>
-            
-            <div className="mt-2 text-[10px] text-slate-400 line-clamp-2 hidden sm:block">
-              {act.description}
-            </div>
-          </button>
-        );
-      })}
+    <div className="bg-white border-b border-slate-200 sticky top-[72px] z-20 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)] flex flex-col">
+      {/* Barra de Abas */}
+      <div className="flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2 scrollbar-hide">
+        {activities?.map(act => {
+          const isActive = selectedActivity === act.id;
+          return (
+            <button
+              key={act.id}
+              onClick={() => setSelectedActivity(act.id)}
+              className={`
+                group flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 shrink-0 border
+                ${isActive
+                  ? "bg-teal-50 border-teal-200 text-teal-800 shadow-sm"
+                  : "bg-white border-transparent hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                }
+              `}
+            >
+              <div className={`
+                flex items-center justify-center w-6 h-6 rounded-md text-[10px] font-bold shrink-0 transition-colors
+                ${isActive ? 'bg-teal-200 text-teal-800' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}
+              `}>
+                {act.id}
+              </div>
+
+              <div className="flex flex-col">
+                <span className={`text-xs font-semibold whitespace-nowrap ${isActive ? 'text-teal-900' : 'text-slate-700'}`}>
+                  {act.title}
+                </span>
+                {/* Descrição resumida na própria tab removida para limpar visual, já que teremos descrição detalhada abaixo */}
+              </div>
+
+              {isActive && (
+                <div className="w-1.5 h-1.5 rounded-full bg-teal-500 ml-1 animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Descrição da Atividade Integrada */}
+      {currentActivity?.description && (
+        <div className="px-4 sm:px-6 py-2 bg-slate-50/50 border-t border-slate-100 flex items-start gap-2 animate-fade-in">
+          <Info size={14} className="text-teal-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-slate-600 leading-relaxed max-w-4xl">
+            <span className="font-semibold text-slate-700 mr-1">Sobre esta atividade:</span>
+            {currentActivity.description}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
-
