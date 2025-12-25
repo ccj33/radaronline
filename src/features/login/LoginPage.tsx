@@ -71,7 +71,7 @@ export function LoginPage() {
           <div className="absolute top-12 left-12">
             <div className="flex flex-col items-start -space-y-1">
               <span className="text-5xl font-bold text-cyan-400 tracking-tight">Radar</span>
-              <span className="text-sm text-white font-light tracking-wider opacity-90">Núcleo de Saúde Digital | SES/GAB/ATI-NSDIGI</span>
+              <span className="text-sm text-white font-light tracking-wider opacity-90">Núcleo de Saúde Digital MG</span>
             </div>
           </div>
 
