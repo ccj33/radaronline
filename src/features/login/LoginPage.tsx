@@ -143,7 +143,7 @@ export function LoginPage() {
         </div>
 
         {/* Right Panel - Container Principal */}
-        <div className="flex-1 hidden md:flex relative overflow-hidden flex-col justify-end items-center p-12">
+        <div className="flex-1 hidden md:flex relative overflow-hidden flex-col justify-center items-center p-12">
           {/* Glass Reflection Gradient */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -161,8 +161,8 @@ export function LoginPage() {
             }}
           />
 
-          {/* Conteúdo de Texto (Posicionado na linha vermelha - com margem inferior grande) */}
-          <div className="relative z-10 flex flex-col items-center text-center max-w-lg mb-24">
+          {/* Conteúdo de Texto (Centralizado) */}
+          <div className="relative z-10 flex flex-col items-center text-center max-w-lg">
             <h3 className="text-3xl font-semibold text-white/60 mb-2 tracking-normal leading-tight">
               Transformação Digital em Saúde
             </h3>
@@ -172,12 +172,12 @@ export function LoginPage() {
             </p>
           </div>
 
-          {/* Logo (Posicionado na linha amarela - rodapé) */}
-          <div className="relative z-10">
+          {/* Logo (Absoluto no rodapé) */}
+          <div className="absolute bottom-12 z-10">
             <img
               src="/logos-sidebar.png"
               alt="Logos SUS Digital e SES"
-              className="w-56 h-auto object-contain opacity-40 hover:opacity-60 transition-opacity duration-500"
+              className="w-80 h-auto object-contain opacity-40 hover:opacity-60 transition-opacity duration-500"
               style={{ filter: 'brightness(0) invert(1)' }}
             />
           </div>
