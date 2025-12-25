@@ -177,7 +177,7 @@ export function LoginPage() {
             <img
               src="/logos-sidebar.png"
               alt="Logos SUS Digital e SES"
-              className="w-80 h-auto object-contain opacity-40 hover:opacity-60 transition-opacity duration-500"
+              className="w-[40rem] h-auto object-contain opacity-40 hover:opacity-60 transition-opacity duration-500"
               style={{ filter: 'brightness(0) invert(1)' }}
             />
           </div>
