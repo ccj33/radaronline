@@ -259,7 +259,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 data={metrics.progressoPorObjetivo}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 layout="vertical"
-                onClick={(data) => {
+                onClick={(data: any) => {
                   if (data && data.activePayload && data.activePayload.length > 0) {
                     const objId = data.activePayload[0].payload.id;
                     onNavigate('list', { objectiveId: objId });

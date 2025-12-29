@@ -834,6 +834,19 @@ function AppContent() {
     setCurrentPage('main');
   }, []);
 
+  // Handler para navegação do Dashboard
+  const handleDashboardNavigate = useCallback((view: 'list', filters?: { status?: string; objectiveId?: number }) => {
+    setCurrentNav('strategy');
+    setViewMode('table');
+    if (filters?.status) {
+      // Cast to match the expected specific string literals
+      setStatusFilter(filters.status as any);
+    }
+    if (filters?.objectiveId) {
+      setSelectedObjective(filters.objectiveId);
+    }
+  }, []);
+
   // =====================================
   // OBJECTIVES & ACTIVITIES CRUD HANDLERS
   // (Admin/SuperAdmin only)
@@ -982,7 +995,8 @@ function AppContent() {
     setIsSaving(true);
     try {
       // 1. Persistir no Supabase
-      const saved = await dataService.updateAction(updatedAction);
+      // 1. Persistir no Supabase
+      const saved = await dataService.updateAction(updatedAction.uid, updatedAction);
 
       // 2. Atualizar estado local
       setActions(prev => prev.map(a => a.uid === saved.uid ? saved : a));
@@ -1260,6 +1274,7 @@ function AppContent() {
                   team={currentTeam}
                   objectives={objectives}
                   activities={activities}
+                  onNavigate={handleDashboardNavigate}
                 />
               </ErrorBoundary>
 

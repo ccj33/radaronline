@@ -51,6 +51,7 @@ interface MainViewProps {
   checkCanDelete: (action: Action) => boolean;
   onUpdateTeam?: (microId: string, updatedTeam: TeamMember[]) => void;
   setTeamsByMicro: React.Dispatch<React.SetStateAction<Record<string, TeamMember[]>>>;
+  onNavigate: (view: 'list', filters?: { status?: string; objectiveId?: number }) => void;
 }
 
 export function MainView({
@@ -95,6 +96,7 @@ export function MainView({
   checkCanDelete,
   onUpdateTeam,
   setTeamsByMicro,
+  onNavigate,
 }: MainViewProps) {
   // Encontrar a ação selecionada para o modal
   const selectedAction = expandedActionUid
@@ -123,6 +125,7 @@ export function MainView({
               team={currentTeam}
               objectives={objectives}
               activities={activities}
+              onNavigate={onNavigate}
             />
           </ErrorBoundary>
 
