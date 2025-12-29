@@ -92,25 +92,25 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
   };
 
   const getMedalBg = (position: number) => {
-    if (position === 0) return 'bg-yellow-50 border-yellow-200';
-    if (position === 1) return 'bg-slate-50 border-slate-200';
-    if (position === 2) return 'bg-amber-50 border-amber-200';
-    return 'bg-white border-slate-100';
+    if (position === 0) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700';
+    if (position === 1) return 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-600';
+    if (position === 2) return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700';
+    return 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700';
   };
 
   return (
     <div className="space-y-6">
       {/* Top 3 Destaque */}
-      <div className="bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl border border-teal-100 p-6">
+      <div className="bg-gradient-to-br from-teal-50 to-blue-50 dark:from-teal-900/20 dark:to-blue-900/20 rounded-xl border border-teal-100 dark:border-teal-800/50 p-6 transition-colors">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Trophy className="w-6 h-6 text-yellow-500" />
-            <h3 className="font-bold text-slate-800 text-lg">Top 3 Microrregiões</h3>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Top 3 Microrregiões</h3>
           </div>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
             <option value="progresso">Por Progresso</option>
             <option value="concluidas">Por Taxa de Conclusão</option>
@@ -137,33 +137,33 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
               </div>
 
               <div className="mt-2">
-                <h4 className="font-semibold text-slate-800 truncate" title={micro.nome}>
+                <h4 className="font-semibold text-slate-800 dark:text-slate-100 truncate" title={micro.nome}>
                   {micro.nome}
                 </h4>
-                <p className="text-xs text-slate-500">{micro.macrorregiao}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{micro.macrorregiao}</p>
 
                 <div className="mt-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Progresso</span>
-                    <span className="font-bold text-slate-700">{micro.progressoMedio}%</span>
+                    <span className="text-slate-500 dark:text-slate-400">Progresso</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">{micro.progressoMedio}%</span>
                   </div>
-                  <div className="h-2 bg-white/80 rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/80 dark:bg-slate-700/50 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-teal-500 transition-all"
                       style={{ width: `${micro.progressoMedio}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500">
+                  <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>{micro.concluidas}/{micro.totalAcoes} concluídas</span>
                     {micro.atrasadas > 0 && (
-                      <span className="text-red-500">{micro.atrasadas} atrasadas</span>
+                      <span className="text-red-500 dark:text-red-400">{micro.atrasadas} atrasadas</span>
                     )}
                   </div>
                 </div>
 
                 <button
                   onClick={() => onViewMicrorregiao(micro.id)}
-                  className="mt-3 w-full flex items-center justify-center gap-1 py-2 text-xs font-medium text-teal-600 hover:bg-teal-100 rounded-lg transition-colors"
+                  className="mt-3 w-full flex items-center justify-center gap-1 py-2 text-xs font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/30 rounded-lg transition-colors"
                 >
                   <Eye className="w-3 h-3" />
                   Visualizar
@@ -175,13 +175,13 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
       </div>
 
       {/* Gráfico de Barras Horizontais - Top 10 */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 transition-colors">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-teal-500" />
             Top 10 por Progresso
           </h3>
-          <span className="text-xs text-slate-500">Clique na barra para ver detalhes</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Clique na barra para ver detalhes</span>
         </div>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -245,20 +245,20 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
       </div>
 
       {/* Tabela de Ranking */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-green-500" />
             Ranking Completo
           </h3>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {rankings.length} microrregiões com dados
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+            <thead className="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold">#</th>
                 <th className="px-4 py-3 text-left font-semibold">Microrregião</th>
@@ -266,7 +266,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                 <th className="px-4 py-3 text-center font-semibold">
                   <button
                     onClick={() => setSortBy('concluidas')}
-                    className={`hover:text-teal-600 ${sortBy === 'concluidas' ? 'text-teal-600' : ''}`}
+                    className={`hover:text-teal-600 dark:hover:text-teal-400 ${sortBy === 'concluidas' ? 'text-teal-600 dark:text-teal-400' : ''}`}
                   >
                     Concluídas
                   </button>
@@ -274,7 +274,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                 <th className="px-4 py-3 text-center font-semibold">
                   <button
                     onClick={() => setSortBy('atraso')}
-                    className={`hover:text-teal-600 ${sortBy === 'atraso' ? 'text-teal-600' : ''}`}
+                    className={`hover:text-teal-600 dark:hover:text-teal-400 ${sortBy === 'atraso' ? 'text-teal-600 dark:text-teal-400' : ''}`}
                   >
                     Atrasadas
                   </button>
@@ -282,7 +282,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                 <th className="px-4 py-3 text-center font-semibold">
                   <button
                     onClick={() => setSortBy('progresso')}
-                    className={`hover:text-teal-600 ${sortBy === 'progresso' ? 'text-teal-600' : ''}`}
+                    className={`hover:text-teal-600 dark:hover:text-teal-400 ${sortBy === 'progresso' ? 'text-teal-600 dark:text-teal-400' : ''}`}
                   >
                     Progresso
                   </button>
@@ -290,32 +290,32 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                 <th className="px-4 py-3 text-center font-semibold">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {topRankings.map((micro, index) => (
-                <tr key={micro.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={micro.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <td className="px-4 py-3">
-                    <span className={`font-bold ${index < 3 ? getMedalColor(index) : 'text-slate-400'}`}>
+                    <span className={`font-bold ${index < 3 ? getMedalColor(index) : 'text-slate-400 dark:text-slate-500'}`}>
                       {index + 1}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div>
-                      <p className="font-medium text-slate-800">{micro.nome}</p>
-                      <p className="text-xs text-slate-400">{micro.macrorregiao}</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-200">{micro.nome}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{micro.macrorregiao}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center text-sm text-slate-600">
+                  <td className="px-4 py-3 text-center text-sm text-slate-600 dark:text-slate-300">
                     {micro.totalAcoes}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full">
                       {micro.concluidas}
                       <span className="text-green-500">({micro.taxaConclusao}%)</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     {micro.atrasadas > 0 ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full">
                         {micro.atrasadas}
                       </span>
                     ) : (
@@ -324,7 +324,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all ${micro.progressoMedio >= 75 ? 'bg-green-500' :
                             micro.progressoMedio >= 50 ? 'bg-blue-500' :
@@ -333,7 +333,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                           style={{ width: `${micro.progressoMedio}%` }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-slate-600 w-10 text-right">
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-300 w-10 text-right">
                         {micro.progressoMedio}%
                       </span>
                     </div>
@@ -341,7 +341,7 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => onViewMicrorregiao(micro.id)}
-                      className="p-1.5 hover:bg-teal-50 rounded-lg text-teal-600 transition-colors"
+                      className="p-1.5 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded-lg text-teal-600 dark:text-teal-400 transition-colors"
                       title="Visualizar painel"
                     >
                       <Eye className="w-4 h-4" />
@@ -354,10 +354,10 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
         </div>
 
         {rankings.length > 10 && !showAll && (
-          <div className="p-3 border-t border-slate-100 text-center">
+          <div className="p-3 border-t border-slate-100 dark:border-slate-700 text-center">
             <button
               onClick={() => setShowAll(true)}
-              className="flex items-center gap-1 mx-auto text-sm text-teal-600 hover:text-teal-700 font-medium"
+              className="flex items-center gap-1 mx-auto text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium"
             >
               <ChevronDown className="w-4 h-4" />
               Ver todas as {rankings.length} microrregiões
@@ -368,32 +368,32 @@ export function RankingPanel({ actions, onViewMicrorregiao }: RankingPanelProps)
 
       {/* Bottom 5 - Precisam de Atenção */}
       {bottomRankings.length > 0 && bottomRankings[0].progressoMedio < 50 && (
-        <div className="bg-red-50 rounded-xl border border-red-200 p-4">
+        <div className="bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/30 p-4 transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <TrendingDown className="w-5 h-5 text-red-500" />
-            <h3 className="font-semibold text-red-800">Precisam de Atenção</h3>
+            <h3 className="font-semibold text-red-800 dark:text-red-300">Precisam de Atenção</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             {bottomRankings.filter(m => m.progressoMedio < 50).slice(0, 5).map((micro, index) => (
               <button
                 key={micro.id}
                 onClick={() => onViewMicrorregiao(micro.id)}
-                className="p-3 bg-white rounded-lg border border-red-200 text-left hover:shadow-md transition-all hover:scale-105"
+                className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-900/30 text-left hover:shadow-md transition-all hover:scale-105"
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-red-400 font-mono">#{rankings.length - index}</span>
                   <ArrowDown className="w-3 h-3 text-red-500" />
                 </div>
-                <p className="text-sm font-medium text-slate-800 truncate">{micro.nome}</p>
-                <p className="text-xs text-slate-500 mb-2">{micro.atrasadas} atrasadas</p>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{micro.nome}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{micro.atrasadas} atrasadas</p>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-red-100 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1.5 bg-red-100 dark:bg-red-900/30 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-red-500"
                       style={{ width: `${micro.progressoMedio}%` }}
                     />
                   </div>
-                  <span className="text-xs font-bold text-red-600">{micro.progressoMedio}%</span>
+                  <span className="text-xs font-bold text-red-600 dark:text-red-400">{micro.progressoMedio}%</span>
                 </div>
               </button>
             ))}

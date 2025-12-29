@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
-import type { Action, ActionComment, TeamMember, RaciMember } from '../types';
+import type { Action, ActionComment, TeamMember, RaciMember, ProfileDTO } from '../types';
 import { generateActionUid } from '../types';
+import { loggingService } from './loggingService'; // Imported loggingService
 
 // =====================================
 // TIPOS PARA O BANCO DE DADOS
@@ -36,6 +37,7 @@ interface ActionCommentDTO {
     id: string;
     action_id: string;
     author_id: string;
+    parent_id: string | null;
     content: string;
     created_at: string;
     // Joined from profiles
@@ -51,9 +53,10 @@ interface TeamDTO {
     id: string;
     microregiao_id: string;
     name: string;
-    role: string;
+    cargo: string;  // Renomeado de 'role' para evitar conflito com profiles.role
     email: string | null;
     municipio: string | null;
+    profile_id: string | null;  // Novo: vincula ao profile quando cadastrado
     created_at: string;
     updated_at: string;
 }
@@ -85,6 +88,7 @@ function mapActionDTOToAction(
         notes: dto.notes || '',
         comments: comments.map(c => ({
             id: c.id,
+            parentId: c.parent_id || null,
             authorId: c.author_id,
             authorName: c.author?.nome || 'Usuário',
             authorMunicipio: c.author?.microregiao_id || '',
@@ -100,10 +104,11 @@ function mapTeamDTOToTeamMember(dto: TeamDTO): TeamMember {
     return {
         id: dto.id, // Manter UUID original do banco
         name: dto.name,
-        role: dto.role,
+        role: dto.cargo,  // Mapeia 'cargo' do DB para 'role' do frontend
         email: dto.email || '',
         municipio: dto.municipio || '',
         microregiaoId: dto.microregiao_id,
+        isRegistered: !!dto.profile_id,  // Usa profile_id para determinar se está cadastrado
     };
 }
 
@@ -228,7 +233,19 @@ export async function createAction(input: {
             throw new Error(`Erro ao criar ação: ${error.message}`);
         }
 
-        return mapActionDTOToAction(data as ActionDTO, [], []);
+        const newAction = mapActionDTOToAction(data as ActionDTO, [], []);
+
+        // ✅ LOG ACTIVITY
+        loggingService.logActivity('action_created', 'action', newAction.id, {  // Using DB ID for entity_id to match FK, but UI uses UID. Let's use ID logic consistent with auth (user ID). Action ID is UUID? 'actions' table PK is UUID. 'uid' is string (A-001). 
+            // DataService types say: 'id: string' (UUID) and 'uid: string' (Display ID).
+            // ActivityLog entity_id is string.
+            // Let's use the DB ID (UUID) for entity_id, and put UID in metadata.
+            title: newAction.title,
+            displayId: newAction.uid,
+            microregiaoId: newAction.microregiaoId
+        });
+
+        return newAction;
     } catch (error) {
         console.error('[dataService] Erro inesperado ao criar ação:', error);
         throw error;
@@ -283,11 +300,19 @@ export async function updateAction(
             .eq('action_id', data.id)
             .order('created_at', { ascending: true });
 
-        return mapActionDTOToAction(
+        const updatedAction = mapActionDTOToAction(
             data as ActionDTO,
             (raciData || []) as ActionRaciDTO[],
             (commentsData || []) as ActionCommentDTO[]
         );
+
+        // ✅ LOG ACTIVITY
+        loggingService.logActivity('action_updated', 'action', data.id, {
+            changes: Object.keys(updates),
+            displayId: uid
+        });
+
+        return updatedAction;
     } catch (error) {
         console.error('[dataService] Erro inesperado ao atualizar ação:', error);
         throw error;
@@ -308,6 +333,9 @@ export async function deleteAction(uid: string): Promise<void> {
             console.error('[dataService] Erro ao excluir ação:', error);
             throw new Error(`Erro ao excluir ação: ${error.message}`);
         }
+
+        // ✅ LOG ACTIVITY
+        loggingService.logActivity('action_deleted', 'action', uid, {});
     } catch (error) {
         console.error('[dataService] Erro inesperado ao excluir ação:', error);
         throw error;
@@ -404,10 +432,12 @@ export async function removeRaciMember(
 
 /**
  * Adiciona comentário a uma ação
+ * @param parentId - ID do comentário pai (para respostas em thread)
  */
 export async function addComment(
     actionUid: string,
-    content: string
+    content: string,
+    parentId?: string | null
 ): Promise<ActionComment> {
     try {
         // Buscar usuário atual
@@ -443,6 +473,7 @@ export async function addComment(
             .insert({
                 action_id: actionData.id,
                 author_id: user.id,
+                parent_id: parentId || null,
                 content,
             })
             .select()
@@ -455,6 +486,7 @@ export async function addComment(
 
         return {
             id: data.id,
+            parentId: data.parent_id || null,
             authorId: user.id,
             authorName: profile?.nome || 'Usuário',
             authorMunicipio: profile?.microregiao_id || '',
@@ -469,6 +501,43 @@ export async function addComment(
     }
 }
 
+// Atualizar comentário
+export async function updateComment(commentId: string, content: string): Promise<void> {
+    const { error } = await supabase
+        .from('action_comments')
+        .update({ content })
+        .eq('id', commentId);
+
+    if (error) {
+        console.error('[dataService] Erro ao atualizar comentário:', error);
+        throw new Error(`Erro ao atualizar comentário: ${error.message}`);
+    }
+}
+
+// Excluir comentário
+export async function deleteComment(commentId: string): Promise<void> {
+    // Primeiro, excluir respostas filhas (se houver)
+    const { error: childError } = await supabase
+        .from('action_comments')
+        .delete()
+        .eq('parent_id', commentId);
+
+    if (childError) {
+        console.error('[dataService] Erro ao excluir respostas:', childError);
+    }
+
+    // Depois, excluir o comentário principal
+    const { error } = await supabase
+        .from('action_comments')
+        .delete()
+        .eq('id', commentId);
+
+    if (error) {
+        console.error('[dataService] Erro ao excluir comentário:', error);
+        throw new Error(`Erro ao excluir comentário: ${error.message}`);
+    }
+}
+
 // =====================================
 // EQUIPES - CRUD
 // =====================================
@@ -479,36 +548,175 @@ export async function addComment(
  */
 export async function loadTeams(microregiaoId?: string): Promise<Record<string, TeamMember[]>> {
     try {
-        let query = supabase
+        const teamsByMicro: Record<string, TeamMember[]> = {};
+
+        // 1. Buscar Perfis (usuários já cadastrados na plataforma)
+        let profilesQuery = supabase
+            .from('profiles')
+            .select('*')
+            .eq('ativo', true);
+
+        if (microregiaoId && microregiaoId !== 'all') {
+            profilesQuery = profilesQuery.eq('microregiao_id', microregiaoId);
+        }
+
+        const { data: profilesData, error: profilesError } = await profilesQuery;
+
+        if (profilesError) {
+            console.error('[dataService] Erro ao carregar perfis:', profilesError);
+        }
+
+
+
+        // 2. Buscar Times Manuais (adicionados pelo gestor)
+        let teamQuery = supabase
             .from('teams')
             .select('*')
             .order('name', { ascending: true });
 
         if (microregiaoId && microregiaoId !== 'all') {
-            query = query.eq('microregiao_id', microregiaoId);
+            teamQuery = teamQuery.eq('microregiao_id', microregiaoId);
         }
 
-        const { data, error } = await query;
+        const { data: teamsData, error: teamsError } = await teamQuery;
 
-        if (error) {
-            console.error('[dataService] Erro ao carregar equipes:', error);
-            throw new Error(`Erro ao carregar equipes: ${error.message}`);
+        if (teamsError) {
+            console.error('[dataService] Erro ao carregar equipes:', teamsError);
+            throw new Error(`Erro ao carregar equipes: ${teamsError.message}`);
         }
 
-        // Agrupar por microrregião
-        const teamsByMicro: Record<string, TeamMember[]> = {};
+        // 3. Processar Perfis (Enriquecendo com dados de times se houver)
+        (profilesData || []).forEach((p: ProfileDTO) => {
+            const microId = p.microregiao_id || 'unassigned';
+            if (!teamsByMicro[microId]) teamsByMicro[microId] = [];
 
-        (data || []).forEach((dto: TeamDTO) => {
-            const member = mapTeamDTOToTeamMember(dto);
-            if (!teamsByMicro[dto.microregiao_id]) {
-                teamsByMicro[dto.microregiao_id] = [];
+            // Procurar se existe registro deste email na tabela teams para pegar o município
+            const teamRecord = (teamsData || []).find(t => t.email?.toLowerCase() === p.email.toLowerCase());
+
+            teamsByMicro[microId].push({
+                id: p.id,
+                name: p.nome,
+                role: p.role || 'Membro',
+                email: p.email,
+                municipio: teamRecord?.municipio || p.municipio || 'Sede/Remoto', // Usa do time, ou profile, ou default
+                microregiaoId: microId,
+                isRegistered: true
+            });
+        });
+
+        // 4. Mesclar Times Manuais (ignorando os que já foram adicionados via profile)
+        (teamsData || []).forEach((dto: TeamDTO) => {
+            const existingInMicro = teamsByMicro[dto.microregiao_id] || [];
+
+            // Verificar se já existe alguém com esse email que seja registrado (já processado acima)
+            const alreadyExists = dto.email && existingInMicro.some(m =>
+                m.isRegistered && m.email.toLowerCase() === dto.email?.toLowerCase()
+            );
+
+            if (!alreadyExists) {
+                const member = mapTeamDTOToTeamMember(dto);
+
+                // Verificar se o email corresponde a um profile (caso tenha sido adicionado manual mas a pessoa se cadastrou recentemente e loadTeams ainda não pegou ou algo assim)
+                // Na lógica atual, o passo 3 já pegaria. Mas mantemos a segurança.
+                const linkedProfile = (profilesData || []).find(p => p.email.toLowerCase() === dto.email?.toLowerCase());
+                member.isRegistered = !!linkedProfile;
+
+                if (!teamsByMicro[dto.microregiao_id]) {
+                    teamsByMicro[dto.microregiao_id] = [];
+                }
+                teamsByMicro[dto.microregiao_id].push(member);
             }
-            teamsByMicro[dto.microregiao_id].push(member);
         });
 
         return teamsByMicro;
     } catch (error) {
         console.error('[dataService] Erro inesperado ao carregar equipes:', error);
+        throw error;
+    }
+}
+
+/**
+ * Verifica se o usuário já tem registro na tabela de times
+ */
+export async function getUserTeamStatus(email: string): Promise<{ exists: boolean; municipio: string | null }> {
+    const { data } = await supabase
+        .from('teams')
+        .select('municipio')
+        .eq('email', email)
+        .limit(1);
+
+    const record = data?.[0];
+
+    return {
+        exists: !!record,
+        municipio: record?.municipio || null
+    };
+}
+
+/**
+ * Salva o município do usuário na tabela de teams E profiles
+ * Isso garante que o município seja propagado para todos os lugares
+ */
+export async function saveUserMunicipality(
+    microregiaoId: string,
+    email: string,
+    municipio: string,
+    userName: string
+): Promise<void> {
+    try {
+        // Obter usuário atual para vincular profile_id
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // 1. Atualizar tabela profiles (baseado no email)
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ municipio })
+            .eq('email', email);
+
+        if (profileError) {
+            console.error('[dataService] Erro ao atualizar município no profile:', profileError);
+            // Não lança erro para continuar com teams
+        }
+
+        // 2. Verificar se já existe registro na tabela teams para este email
+        // Busca TODOS registros com este email para tratar duplicatas
+        const { data: existingTeams } = await supabase
+            .from('teams')
+            .select('id')
+            .eq('email', email);
+
+        if (existingTeams && existingTeams.length > 0) {
+            // Atualizar TODAS as ocorrências para este email
+            // Agora também vinculamos o profile_id para garantir acesso via RLS seguro
+            const ids = existingTeams.map(t => t.id);
+            const updatePayload: any = {
+                municipio,
+                name: userName
+            };
+
+            if (user?.id) {
+                updatePayload.profile_id = user.id;
+            }
+
+            await supabase
+                .from('teams')
+                .update(updatePayload)
+                .in('id', ids);
+        } else {
+            // Inserir novo
+            await supabase
+                .from('teams')
+                .insert({
+                    microregiao_id: microregiaoId,
+                    name: userName,
+                    email: email,
+                    municipio: municipio,
+                    cargo: 'Membro', // Cargo default
+                    profile_id: user?.id || null // Vincula ao usuário atual
+                });
+        }
+    } catch (error) {
+        console.error('[dataService] Erro ao salvar município do usuário:', error);
         throw error;
     }
 }
@@ -524,12 +732,13 @@ export async function addTeamMember(input: {
     municipio?: string;
 }): Promise<TeamMember> {
     try {
+        // 1. Inserir na tabela de times
         const { data, error } = await supabase
             .from('teams')
             .insert({
                 microregiao_id: input.microregiaoId,
                 name: input.name,
-                role: input.role,
+                cargo: input.role,  // input.role → cargo no banco
                 email: input.email || null,
                 municipio: input.municipio || null,
             })
@@ -541,11 +750,54 @@ export async function addTeamMember(input: {
             throw new Error(`Erro ao adicionar membro: ${error.message}`);
         }
 
-        return mapTeamDTOToTeamMember(data as TeamDTO);
+        const newMember = mapTeamDTOToTeamMember(data as TeamDTO);
+
+        // 2. Verificar se o usuário já existe na base de perfis
+        if (input.email) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', input.email)
+                .single();
+
+            newMember.isRegistered = !!profile;
+
+            // 3. Se NÃO for registrado, notificar administradores
+            if (!newMember.isRegistered) {
+                await notifyAdminsOfPendingUser(input.name, input.email, input.microregiaoId);
+            }
+        } else {
+            newMember.isRegistered = false;
+        }
+
+        return newMember;
     } catch (error) {
         console.error('[dataService] Erro inesperado ao adicionar membro:', error);
         throw error;
     }
+}
+
+/**
+ * Helper: Notifica todos os admins sobre usuário pendente
+ */
+async function notifyAdminsOfPendingUser(name: string, email: string, microId: string) {
+    // Buscar IDs de admins
+    const { data: admins } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('role', ['admin', 'superadmin']);
+
+    if (!admins || admins.length === 0) return;
+
+    // Criar notificações
+    const notifications = admins.map(admin => ({
+        user_id: admin.id,
+        request_type: 'system',
+        content: `Membro pendente de cadastro: ${name} (${email}) na Micro ${microId}. Necessário criar conta.`,
+        status: 'pending'
+    }));
+
+    await supabase.from('user_requests').insert(notifications);
 }
 
 /**
@@ -565,5 +817,145 @@ export async function removeTeamMember(memberId: string): Promise<void> {
     } catch (error) {
         console.error('[dataService] Erro inesperado ao remover membro:', error);
         throw error;
+    }
+}
+
+// =====================================
+// NOTIFICAÇÕES DE MENÇÃO
+// =====================================
+
+/**
+ * Cria notificação de menção para um usuário
+ * @param mentionedUserName - Nome do usuário mencionado (para buscar o ID)
+ * @param actionTitle - Título da ação onde foi mencionado
+ * @param authorName - Nome de quem mencionou
+ */
+export async function createMentionNotification(
+    mentionedUserName: string,
+    actionTitle: string,
+    authorName: string
+): Promise<void> {
+    try {
+        // Buscar o ID do usuário mencionado pelo nome
+        const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .ilike('nome', mentionedUserName);
+
+        if (profileError || !profiles || profiles.length === 0) {
+            console.log('[dataService] Usuário mencionado não encontrado:', mentionedUserName);
+            return; // Não é um erro, apenas não encontrou o usuário
+        }
+
+        const mentionedUserId = profiles[0].id;
+
+        // Criar notificação na tabela user_requests
+        const { error } = await supabase
+            .from('user_requests')
+            .insert({
+                user_id: mentionedUserId,
+                request_type: 'mention',
+                content: `${authorName} mencionou você em um comentário na ação "${actionTitle}"`,
+                status: 'pending',
+            });
+
+        if (error) {
+            console.error('[dataService] Erro ao criar notificação de menção:', error);
+            // Não lança erro para não interromper o fluxo de adicionar comentário
+        }
+    } catch (error) {
+        console.error('[dataService] Erro inesperado ao criar notificação:', error);
+        // Não lança erro para não interromper o fluxo
+    }
+}
+
+/**
+ * Processa menções em um comentário e cria notificações
+ * @param commentContent - Conteúdo do comentário
+ * @param actionTitle - Título da ação
+ * @param authorName - Nome do autor do comentário  
+ */
+export async function processMentions(
+    commentContent: string,
+    actionTitle: string,
+    authorName: string
+): Promise<void> {
+    // Extrair menções do texto (@Nome)
+    const mentionRegex = /@([^\s@]+(?:\s[^\s@]+)?)/g;
+    const mentions: string[] = [];
+    let match;
+
+    while ((match = mentionRegex.exec(commentContent)) !== null) {
+        mentions.push(match[1]);
+    }
+
+    // Criar notificação para cada menção única
+    const uniqueMentions = [...new Set(mentions)];
+    for (const mentionedName of uniqueMentions) {
+        // Não notificar se mencionou a si mesmo
+        if (mentionedName.toLowerCase() !== authorName.toLowerCase()) {
+            await createMentionNotification(mentionedName, actionTitle, authorName);
+        }
+    }
+}
+
+// =====================================
+// CADASTROS PENDENTES
+// =====================================
+
+export interface PendingRegistration {
+    id: string;
+    name: string;
+    email: string | null;
+    municipio: string | null;
+    microregiaoId: string;
+    cargo: string;
+    createdAt: string;
+}
+
+/**
+ * Carrega membros de equipe que ainda não têm conta na plataforma
+ * (profile_id IS NULL na tabela teams)
+ */
+export async function loadPendingRegistrations(): Promise<PendingRegistration[]> {
+    try {
+        const { data, error } = await supabase
+            .from('teams')
+            .select('id, name, email, municipio, microregiao_id, cargo, created_at')
+            .is('profile_id', null)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('[dataService] Erro ao buscar pendentes:', error);
+            return [];
+        }
+
+        return (data || []).map(d => ({
+            id: d.id,
+            name: d.name,
+            email: d.email,
+            municipio: d.municipio,
+            microregiaoId: d.microregiao_id,
+            cargo: d.cargo || 'Membro',
+            createdAt: d.created_at,
+        }));
+    } catch (error) {
+        console.error('[dataService] Erro inesperado ao buscar pendentes:', error);
+        return [];
+    }
+}
+
+/**
+ * Exclui um membro pendente da tabela teams
+ */
+export async function deletePendingRegistration(id: string): Promise<void> {
+    const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('[dataService] Erro ao excluir pendente:', error);
+        throw new Error('Erro ao excluir membro pendente');
     }
 }

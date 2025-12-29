@@ -5,6 +5,23 @@ import { Action, Activity, Objective, TeamMember } from '../types';
 // Em produção, virá do Supabase
 // =====================================
 
+// Exportando dados iniciais separadamente para gerenciamento de state
+export const INITIAL_OBJECTIVES: Objective[] = [
+  { id: 1, title: "1. Infoestrutura e Governança", status: "on-track" },
+  { id: 2, title: "2. Desenvolvimento de Negócios", status: "on-track" },
+  { id: 3, title: "3. Experiência do Cliente", status: "delayed" }
+];
+
+export const INITIAL_ACTIVITIES: Record<number, Activity[]> = {
+  1: [
+    { id: "1.1", title: "Diagnóstico e Mapeamento", description: "Implantar a estratégia de gestão de conhecimento." },
+    { id: "1.2", title: "Gestão do Conhecimento e Qualificação", description: "Fortalecer a governança, a gestão do conhecimento." },
+    { id: "1.3", title: "Governança e Fluxos de Trabalho", description: "Garantir a sustentabilidade e o aprimoramento da Infoestrutura." }
+  ],
+  2: [{ id: "2.1", title: "Atração de Investimentos", description: "Fomento ao comércio local." }],
+  3: [{ id: "3.1", title: "Digitalização de Serviços", description: "Portal do Cidadão." }]
+};
+
 export const INITIAL_DATA: {
   macro: string;
   micro: string;
@@ -17,22 +34,10 @@ export const INITIAL_DATA: {
   micro: "Poços de Caldas",
 
   // Objetivos são globais (iguais para todas as microrregiões)
-  objectives: [
-    { id: 1, title: "1. Infoestrutura e Governança", status: "on-track" },
-    { id: 2, title: "2. Desenvolvimento de Negócios", status: "on-track" },
-    { id: 3, title: "3. Experiência do Cliente", status: "delayed" }
-  ],
+  objectives: INITIAL_OBJECTIVES,
 
   // Atividades são globais (iguais para todas as microrregiões)
-  activities: {
-    1: [
-      { id: "1.1", title: "Diagnóstico e Mapeamento", description: "Implantar a estratégia de gestão de conhecimento." },
-      { id: "1.2", title: "Gestão do Conhecimento e Qualificação", description: "Fortalecer a governança, a gestão do conhecimento." },
-      { id: "1.3", title: "Governança e Fluxos de Trabalho", description: "Garantir a sustentabilidade e o aprimoramento da Infoestrutura." }
-    ],
-    2: [{ id: "2.1", title: "Atração de Investimentos", description: "Fomento ao comércio local." }],
-    3: [{ id: "3.1", title: "Digitalização de Serviços", description: "Portal do Cidadão." }]
-  },
+  activities: INITIAL_ACTIVITIES,
 
   // =====================================
   // EQUIPES POR MICRORREGIÃO

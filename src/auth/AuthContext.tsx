@@ -8,6 +8,7 @@ interface ExtendedAuthContextType extends AuthContextType {
 import { getMicroregiaoById } from '../data/microregioes';
 import { supabase } from '../lib/supabase';
 import * as authService from '../services/authService';
+import { loggingService } from '../services/loggingService';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -325,6 +326,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(profile);
         const microId = profile.microregiaoId === 'all' ? null : profile.microregiaoId;
         setViewingMicroregiaoId(microId);
+
+        // Registrar login no log de atividades
+        loggingService.logActivity('login', 'auth', profile.id, { name: profile.nome });
 
         return { success: true };
       }

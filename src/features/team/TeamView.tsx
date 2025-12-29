@@ -5,7 +5,7 @@ import { ConfirmModal } from '../../components/common';
 import {
   Mail, MapPin, Edit3, Trash2, Plus,
   User as UserIcon, Search, X,
-  ChevronDown, Filter, Loader2
+  ChevronDown, Filter, Loader2, AlertTriangle
 } from 'lucide-react';
 
 // Melhores Práticas: Definir papeis padrão para evitar "Lider", "Chefe", "Resp." misturados
@@ -22,11 +22,11 @@ const ROLES_OPTIONS = [
 // Gera cor do badge baseado no cargo
 const getRoleBadgeColor = (role: string) => {
   const normalized = role.toLowerCase();
-  if (normalized.includes('respons')) return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (normalized.includes('aprov')) return 'bg-purple-50 text-purple-700 border-purple-200';
-  if (normalized.includes('consult')) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (normalized.includes('inform')) return 'bg-slate-50 text-slate-600 border-slate-200';
-  return 'bg-gray-50 text-gray-600 border-gray-200';
+  if (normalized.includes('respons')) return 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700';
+  if (normalized.includes('aprov')) return 'bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700';
+  if (normalized.includes('consult')) return 'bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700';
+  if (normalized.includes('inform')) return 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
+  return 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700';
 };
 
 const getInitials = (name: string) => {
@@ -175,14 +175,14 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       {/* Header com Design Elevado */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-700">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-teal-600 mb-1">
             <UserIcon size={20} className="stroke-[2.5]" />
             <span className="text-xs font-bold uppercase tracking-wider">Gestão de Equipe</span>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Membros & Atribuições</h2>
-          <p className="text-slate-500 text-sm max-w-lg">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Membros & Atribuições</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-lg">
             Gerencie quem faz o que. Mantenha os dados de contato e atribuições RACI atualizados para a microrregião.
           </p>
         </div>
@@ -206,7 +206,7 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
           <input
             type="text"
             placeholder="Buscar por nome, email ou cidade..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-400 transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-100 dark:focus:ring-teal-800 focus:border-teal-400 transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -220,7 +220,7 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
         <div className="relative min-w-[160px]">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <select
-            className="w-full pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-400 shadow-sm cursor-pointer"
+            className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-600 dark:text-slate-300 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-100 dark:focus:ring-teal-800 focus:border-teal-400 shadow-sm cursor-pointer"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
@@ -236,7 +236,7 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
           <button
             onClick={() => setIsAddOpen(!isAddOpen)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 ${isAddOpen
-              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               : 'bg-teal-600 text-white hover:bg-teal-700 shadow-teal-200'
               }`}
           >
@@ -249,46 +249,46 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
 
       {/* Formulário de Adição (Colapsável) */}
       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAddOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="bg-gradient-to-br from-teal-50 to-white border border-teal-100 rounded-2xl p-5 md:p-6 shadow-inner">
+        <div className="bg-gradient-to-br from-teal-50 to-white dark:from-slate-800 dark:to-slate-900 border border-teal-100 dark:border-teal-800 rounded-2xl p-5 md:p-6 shadow-inner">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-teal-900 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-teal-900 dark:text-teal-300 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
               Adicionar Novo Colaborador
             </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-teal-900/60 ml-1">Nome Completo</label>
+              <label className="text-xs font-semibold text-teal-900/60 dark:text-teal-400 ml-1">Nome Completo</label>
               <input
-                className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all placeholder:text-slate-300"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-teal-200/60 dark:border-teal-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700 focus:border-teal-400 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-500"
                 placeholder="Ex: Maria Silva"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-teal-900/60 ml-1">Cargo / Função</label>
+              <label className="text-xs font-semibold text-teal-900/60 dark:text-teal-400 ml-1">Cargo / Função</label>
               <input
-                className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all placeholder:text-slate-300"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-teal-200/60 dark:border-teal-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700 focus:border-teal-400 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-500"
                 placeholder="Ex: Coordenador, Técnico, Gestor..."
                 value={form.role}
                 onChange={e => setForm({ ...form, role: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-teal-900/60 ml-1">Email</label>
+              <label className="text-xs font-semibold text-teal-900/60 dark:text-teal-400 ml-1">Email</label>
               <input
-                className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all placeholder:text-slate-300"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-teal-200/60 dark:border-teal-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700 focus:border-teal-400 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-500"
                 placeholder="maria@exemplo.com"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-teal-900/60 ml-1">Município</label>
+              <label className="text-xs font-semibold text-teal-900/60 dark:text-teal-400 ml-1">Município</label>
               <div className="relative">
                 <select
-                  className="w-full px-3 py-2 bg-white border border-teal-200/60 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 focus:border-teal-400 transition-all appearance-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-teal-200/60 dark:border-teal-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700 focus:border-teal-400 transition-all appearance-none cursor-pointer"
                   value={form.municipio}
                   onChange={e => setForm({ ...form, municipio: e.target.value })}
                 >
@@ -316,37 +316,38 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTeam.map((member) => {
           const isEditing = editingId === member.id;
+          const isPending = member.isRegistered === false;
 
           if (isEditing) {
             // Card em Modo de Edição
             return (
-              <div key={member.id} className="bg-white rounded-2xl p-5 shadow-lg border-2 border-teal-100 ring-2 ring-teal-50 relative animate-in fade-in zoom-in-95 duration-200">
+              <div key={member.id} className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-lg border-2 border-teal-100 dark:border-teal-800 ring-2 ring-teal-50 dark:ring-teal-900 relative animate-in fade-in zoom-in-95 duration-200">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-teal-600 uppercase tracking-wide">Editando Membro</h4>
                   </div>
                   <input
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-teal-200"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700"
                     value={editForm.name}
                     onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                     placeholder="Nome"
                   />
                   <select
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-200"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700"
                     value={editForm.role}
                     onChange={e => setEditForm({ ...editForm, role: e.target.value })}
                   >
                     {ROLES_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                   <input
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-200"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700"
                     value={editForm.email}
                     onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                     placeholder="Email"
                   />
                   <div className="relative">
                     <select
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-200 appearance-none cursor-pointer"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-700 appearance-none cursor-pointer"
                       value={editForm.municipio}
                       onChange={e => setEditForm({ ...editForm, municipio: e.target.value })}
                     >
@@ -357,7 +358,7 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
                   </div>
                   <div className="flex gap-2 pt-2">
                     <button onClick={() => saveEdit(member.id)} className="flex-1 bg-teal-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-teal-700">Salvar</button>
-                    <button onClick={() => setEditingId(null)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-50">Cancelar</button>
+                    <button onClick={() => setEditingId(null)} className="flex-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600">Cancelar</button>
                   </div>
                 </div>
               </div>
@@ -366,16 +367,32 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
 
           // Card em Modo de Visualização
           return (
-            <div key={member.id} className="group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md hover:border-teal-100 transition-all duration-300 relative">
+            <div key={member.id} className={`group bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border transition-all duration-300 relative ${isPending
+              ? 'border-amber-300 dark:border-amber-700/50 ring-1 ring-amber-100 dark:ring-amber-900/20'
+              : 'border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-teal-100 dark:hover:border-teal-800'
+              }`}>
+
+              {/* Badge de Pendente */}
+              {isPending && (
+                <div className="absolute top-0 right-0">
+                  <div className="bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-bl-xl rounded-tr-xl flex items-center gap-1.5 shadow-sm border-b border-l border-amber-200 dark:border-amber-800/50">
+                    <AlertTriangle size={12} className="stroke-[2.5]" />
+                    <span>CADASTRO PENDENTE</span>
+                  </div>
+                </div>
+              )}
 
               {/* Cabeçalho do Card */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-4 mt-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 font-bold text-lg flex items-center justify-center shadow-inner">
+                  <div className={`w-12 h-12 rounded-2xl text-lg font-bold flex items-center justify-center shadow-inner ${isPending
+                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                    : 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-600 dark:to-slate-700 text-slate-600 dark:text-slate-200'
+                    }`}>
                     {getInitials(member.name)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-teal-700 transition-colors">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base leading-tight group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
                       {member.name}
                     </h3>
                     <div className={`inline-flex items-center px-2 py-0.5 mt-1 rounded-md border text-[10px] font-bold uppercase tracking-wider ${getRoleBadgeColor(member.role)}`}>
@@ -387,10 +404,10 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
                 {/* Ações (Aparecem no hover em desktop, ou sempre visíveis se mobile) */}
                 {!readOnly && (
                   <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => startEdit(member)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                    <button onClick={() => startEdit(member)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/40 rounded-lg transition-colors">
                       <Edit3 size={16} />
                     </button>
-                    <button onClick={() => handleRemove(member.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                    <button onClick={() => handleRemove(member.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-lg transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -400,15 +417,15 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
               {/* Detalhes do Card */}
               <div className="space-y-2">
                 {member.email ? (
-                  <div className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors">
-                    <div className="p-1.5 bg-slate-50 rounded-md text-slate-400">
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
+                    <div className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-md text-slate-400 dark:text-slate-500">
                       <Mail size={14} />
                     </div>
                     <span className="truncate">{member.email}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-sm text-slate-300 italic">
-                    <div className="p-1.5 bg-slate-50 rounded-md">
+                  <div className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-500 italic">
+                    <div className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-md">
                       <Mail size={14} />
                     </div>
                     Sem email
@@ -416,19 +433,25 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
                 )}
 
                 {member.municipio ? (
-                  <div className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors">
-                    <div className="p-1.5 bg-slate-50 rounded-md text-slate-400">
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
+                    <div className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-md text-slate-400 dark:text-slate-500">
                       <MapPin size={14} />
                     </div>
                     <span className="truncate">{member.municipio}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-sm text-slate-300 italic">
-                    <div className="p-1.5 bg-slate-50 rounded-md">
+                  <div className="flex items-center gap-2 text-sm text-slate-300 dark:text-slate-500 italic">
+                    <div className="p-1.5 bg-slate-50 dark:bg-slate-700 rounded-md">
                       <MapPin size={14} />
                     </div>
                     Sem município
                   </div>
+                )}
+
+                {isPending && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium pt-2 border-t border-slate-100 dark:border-slate-700 mt-2">
+                    Aguardando cadastro pelo administrador
+                  </p>
                 )}
               </div>
             </div>
@@ -437,16 +460,16 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
       </div>
 
       {filteredTeam.length === 0 && (
-        <div className="text-center py-16 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
-          <div className="mx-auto w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-4">
+        <div className="text-center py-16 bg-slate-50/50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
+          <div className="mx-auto w-16 h-16 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center mb-4">
             <Search size={24} />
           </div>
-          <h3 className="text-slate-900 font-semibold text-lg">Nenhum membro encontrado</h3>
-          <p className="text-slate-500 max-w-xs mx-auto mt-1">
+          <h3 className="text-slate-900 dark:text-slate-100 font-semibold text-lg">Nenhum membro encontrado</h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-1">
             Tente ajustar seus filtros ou adicione um novo colaborador à equipe.
           </p>
           {!readOnly && (
-            <button onClick={() => { setSearchTerm(''); setRoleFilter(''); setIsAddOpen(true) }} className="mt-4 text-teal-600 font-semibold text-sm hover:underline">
+            <button onClick={() => { setSearchTerm(''); setRoleFilter(''); setIsAddOpen(true) }} className="mt-4 text-teal-600 dark:text-teal-400 font-semibold text-sm hover:underline">
               Limpar filtros e adicionar novo
             </button>
           )}

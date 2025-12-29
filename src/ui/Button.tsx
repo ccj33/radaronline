@@ -7,8 +7,8 @@ const base = "inline-flex items-center justify-center font-bold rounded transiti
 
 const variants: Record<Variant, string> = {
   primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
-  secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 disabled:text-slate-400",
-  ghost: "bg-transparent text-slate-600 hover:bg-slate-100 disabled:text-slate-400"
+  secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:text-slate-400",
+  ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:text-slate-400"
 };
 
 const sizes: Record<Size, string> = {

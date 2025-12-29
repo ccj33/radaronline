@@ -113,19 +113,19 @@ function calculateMacroMetrics(
     };
 }
 
-function calculateMunicipioMetrics(
-    municipioCode: string,
+function calculateMicroMetrics(
+    microId: string,
     actions: Action[],
     users: User[]
 ): EntityMetrics | null {
-    const muni = MUNICIPIOS.find(m => m.codigo === municipioCode);
-    if (!muni) return null;
+    const micro = MICROREGIOES.find(m => m.id === microId);
+    if (!micro) return null;
 
-    // Users are tied to microrregioes, so we filter users who belong to this municipality's micro
-    const muniUsers = users.filter(u => u.microregiaoId === muni.microregiaoId);
+    // Users are tied to microrregioes
+    const microUsers = users.filter(u => u.microregiaoId === micro.id);
 
-    // Actions are at micro level, so we show the parent micro's actions
-    const microActions = actions.filter(a => a.microregiaoId === muni.microregiaoId);
+    // Actions are at micro level
+    const microActions = actions.filter(a => a.microregiaoId === micro.id);
 
     const hoje = new Date();
     const completed = microActions.filter(a => a.status === 'Concluído').length;
@@ -142,9 +142,12 @@ function calculateMunicipioMetrics(
         ? Math.round(microActions.reduce((sum, a) => sum + a.progress, 0) / totalActions)
         : 0;
 
+    // Count municipalities in this micro
+    const municipioCount = getMunicipiosByMicro(micro.id).length;
+
     return {
-        id: muni.codigo,
-        name: muni.nome,
+        id: micro.id,
+        name: micro.nome,
         totalActions,
         completed,
         inProgress,
@@ -152,8 +155,9 @@ function calculateMunicipioMetrics(
         overdue,
         completionRate,
         avgProgress,
-        userCount: muniUsers.length,
-        activeUsers: muniUsers.filter(u => u.ativo).length,
+        userCount: microUsers.length,
+        activeUsers: microUsers.filter(u => u.ativo).length,
+        municipioCount,
     };
 }
 
@@ -179,17 +183,17 @@ function ComparisonCard({
     const formatValue = (v: number) => format === 'percent' ? `${v}%` : v.toString();
 
     return (
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-slate-200/60 p-4 shadow-sm hover:shadow-lg transition-all">
+        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-sm hover:shadow-lg transition-all text-slate-800 dark:text-slate-200">
             <div className="flex items-center gap-2 mb-3">
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-500">
+                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-400">
                     {icon}
                 </div>
-                <span className="text-sm font-medium text-slate-600">{label}</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{label}</span>
             </div>
             <div className="flex items-center justify-between">
                 {/* Entity A */}
                 <div className={`text-center flex-1 ${aWins ? 'scale-105' : ''}`}>
-                    <span className={`text-2xl font-bold ${aWins ? 'text-teal-600' : 'text-slate-700'}`}>
+                    <span className={`text-2xl font-bold ${aWins ? 'text-teal-600 dark:text-teal-400' : 'text-slate-700 dark:text-slate-300'}`}>
                         {formatValue(valueA)}
                     </span>
                     {aWins && <TrendingUp className="w-4 h-4 text-teal-500 inline ml-1" />}
@@ -202,10 +206,10 @@ function ComparisonCard({
 
                 {/* Entity B */}
                 <div className={`text-center flex-1 ${bWins ? 'scale-105' : ''}`}>
-                    <span className={`text-2xl font-bold ${bWins ? 'text-purple-600' : 'text-slate-700'}`}>
+                    <span className={`text-2xl font-bold ${bWins ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
                         {formatValue(valueB)}
                     </span>
-                    {bWins && <TrendingUp className="w-4 h-4 text-purple-500 inline ml-1" />}
+                    {bWins && <TrendingUp className="w-4 h-4 text-blue-500 dark:text-blue-400 inline ml-1" />}
                 </div>
             </div>
         </div>
@@ -224,14 +228,14 @@ export function ComparisonEngine({
         if (!entityA) return null;
         return compareLevel === 'macro'
             ? calculateMacroMetrics(entityA, actions, users)
-            : calculateMunicipioMetrics(entityA, actions, users);
+            : calculateMicroMetrics(entityA, actions, users);
     }, [entityA, compareLevel, actions, users]);
 
     const metricsB = useMemo(() => {
         if (!entityB) return null;
         return compareLevel === 'macro'
             ? calculateMacroMetrics(entityB, actions, users)
-            : calculateMunicipioMetrics(entityB, actions, users);
+            : calculateMicroMetrics(entityB, actions, users);
     }, [entityB, compareLevel, actions, users]);
 
     // Data for bar chart
@@ -258,15 +262,15 @@ export function ComparisonEngine({
 
     if (!entityA || !entityB) {
         return (
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-slate-200 p-12 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center">
-                    <ArrowRight className="w-8 h-8 text-teal-600" />
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center transition-colors">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-teal-100 to-blue-100 dark:from-teal-900/30 dark:to-blue-900/30 flex items-center justify-center">
+                    <ArrowRight className="w-8 h-8 text-teal-600 dark:text-teal-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2">
                     Selecione duas entidades para comparar
                 </h3>
-                <p className="text-sm text-slate-500">
-                    Escolha {compareLevel === 'macro' ? 'duas Macrorregiões' : 'dois Municípios'} nos seletores acima
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Escolha {compareLevel === 'macro' ? 'duas Macrorregiões' : 'duas Microrregiões'} nos seletores acima
                 </p>
             </div>
         );
@@ -284,16 +288,16 @@ export function ComparisonEngine({
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header with Entity Names */}
             <div className="flex items-center justify-center gap-4 mb-2">
-                <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-full">
+                <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/50 rounded-full transition-colors">
                     <div className="w-6 h-6 rounded-full bg-teal-500 text-white text-xs font-bold flex items-center justify-center">A</div>
-                    {compareLevel === 'macro' ? <Layers className="w-4 h-4 text-teal-600" /> : <Building2 className="w-4 h-4 text-teal-600" />}
-                    <span className="font-semibold text-teal-800">{metricsA.name}</span>
+                    {compareLevel === 'macro' ? <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" /> : <MapPin className="w-4 h-4 text-teal-600 dark:text-teal-400" />}
+                    <span className="font-semibold text-teal-800 dark:text-teal-300">{metricsA.name}</span>
                 </div>
                 <span className="text-slate-400 font-bold text-lg">×</span>
-                <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-full">
-                    <div className="w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center justify-center">B</div>
-                    {compareLevel === 'macro' ? <Layers className="w-4 h-4 text-purple-600" /> : <Building2 className="w-4 h-4 text-purple-600" />}
-                    <span className="font-semibold text-purple-800">{metricsB.name}</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-full transition-colors">
+                    <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">B</div>
+                    {compareLevel === 'macro' ? <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" /> : <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                    <span className="font-semibold text-blue-800 dark:text-blue-300">{metricsB.name}</span>
                 </div>
             </div>
 
@@ -333,41 +337,53 @@ export function ComparisonEngine({
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Bar Chart */}
-                <div className="bg-white/70 backdrop-blur-md rounded-xl border border-slate-200/60 p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Distribuição de Status</h3>
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-6 shadow-sm transition-colors">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Distribuição de Status</h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" strokeOpacity={0.3} />
                                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-white dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg text-sm">
+                                                    <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">{label}</p>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={index} className="flex items-center gap-2 mb-1">
+                                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                                            <span className="text-slate-600 dark:text-slate-400">
+                                                                {entry.name}: <span className="font-medium text-slate-900 dark:text-slate-100">{entry.value}</span>
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
                                     }}
                                 />
                                 <Legend />
                                 <Bar dataKey="A" name={metricsA.name} fill="#14b8a6" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="B" name={metricsB.name} fill="#a855f7" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="B" name={metricsB.name} fill="#3b82f6" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
                 {/* Radar Chart */}
-                <div className="bg-white/70 backdrop-blur-md rounded-xl border border-slate-200/60 p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Comparativo de Performance</h3>
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-6 shadow-sm transition-colors">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Comparativo de Performance</h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <RadarChart data={radarData}>
-                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarGrid stroke="#94a3b8" strokeOpacity={0.3} />
                                 <PolarAngleAxis dataKey="metric" tick={{ fill: '#64748b', fontSize: 12 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                                 <Radar name={metricsA.name} dataKey="A" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.3} />
-                                <Radar name={metricsB.name} dataKey="B" stroke="#a855f7" fill="#a855f7" fillOpacity={0.3} />
+                                <Radar name={metricsB.name} dataKey="B" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
                                 <Legend />
                             </RadarChart>
                         </ResponsiveContainer>
@@ -375,23 +391,23 @@ export function ComparisonEngine({
                 </div>
             </div>
 
-            {/* Additional info for Macro comparison */}
-            {compareLevel === 'macro' && metricsA.microCount !== undefined && metricsB.microCount !== undefined && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Additional info for Macro comparison (micros count) OR Micro comparison (municipios count) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {compareLevel === 'macro' && metricsA.microCount !== undefined && metricsB.microCount !== undefined && (
                     <ComparisonCard
                         label="Microrregiões"
                         valueA={metricsA.microCount}
                         valueB={metricsB.microCount}
                         icon={<MapPin className="w-5 h-5" />}
                     />
-                    <ComparisonCard
-                        label="Municípios"
-                        valueA={metricsA.municipioCount || 0}
-                        valueB={metricsB.municipioCount || 0}
-                        icon={<Building2 className="w-5 h-5" />}
-                    />
-                </div>
-            )}
+                )}
+                <ComparisonCard
+                    label="Municípios"
+                    valueA={metricsA.municipioCount || 0}
+                    valueB={metricsB.municipioCount || 0}
+                    icon={<Building2 className="w-5 h-5" />}
+                />
+            </div>
         </div>
     );
 }

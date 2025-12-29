@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { 
-  Activity, 
-  UserPlus, 
-  UserCheck, 
+import {
+  Activity,
+  UserPlus,
+  UserCheck,
   UserX,
   Edit3,
   Plus,
@@ -15,11 +15,11 @@ import {
 } from 'lucide-react';
 
 // Tipos de atividade
-type ActivityType = 
-  | 'login' 
-  | 'logout' 
-  | 'user_created' 
-  | 'user_updated' 
+type ActivityType =
+  | 'login'
+  | 'logout'
+  | 'user_created'
+  | 'user_updated'
   | 'user_deactivated'
   | 'lgpd_accepted'
   | 'action_created'
@@ -150,24 +150,24 @@ export function ActivityLog({ maxItems = 10 }: ActivityLogProps) {
     switch (type) {
       case 'login':
       case 'logout':
-        return 'bg-blue-100 text-blue-600 border-blue-200';
+        return 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/30';
       case 'user_created':
       case 'user_updated':
-        return 'bg-green-100 text-green-600 border-green-200';
+        return 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/30';
       case 'user_deactivated':
-        return 'bg-red-100 text-red-600 border-red-200';
+        return 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/30';
       case 'lgpd_accepted':
-        return 'bg-purple-100 text-purple-600 border-purple-200';
+        return 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/30';
       case 'action_created':
-        return 'bg-teal-100 text-teal-600 border-teal-200';
+        return 'bg-teal-100 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800/30';
       case 'action_updated':
-        return 'bg-amber-100 text-amber-600 border-amber-200';
+        return 'bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/30';
       case 'action_deleted':
-        return 'bg-red-100 text-red-600 border-red-200';
+        return 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/30';
       case 'view_micro':
-        return 'bg-slate-100 text-slate-600 border-slate-200';
+        return 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600';
       default:
-        return 'bg-slate-100 text-slate-600 border-slate-200';
+        return 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600';
     }
   };
 
@@ -187,15 +187,15 @@ export function ActivityLog({ maxItems = 10 }: ActivityLogProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
       {/* Header */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50">
+      <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Activity className="w-5 h-5 text-teal-600" />
-            <h3 className="font-semibold text-slate-800">Atividade Recente</h3>
+            <Activity className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100">Atividade Recente</h3>
           </div>
-          <span className="text-xs text-slate-500 flex items-center gap-1">
+          <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
             <Clock className="w-3 h-3" />
             Últimas atividades
           </span>
@@ -203,11 +203,11 @@ export function ActivityLog({ maxItems = 10 }: ActivityLogProps) {
       </div>
 
       {/* Activity List */}
-      <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+      <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
         {activities.map((activity, index) => (
-          <div 
+          <div
             key={activity.id}
-            className="p-4 hover:bg-slate-50 transition-colors"
+            className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
           >
             <div className="flex gap-3">
               {/* Icon */}
@@ -219,23 +219,23 @@ export function ActivityLog({ maxItems = 10 }: ActivityLogProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm text-slate-800">
+                    <p className="text-sm text-slate-800 dark:text-slate-200">
                       <span className="font-medium">{activity.userName}</span>
                       {' '}
-                      <span className="text-slate-500">{activity.description}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{activity.description}</span>
                     </p>
                     {activity.details && (
-                      <p className="text-xs text-slate-500 mt-0.5 truncate" title={activity.details}>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate" title={activity.details}>
                         {activity.details}
                       </p>
                     )}
                     {activity.microregiaoNome && (
-                      <span className="inline-flex items-center gap-1 mt-1 text-xs text-teal-600 bg-teal-50 px-2 py-0.5 rounded">
+                      <span className="inline-flex items-center gap-1 mt-1 text-xs text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 px-2 py-0.5 rounded">
                         📍 {activity.microregiaoNome}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400 flex-shrink-0">
+                  <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">
                     {formatTimeAgo(activity.timestamp)}
                   </span>
                 </div>
@@ -244,15 +244,15 @@ export function ActivityLog({ maxItems = 10 }: ActivityLogProps) {
 
             {/* Timeline connector */}
             {index < activities.length - 1 && (
-              <div className="ml-5 mt-3 h-3 border-l-2 border-dashed border-slate-200" />
+              <div className="ml-5 mt-3 h-3 border-l-2 border-dashed border-slate-200 dark:border-slate-700" />
             )}
           </div>
         ))}
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-slate-100 text-center bg-slate-50">
-        <button className="text-sm text-teal-600 hover:text-teal-700 font-medium">
+      <div className="p-3 border-t border-slate-100 dark:border-slate-700 text-center bg-slate-50 dark:bg-slate-700/30">
+        <button className="text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium">
           Ver histórico completo
         </button>
       </div>

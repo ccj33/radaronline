@@ -6,27 +6,39 @@
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
-| `id` | UUID | ID do usuário (FK para auth.users) |
+| `id` | UUID | ID do usuário (= auth.users.id) |
 | `nome` | TEXT | Nome completo |
 | `email` | TEXT | Email do usuário |
-| `role` | TEXT | Cargo: `admin`, `superadmin`, `gestor`, `usuario` |
-| `microregiao_id` | TEXT | Microrregião (null para admin/superadmin = acesso total) |
-| `avatar_id` | TEXT | ID do avatar (default: 'avatar1') |
+| `role` | TEXT | Nível de acesso: `superadmin`, `admin`, `gestor`, `usuario` |
+| `microregiao_id` | TEXT | FK → microregioes (null = acesso total) |
+| `avatar_id` | TEXT | ID do avatar (default: 'zg10') |
 | `ativo` | BOOLEAN | Se o usuário está ativo |
 | `lgpd_consentimento` | BOOLEAN | Consentimento LGPD |
+| `municipio` | TEXT | Município do usuário |
 | `created_by` | UUID | Quem criou o usuário |
 | `created_at` | TIMESTAMP | Data de criação |
 | `updated_at` | TIMESTAMP | Última atualização |
+
+### Tabela: `microregioes` (NOVA)
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | TEXT PK | ID da microrregião (ex: "MR009") |
+| `codigo` | TEXT | Código oficial (ex: "31009") |
+| `nome` | TEXT | Nome (ex: "São Sebastião do Paraíso") |
+| `macrorregiao` | TEXT | Nome da macrorregião |
+| `macro_id` | TEXT | ID da macrorregião (ex: "MAC16") |
+| `urs` | TEXT | Unidade Regional de Saúde |
 
 ### Tabela: `actions`
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
-| `id` | UUID | ID interno |
+| `id` | UUID | ID interno (PK) |
 | `uid` | TEXT | Chave única: `{microregiao_id}::{action_id}` |
 | `action_id` | TEXT | ID da ação (ex: "1.1.1") |
 | `activity_id` | TEXT | ID da atividade pai (ex: "1.1") |
-| `microregiao_id` | TEXT | Microrregião |
+| `microregiao_id` | TEXT | FK → microregioes |
 | `title` | TEXT | Título da ação |
 | `status` | TEXT | `Não Iniciado`, `Em Andamento`, `Concluído`, `Atrasado` |
 | `start_date` | DATE | Data de início |
@@ -41,7 +53,7 @@
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID | ID único |
-| `action_id` | UUID | FK para actions |
+| `action_id` | UUID | FK → actions |
 | `member_name` | TEXT | Nome do membro |
 | `role` | TEXT | Papel RACI: `R`, `A`, `C`, `I` |
 
@@ -50,8 +62,9 @@
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID | ID único |
-| `action_id` | UUID | FK para actions |
-| `author_id` | UUID | FK para profiles |
+| `action_id` | UUID | FK → actions |
+| `author_id` | UUID | FK → profiles |
+| `parent_id` | UUID | FK → action_comments (para threads) |
 | `content` | TEXT | Conteúdo do comentário |
 | `created_at` | TIMESTAMP | Data de criação |
 
@@ -60,24 +73,39 @@
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID | ID único |
-| `microregiao_id` | TEXT | Microrregião |
+| `microregiao_id` | TEXT | FK → microregioes |
 | `name` | TEXT | Nome do membro |
-| `role` | TEXT | Cargo/função |
+| `cargo` | TEXT | Cargo/função na equipe (⚠️ renomeado de 'role') |
 | `email` | TEXT | Email |
 | `municipio` | TEXT | Município |
+| `profile_id` | UUID | FK → profiles (se cadastrado) |
 
 ### Tabela: `user_requests`
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID | ID único |
-| `user_id` | UUID | FK para profiles |
-| `request_type` | TEXT | `profile_change`, `other` |
+| `user_id` | UUID | FK → profiles |
+| `request_type` | TEXT | `profile_change`, `mention`, `system` |
 | `content` | TEXT | Conteúdo da solicitação |
 | `status` | TEXT | `pending`, `resolved`, `rejected` |
 | `resolved_by` | UUID | Quem resolveu |
 | `resolved_at` | TIMESTAMP | Quando foi resolvido |
 | `admin_notes` | TEXT | Notas do admin |
+
+### Tabela: `activity_logs`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID | ID único |
+| `user_id` | UUID | FK → profiles |
+| `action_type` | TEXT | Ex: `login`, `user_created`, `action_updated` |
+| `entity_type` | TEXT | `auth`, `action`, `user`, `view` |
+| `entity_id` | TEXT | ID da entidade afetada |
+| `metadata` | JSONB | Dados adicionais |
+| `created_at` | TIMESTAMP | Data de criação |
+
+> ⚠️ Logs são imutáveis (UPDATE/DELETE bloqueados por RLS)
 
 ---
 

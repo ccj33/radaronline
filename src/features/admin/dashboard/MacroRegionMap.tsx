@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   ChevronRight,
   MapPin,
@@ -8,11 +8,13 @@ import {
   Maximize2
 } from 'lucide-react';
 import { Action } from '../../../types';
-import { MICROREGIOES, getMacrorregioes, Microrregiao } from '../../../data/microregioes';
+import { MICROREGIOES, getMacrorregioes, Microrregiao, MACRORREGIOES } from '../../../data/microregioes';
 
 interface MacroRegionMapProps {
   actions: Action[];
   onViewMicrorregiao: (microId: string) => void;
+  selectedMacroId?: string | null;
+  onRegionChange?: (macroId: string | null) => void;
 }
 
 interface MicroStats {
@@ -161,9 +163,47 @@ const MAP_REGIONS = [
   }
 ];
 
-export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapProps) {
+export function MacroRegionMap({ actions, onViewMicrorregiao, selectedMacroId, onRegionChange }: MacroRegionMapProps) {
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+
+  // Sync with external filter
+  useEffect(() => {
+    if (selectedMacroId) {
+      const macro = MACRORREGIOES.find(m => m.id === selectedMacroId);
+      if (macro) {
+        // Robust case insensitive match
+        const region = MAP_REGIONS.find(r =>
+          r.systemName.toLowerCase().trim() === macro.nome.toLowerCase().trim()
+        );
+        if (region) {
+          setSelectedRegionId(region.id);
+        }
+      }
+    } else {
+      setSelectedRegionId(null);
+    }
+  }, [selectedMacroId]);
+
+  const handleRegionClick = (regionId: string) => {
+    const region = MAP_REGIONS.find(r => r.id === regionId);
+    if (region && onRegionChange) {
+      const macro = MACRORREGIOES.find(m => m.nome.toLowerCase().trim() === region.systemName.toLowerCase().trim());
+      if (macro) {
+        onRegionChange(macro.id);
+      }
+    }
+    // Also update internal state immediately for responsiveness
+    setSelectedRegionId(regionId);
+  };
+
+  const clearSelection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedRegionId(null);
+    if (onRegionChange) {
+      onRegionChange(null);
+    }
+  };
 
   // Calcular estatísticas reais do sistema
   const statsMap = useMemo(() => {
@@ -226,73 +266,61 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
     return map;
   }, [actions]);
 
-  // Função para obter cor de preenchimento
-  const getFillColor = (regionSystemName: string, isHovered: boolean, isSelected: boolean) => {
-    const stats = statsMap.get(regionSystemName);
-    const baseColor = (() => {
-      if (!stats || stats.totalAcoes === 0) return '#e2e8f0'; // Slate 200
-      switch (stats.status) {
-        case 'otimo': return '#059669'; // Emerald 600
-        case 'bom': return '#2563eb'; // Blue 600
-        case 'atencao': return '#d97706'; // Amber 600
-        case 'critico': return '#e11d48'; // Rose 600
-        default: return '#94a3b8'; // Slate 400
-      }
-    })();
-
-    return baseColor;
-  };
-
-  // Função para cor da borda (Stroke)
-  const getStrokeColor = (regionSystemName: string, isSelected: boolean) => {
-    return isSelected ? '#1e293b' : '#ffffff';
+  const getStatusColorClass = (status?: MacroStats['status']) => {
+    switch (status) {
+      case 'otimo': return 'fill-emerald-600 dark:fill-emerald-700';
+      case 'bom': return 'fill-blue-600 dark:fill-blue-700';
+      case 'atencao': return 'fill-amber-600 dark:fill-amber-700';
+      case 'critico': return 'fill-rose-600 dark:fill-rose-700';
+      default: return 'fill-slate-400 dark:fill-slate-600';
+    }
   };
 
   const selectedRegionConfig = MAP_REGIONS.find(r => r.id === selectedRegionId);
   const selectedStats = selectedRegionConfig ? statsMap.get(selectedRegionConfig.systemName) : null;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 transition-colors">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-slate-500" />
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-slate-500 dark:text-slate-400" />
             Mapa Estratégico de MG
           </h3>
-          <p className="text-sm text-slate-500">16 Macrorregiões de Saúde</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">16 Macrorregiões de Saúde</p>
         </div>
-        <div className="flex flex-wrap gap-3 text-[11px] font-medium text-slate-600 hidden sm:flex">
-          <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
-            <div className="w-2 h-2 rounded-full bg-emerald-600"></div>
-            <span>Ótimo <span className="text-emerald-700 font-bold">≥60%</span></span>
+        <div className="flex flex-wrap gap-3 text-[11px] font-medium text-slate-600 dark:text-slate-300 hidden sm:flex">
+          <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/50">
+            <div className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-500"></div>
+            <span>Ótimo <span className="text-emerald-700 dark:text-emerald-400 font-bold">≥60%</span></span>
           </div>
-          <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
-            <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-            <span>Bom <span className="text-blue-700 font-bold">30-60%</span></span>
+          <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full border border-blue-200 dark:border-blue-800/50">
+            <div className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-500"></div>
+            <span>Bom <span className="text-blue-700 dark:text-blue-400 font-bold">30-60%</span></span>
           </div>
-          <div className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
-            <div className="w-2 h-2 rounded-full bg-amber-600"></div>
-            <span>Atenção <span className="text-amber-700 font-bold">&lt;30%</span></span>
+          <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-full border border-amber-200 dark:border-amber-800/50">
+            <div className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-500"></div>
+            <span>Atenção <span className="text-amber-700 dark:text-amber-400 font-bold">&lt;30%</span></span>
           </div>
-          <div className="flex items-center gap-1.5 bg-rose-50 px-2 py-1 rounded-full border border-rose-200">
-            <div className="w-2 h-2 rounded-full bg-rose-600"></div>
-            <span>Crítico <span className="text-rose-700 font-bold">&gt;5 atrasos</span></span>
+          <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full border border-rose-200 dark:border-rose-800/50">
+            <div className="w-2 h-2 rounded-full bg-rose-600 dark:bg-rose-500"></div>
+            <span>Crítico <span className="text-rose-700 dark:text-rose-400 font-bold">&gt;5 atrasos</span></span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-auto lg:h-[550px]">
         {/* MAPA SVG (2/3) */}
-        <div className="lg:col-span-2 bg-slate-50 rounded-xl border border-slate-100 relative overflow-hidden flex items-center justify-center p-4">
+        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden flex items-center justify-center p-4">
 
           {/* Botão Reset */}
           {selectedRegionId && (
             <button
-              onClick={() => setSelectedRegionId(null)}
-              className="absolute top-4 right-4 z-20 p-2 bg-white rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50 transition-colors"
+              onClick={clearSelection}
+              className="absolute top-4 right-4 z-20 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               title="Restaurar visão completa"
             >
-              <Maximize2 className="w-4 h-4 text-slate-600" />
+              <Maximize2 className="w-4 h-4 text-slate-600 dark:text-slate-300" />
             </button>
           )}
 
@@ -312,23 +340,22 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
                   <path
                     d={region.path}
                     id={region.id}
-                    onClick={() => setSelectedRegionId(region.id)}
+                    onClick={() => handleRegionClick(region.id)}
                     onMouseEnter={() => setHoveredRegionId(region.id)}
                     onMouseLeave={() => setHoveredRegionId(null)}
-                    fill={getFillColor(region.systemName, isHovered, isSelected)}
-                    stroke={getStrokeColor(region.systemName, isSelected)}
                     strokeWidth={isSelected ? 3 : 1.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className={`
                         cursor-pointer transition-all duration-300 ease-out
+                        ${getStatusColorClass(statsMap.get(region.systemName)?.status)}
                         ${isSelected
-                        ? 'opacity-100 z-30 scale-[1.02]'
-                        : isHovered
+                        ? 'stroke-slate-800 dark:stroke-slate-100 opacity-100 z-30 scale-[1.02]'
+                        : `stroke-white dark:stroke-slate-700 ${isHovered
                           ? 'opacity-95 z-20 brightness-95'
                           : isDimmed
                             ? 'opacity-40 grayscale-[0.5]'
-                            : 'opacity-100'
+                            : 'opacity-100'}`
                       }
                       `}
                     style={{
@@ -346,17 +373,17 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
                     className={`
                             text-[8px] font-bold uppercase tracking-tight pointer-events-none select-none
                             transition-opacity duration-300
-                            ${isDimmed ? 'opacity-0' : 'opacity-100'}
+                            ${(isDimmed && !isHovered) ? 'opacity-0' : 'opacity-100'}
                             ${(isHovered || isSelected) ? 'text-[9px]' : ''}
+                            fill-slate-800 dark:fill-slate-100
+                            stroke-white dark:stroke-slate-900
                         `}
                     style={{
                       fontFamily: 'Inter, system-ui, sans-serif',
                       paintOrder: 'stroke',
-                      stroke: 'white',
                       strokeWidth: '3px',
                       strokeLinecap: 'round',
                       strokeLinejoin: 'round',
-                      fill: '#1e293b'
                     }}
                   >
                     {region.name.split(' ').map((word, i) => (
@@ -373,7 +400,7 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
           {/* Instrução Flutuante */}
           {!selectedRegionId && (
             <div className="absolute bottom-4 pointer-events-none">
-              <span className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-medium text-slate-500 shadow-sm border border-slate-200 flex items-center gap-2">
+              <span className="bg-white/90 dark:bg-slate-800/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2">
                 <MapPin className="w-3 h-3" /> Clique em uma região para detalhes
               </span>
             </div>
@@ -383,17 +410,17 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
         {/* PAINEL LATERAL (1/3) */}
         <div className="lg:col-span-1 h-full min-h-[400px]">
           {selectedStats ? (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm h-full flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm h-full flex flex-col animate-in slide-in-from-right duration-300">
               {/* Header do Painel */}
-              <div className="p-4 border-b border-slate-100 bg-slate-50/80">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/30">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h4 className="font-bold text-slate-900 text-lg leading-tight">{selectedRegionConfig?.name}</h4>
-                    <span className="text-xs text-slate-500 font-medium">Macro: {selectedStats.nome}</span>
+                    <h4 className="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight">{selectedRegionConfig?.name}</h4>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Macro: {selectedStats.nome}</span>
                   </div>
                   <button
-                    onClick={() => setSelectedRegionId(null)}
-                    className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                    onClick={clearSelection}
+                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -412,21 +439,21 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
               </div>
 
               {/* Lista de Microrregiões */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
                 {selectedStats.micros.length > 0 ? (
                   selectedStats.micros.map((micro) => (
                     <div
                       key={micro.micro.id}
-                      className="p-3 bg-white border border-slate-200 rounded-lg hover:border-teal-400 hover:shadow-md transition-all group cursor-pointer"
+                      className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-teal-400 dark:hover:border-teal-500 hover:shadow-md transition-all group cursor-pointer"
                       onClick={() => onViewMicrorregiao(micro.micro.id)}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-slate-700 text-sm">{micro.micro.nome}</h5>
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-teal-600 transition-colors" />
+                        <h5 className="font-medium text-slate-700 dark:text-slate-200 text-sm">{micro.micro.nome}</h5>
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
                       </div>
 
                       <div className="space-y-2">
-                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${micro.taxaConclusao >= 75 ? 'bg-emerald-500' :
                               micro.taxaConclusao >= 40 ? 'bg-blue-500' :
@@ -436,29 +463,29 @@ export function MacroRegionMap({ actions, onViewMicrorregiao }: MacroRegionMapPr
                           />
                         </div>
 
-                        <div className="flex justify-between text-[11px] text-slate-500 font-medium">
+                        <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                           <span>{micro.taxaConclusao}% concluído</span>
                           {micro.atrasadas > 0 && (
-                            <span className="text-rose-600">{micro.atrasadas} em atraso</span>
+                            <span className="text-rose-600 dark:text-rose-400">{micro.atrasadas} em atraso</span>
                           )}
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-slate-400 text-sm">
+                  <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
                     Nenhuma microrregião nesta área.
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <MapPin className="w-8 h-8 text-slate-300" />
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                <MapPin className="w-8 h-8 text-slate-300 dark:text-slate-600" />
               </div>
-              <p className="font-medium text-slate-600">Selecione uma região</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-[200px]">
+              <p className="font-medium text-slate-600 dark:text-slate-400">Selecione uma região</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-[200px]">
                 Clique no mapa para ver as microrregiões
               </p>
             </div>

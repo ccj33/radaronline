@@ -246,9 +246,9 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-gradient-to-r from-teal-500 to-emerald-500 text-white">
+                <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-teal-500 to-emerald-500 text-white">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                             <UserIcon className="w-5 h-5" />
@@ -267,7 +267,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                 </div>
 
                 {/* Content */}
-                <div className="p-5 space-y-6 overflow-y-auto max-h-[65vh]">
+                <div className="p-5 space-y-6 overflow-y-auto max-h-[65vh] dark:text-slate-100">
                     {/* Preview do Avatar atual */}
                     <div className="flex flex-col items-center gap-3">
                         <img
@@ -282,20 +282,20 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                     </div>
 
                     {/* Informações do usuário (somente leitura) */}
-                    <div className="bg-slate-50 rounded-xl p-4">
-                        <h3 className="text-sm font-medium text-slate-600 mb-3">Suas informações</h3>
+                    <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-4">
+                        <h3 className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-3">Suas informações</h3>
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Nome</label>
-                                <p className="text-sm text-slate-700 bg-white px-3 py-2 rounded-lg border border-slate-200">{user.nome}</p>
+                                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Nome</label>
+                                <p className="text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600">{user.nome}</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
-                                <p className="text-sm text-slate-700 bg-white px-3 py-2 rounded-lg border border-slate-200">{user.email}</p>
+                                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
+                                <p className="text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600">{user.email}</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Função</label>
-                                <p className="text-sm text-slate-700 bg-white px-3 py-2 rounded-lg border border-slate-200 capitalize">
+                                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Função</label>
+                                <p className="text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 capitalize">
                                     {user.role === 'superadmin' ? 'Super Admin' :
                                         user.role === 'admin' ? 'Administrador' :
                                             user.role === 'gestor' ? 'Gestor' : 'Usuário'}
@@ -305,7 +305,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
 
                         {/* Campo para solicitar alteração */}
                         <div className="mt-4 pt-4 border-t border-slate-200">
-                            <label className="block text-xs font-medium text-slate-600 mb-2">
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                                 Solicitar alteração de dados
                             </label>
                             <textarea
@@ -313,7 +313,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                                 onChange={(e) => setChangeRequest(e.target.value)}
                                 placeholder="Descreva a alteração desejada (ex: Alterar nome para João Silva)..."
                                 rows={2}
-                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
                             />
                             <button
                                 onClick={handleSendRequest}
@@ -328,19 +328,19 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                         {/* Histórico de solicitações */}
                         {myRequests.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-slate-200">
-                                <label className="block text-xs font-medium text-slate-600 mb-2">
+                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                                     Minhas Solicitações
                                 </label>
                                 <div className="space-y-2 max-h-40 overflow-y-auto">
                                     {myRequests.map((req) => (
-                                        <div key={req.id} className={`p-2 rounded-lg text-xs ${req.status === 'pending' ? 'bg-amber-50 border border-amber-200' :
-                                            req.status === 'resolved' ? 'bg-green-50 border border-green-200' :
-                                                'bg-red-50 border border-red-200'
+                                        <div key={req.id} className={`p-2 rounded-lg text-xs ${req.status === 'pending' ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50' :
+                                            req.status === 'resolved' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50' :
+                                                'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50'
                                             }`}>
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                    req.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                                                        'bg-red-100 text-red-700'
+                                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${req.status === 'pending' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' :
+                                                    req.status === 'resolved' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' :
+                                                        'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
                                                     }`}>
                                                     {req.status === 'pending' ? '⏳ Pendente' :
                                                         req.status === 'resolved' ? '✅ Resolvido' : '❌ Rejeitado'}
@@ -349,11 +349,11 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                                                     {new Date(req.created_at).toLocaleDateString('pt-BR')}
                                                 </span>
                                             </div>
-                                            <p className="text-slate-600 line-clamp-2">{req.content}</p>
+                                            <p className="text-slate-600 dark:text-slate-300 line-clamp-2">{req.content}</p>
                                             {req.admin_notes && (
-                                                <div className="mt-2 p-2 bg-white rounded border border-slate-200">
-                                                    <p className="text-xs text-slate-500 font-medium mb-0.5">Resposta do Admin:</p>
-                                                    <p className="text-slate-700">{req.admin_notes}</p>
+                                                <div className="mt-2 p-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-0.5">Resposta do Admin:</p>
+                                                    <p className="text-slate-700 dark:text-slate-300">{req.admin_notes}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -365,7 +365,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
 
                     {/* Galeria de Avatares */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-3">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                             Escolha seu avatar
                         </label>
 
@@ -386,7 +386,7 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                                     onClick={() => setSelectedCategory(cat.id)}
                                     className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${selectedCategory === cat.id
                                         ? 'bg-teal-500 text-white'
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                                         }`}
                                 >
                                     {cat.label}
@@ -400,15 +400,15 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                                     key={avatar.id}
                                     onClick={() => setSelectedAvatar(avatar.id)}
                                     className={`relative p-1 rounded-xl transition-all duration-200 ${selectedAvatar === avatar.id
-                                        ? 'ring-2 ring-teal-500 bg-teal-50 scale-105'
-                                        : 'hover:bg-slate-50 hover:scale-105'
+                                        ? 'ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-900/40 scale-105'
+                                        : 'hover:bg-slate-50 dark:hover:bg-slate-700 hover:scale-105'
                                         }`}
                                     title={avatar.label}
                                 >
                                     <img
                                         src={getAvatarUrl(avatar.id)}
                                         alt={avatar.label}
-                                        className="w-full aspect-square rounded-lg bg-white"
+                                        className="w-full aspect-square rounded-lg bg-white dark:bg-slate-600"
                                     />
                                     {selectedAvatar === avatar.id && (
                                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center shadow-md">
@@ -421,16 +421,16 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                     </div>
 
                     {/* Informações adicionais (somente leitura) */}
-                    <div className="pt-4 border-t border-slate-100">
-                        <h3 className="text-sm font-medium text-slate-500 mb-3">Informações da conta</h3>
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Informações da conta</h3>
                         <div className="space-y-2 text-sm">
-                            <div className="flex justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                                <span className="text-slate-500">Email</span>
-                                <span className="text-slate-700">{user.email}</span>
+                            <div className="flex justify-between py-2 px-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                <span className="text-slate-500 dark:text-slate-400">Email</span>
+                                <span className="text-slate-700 dark:text-slate-300">{user.email}</span>
                             </div>
-                            <div className="flex justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                                <span className="text-slate-500">Função</span>
-                                <span className="capitalize text-slate-700">
+                            <div className="flex justify-between py-2 px-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                <span className="text-slate-500 dark:text-slate-400">Função</span>
+                                <span className="capitalize text-slate-700 dark:text-slate-300">
                                     {user.role === 'superadmin' ? 'Super Admin' :
                                         user.role === 'admin' ? 'Administrador' :
                                             user.role === 'gestor' ? 'Gestor' : 'Usuário'}
@@ -441,10 +441,10 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-100 bg-slate-50">
+                <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition-colors"
+                        className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white transition-colors"
                     >
                         Cancelar
                     </button>

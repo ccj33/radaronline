@@ -73,7 +73,7 @@ export const formatRelativeTime = (dateString: string) => {
 
 const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
   return (
-    <div className="flex gap-3 py-3 border-b border-slate-100 last:border-0">
+    <div className="flex gap-3 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
       <img
         src={getAvatarUrl(comment.authorAvatarId || 'zg10')}
         alt={comment.authorName}
@@ -81,14 +81,14 @@ const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-sm text-slate-800">{comment.authorName}</span>
+          <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">{comment.authorName}</span>
           <span className="text-xs text-slate-400 flex items-center gap-1">
             {comment.authorMunicipio}
           </span>
           <span className="text-xs text-slate-400">•</span>
           <span className="text-xs text-slate-400">{formatRelativeTime(comment.createdAt)}</span>
         </div>
-        <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">{comment.content}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">{comment.content}</p>
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
     <div className="max-w-5xl mx-auto">
       {/* Aviso de modo somente leitura */}
       {readOnly && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-700 text-sm">
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
           <Eye size={16} />
           <span>Modo visualização. Selecione uma microrregião específica para editar.</span>
         </div>
@@ -193,19 +193,19 @@ export const ActionTable: React.FC<ActionTableProps> = ({
         teamMembers={team}
       />
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Linha de hoje */}
-        <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-3 text-xs font-bold text-slate-600 uppercase tracking-wide">
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-teal-300 to-transparent" aria-hidden="true" />
+        <div className="px-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-teal-300 dark:via-teal-600 to-transparent" aria-hidden="true" />
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse-soft" aria-hidden="true" />
             <span>Hoje - {todayLabel}</span>
           </div>
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-teal-300 to-transparent" aria-hidden="true" />
+          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-teal-300 dark:via-teal-600 to-transparent" aria-hidden="true" />
         </div>
 
         {/* Header */}
-        <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider" role="row">
+        <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider" role="row">
           <div className="col-span-1" role="columnheader">ID</div>
           <div className="col-span-5" role="columnheader">Ação</div>
           <div className="col-span-2" role="columnheader">Prazo</div>
@@ -214,7 +214,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-slate-100" role="rowgroup">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700" role="rowgroup">
           {filteredActions.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               <p className="text-sm">Nenhuma ação encontrada</p>
@@ -230,7 +230,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
           ) : filteredActions.map((action, idx) => {
             // Usa UID para identificar a ação expandida
             const isExpanded = expandedActionId === action.uid;
-            const zebra = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+            const zebra = idx % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/50 dark:bg-slate-700/50';
             // Em modo readOnly, ninguém pode editar
             const userCanEdit = !readOnly && canEdit(action);
             const userCanDelete = !readOnly && canDelete(action);
@@ -239,7 +239,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
               <div
                 key={action.uid}
                 id={`action-${action.uid}`}
-                className={`transition-colors ${isExpanded ? 'bg-blue-50/30' : `${zebra} hover:bg-slate-100/60`}`}
+                className={`transition-colors ${isExpanded ? 'bg-blue-50/30 dark:bg-blue-900/20' : `${zebra} hover:bg-slate-100/60 dark:hover:bg-slate-700/50`}`}
                 role="row"
               >
                 {/* Desktop row */}
@@ -251,7 +251,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                   onKeyDown={e => { if (e.key === 'Enter') toggleRow(action.uid); }}
                 >
                   <div className="col-span-1 font-mono text-xs text-slate-400">{action.id}</div>
-                  <div className="col-span-5 font-medium text-sm text-slate-700 flex items-center gap-2">
+                  <div className="col-span-5 font-medium text-sm text-slate-700 dark:text-slate-200 flex items-center gap-2">
                     {action.title}
                     {!userCanEdit && (
                       <Tooltip content={readOnly ? "Modo somente leitura" : "Você não tem permissão para editar"}>
@@ -275,10 +275,10 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                         <StatusBadge status={action.status} />
                         {!userCanEdit && <Lock size={12} className="text-slate-400" />}
                       </div>
-                      <div className="font-medium text-sm text-slate-700 line-clamp-2">{action.title}</div>
+                      <div className="font-medium text-sm text-slate-700 dark:text-slate-200 line-clamp-2">{action.title}</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span className="flex items-center gap-1"><Calendar size={12} /> {formatDateBr(action.endDate)}</span>
                     <div className="flex gap-1">
                       {[...action.raci].sort((a, b) => rolePriority[a.role] - rolePriority[b.role]).slice(0, 2).map((r, i) => <RaciCompactPill key={i} person={r} />)}
@@ -288,10 +288,10 @@ export const ActionTable: React.FC<ActionTableProps> = ({
 
                 {/* Expanded form - só mostra se não está usando modal */}
                 {isExpanded && !useModal && (
-                  <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 border-t border-slate-100 animate-fade-in">
+                  <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 border-t border-slate-100 dark:border-slate-700 animate-fade-in">
                     {/* Aviso de permissão */}
                     {!userCanEdit && (
-                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-700 text-sm">
+                      <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
                         <Lock size={16} />
                         <span>
                           {readOnly
@@ -311,8 +311,8 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                           rows={2}
                           disabled={!userCanEdit}
                         />
-                        <div className="mt-4 border border-slate-200 rounded-lg overflow-hidden">
-                          <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <div className="mt-4 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                             <MessageCircle size={16} />
                             Comentários ({action.comments?.length || 0})
                           </div>
@@ -328,7 +328,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                               </div>
                             )}
                           </div>
-                          <div className="border-t border-slate-200 px-4 py-3 bg-white">
+                          <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-white dark:bg-slate-800">
                             <div className="flex gap-3 items-start">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                                 {(user?.nome || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
@@ -339,7 +339,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                                   onChange={e => setCommentDrafts(prev => ({ ...prev, [action.uid]: e.target.value }))}
                                   placeholder="Escreva um comentário..."
                                   rows={2}
-                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                       e.preventDefault();
@@ -412,7 +412,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                             </Select>
                             <input
                               type="number"
-                              className="w-20 border rounded p-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                              className="w-20 border border-slate-200 dark:border-slate-600 rounded p-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                               value={action.progress}
                               onChange={e => onUpdateAction(action.uid, 'progress', e.target.value)}
                               min="0"
@@ -421,7 +421,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                             />
                           </div>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded border border-slate-100 dark:border-slate-600">
                           <div className="flex justify-between mb-2">
                             <span className="text-xs font-bold text-slate-500 uppercase">Equipe (RACI)</span>
                           </div>
@@ -449,7 +449,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                               <Tooltip content="Adicionar membro à equipe">
                                 <button
                                   onClick={() => handleAddRaci(action.uid)}
-                                  className="bg-blue-100 text-blue-600 p-2 rounded hover:bg-blue-200 transition-colors"
+                                  className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 p-2 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                                   aria-label="Adicionar membro"
                                 >
                                   <Plus size={14} />
@@ -460,7 +460,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex flex-col sm:flex-row justify-between gap-3 pt-3 border-t border-slate-200">
+                        <div className="flex flex-col sm:flex-row justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
                           {/* Botão Excluir */}
                           {userCanDelete ? (
                             <Tooltip content="Excluir esta ação permanentemente">

@@ -45,15 +45,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const colors = {
     danger: {
-      icon: 'text-rose-500 bg-rose-100',
+      icon: 'text-rose-500 bg-rose-100 dark:bg-rose-900/50 dark:text-rose-400',
       button: 'bg-rose-600 hover:bg-rose-700',
     },
     warning: {
-      icon: 'text-amber-500 bg-amber-100',
+      icon: 'text-amber-500 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-400',
       button: 'bg-amber-600 hover:bg-amber-700',
     },
     info: {
-      icon: 'text-blue-500 bg-blue-100',
+      icon: 'text-blue-500 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-400',
       button: 'bg-blue-600 hover:bg-blue-700',
     },
   };
@@ -75,12 +75,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       {/* Modal */}
       <div
         ref={modalRef}
-        className="relative bg-white rounded-xl shadow-2xl max-w-md w-full animate-scale-in"
+        className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full animate-scale-in"
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
           aria-label="Fechar"
         >
           <X size={20} />
@@ -93,30 +93,35 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </div>
 
           {/* Content */}
-          <h2 id="modal-title" className="text-lg font-bold text-slate-800 text-center mb-2">
+          <h2 id="modal-title" className="text-lg font-bold text-slate-800 dark:text-slate-100 text-center mb-2">
             {title}
           </h2>
-          <p className="text-sm text-slate-600 text-center mb-6">
+          <p className="text-sm text-slate-600 dark:text-slate-400 text-center mb-6">
             {message}
           </p>
 
-          {/* Actions */}
+          {/* Actions - Cancelar é destacado (ação segura), Confirmar é secundário (ação destrutiva) */}
           <div className="flex gap-3">
             <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-            >
-              {cancelText}
-            </button>
-            <button
-              ref={confirmButtonRef}
               onClick={() => {
                 onConfirm();
                 onClose();
               }}
-              className={`flex-1 px-4 py-2 text-sm font-bold text-white rounded-lg transition-colors ${colors[type].button}`}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors border-2 ${type === 'danger'
+                  ? 'border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30'
+                  : type === 'warning'
+                    ? 'border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                    : 'border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                }`}
             >
               {confirmText}
+            </button>
+            <button
+              ref={confirmButtonRef}
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors shadow-sm"
+            >
+              {cancelText}
             </button>
           </div>
         </div>

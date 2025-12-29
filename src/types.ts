@@ -2,6 +2,8 @@
 // TIPOS PRINCIPAIS DO SISTEMA RADAR 2.0
 // =====================================
 
+export * from './types/auth.types';
+
 // --- STATUS E ROLES ---
 export type Status = 'Concluído' | 'Em Andamento' | 'Não Iniciado' | 'Atrasado';
 export type RaciRole = 'R' | 'A' | 'C' | 'I';
@@ -12,9 +14,10 @@ export type RaciMember = {
   role: RaciRole;
 };
 
-// --- COMENTÁRIO (estilo Reddit) ---
+// --- COMENTÁRIO (estilo Reddit/thread) ---
 export type ActionComment = {
   id: string;               // ID único do comentário
+  parentId?: string | null; // ID do comentário pai (para threads)
   authorId: string;         // ID do usuário que comentou
   authorName: string;       // Nome do autor
   authorMunicipio: string;  // Município do autor
@@ -22,6 +25,7 @@ export type ActionComment = {
   authorRole?: string;      // Cargo do autor: gestor, adm, usuario
   content: string;          // Conteúdo do comentário
   createdAt: string;        // ISO datetime: "2025-01-15T14:30:00Z"
+  replies?: ActionComment[]; // Respostas aninhadas (preenchido no frontend)
 };
 
 // --- AÇÃO ---
@@ -65,6 +69,7 @@ export type TeamMember = {
   email: string;
   municipio: string;
   microregiaoId: string;  // Microrregião a qual pertence
+  isRegistered?: boolean; // Se o usuário tem cadastro na plataforma
 };
 
 export type GanttRange = '30d' | '60d' | '90d' | 'all';

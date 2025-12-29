@@ -7,6 +7,8 @@ export { ActivityCenter } from './ActivityCenter';
 export { DashboardFilters, defaultFiltersState } from './DashboardFilters';
 export type { DashboardFiltersState, CompareLevel } from './DashboardFilters';
 export { ComparisonEngine } from './ComparisonEngine';
+export { PendingRegistrationsPanel } from './PendingRegistrationsPanel';
+export { KpiDetailModal } from './KpiDetailModal';
 
 
 

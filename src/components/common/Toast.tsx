@@ -29,10 +29,10 @@ const icons: Record<ToastType, React.ReactNode> = {
 };
 
 const styles: Record<ToastType, string> = {
-  success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-  error: 'bg-rose-50 border-rose-200 text-rose-800',
-  warning: 'bg-amber-50 border-amber-200 text-amber-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
+  success: 'bg-emerald-50 dark:bg-emerald-900/50 border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200',
+  error: 'bg-rose-50 dark:bg-rose-900/50 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200',
+  warning: 'bg-amber-50 dark:bg-amber-900/50 border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200',
+  info: 'bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200',
 };
 
 const ToastItem: React.FC<{ toast: Toast; onClose: (id: number) => void }> = ({ toast, onClose }) => {
@@ -75,14 +75,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      
+
       {/* Toast Container */}
       <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onClose={closeToast} />
         ))}
       </div>
-      
+
       {/* Animation styles */}
       <style>{`
         @keyframes slide-in {

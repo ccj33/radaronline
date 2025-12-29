@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronLeft, ChevronRight, Home, Target, Settings, LogOut, Shield } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Target, Settings, LogOut, Shield, Pencil, Trash2, Plus, X, Edit2 } from 'lucide-react';
 import { Objective, Activity } from '../../types';
 import { UserRole } from '../../types/auth.types';
 import { getAvatarUrl } from '../../features/settings/UserSettingsModal';
 import { NotificationBell } from '../common/NotificationBell';
+import { SecureDeleteModal } from '../common/SecureDeleteModal';
+import { EditNameModal } from '../common/EditNameModal';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -58,6 +60,13 @@ interface SidebarProps {
   onLogout?: () => void;
   isAdmin?: boolean;
   onOpenSettings?: () => void;
+  // CRUD props for objectives and activities (admin/superadmin only)
+  onAddObjective?: () => void;
+  onDeleteObjective?: (id: number) => void;
+  onUpdateObjective?: (id: number, newTitle: string) => void;
+  onAddActivity?: (objectiveId: number) => void;
+  onDeleteActivity?: (objectiveId: number, activityId: string) => void;
+  onUpdateActivity?: (objectiveId: number, activityId: string, newTitle: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -79,7 +88,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   isAdmin = false,
   onOpenSettings,
+  onAddObjective,
+  onDeleteObjective,
+  onUpdateObjective,
+  onAddActivity,
+  onDeleteActivity,
+  onUpdateActivity,
 }) => {
+  // Estado para controlar modo de edição (apenas admin/superadmin)
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Estados para modais de edição/exclusão
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean;
+    type: 'objective' | 'activity';
+    id: number | string;
+    parentId?: number; // Para atividades
+    initialValue: string;
+  }>({ isOpen: false, type: 'objective', id: 0, initialValue: '' });
+
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'objective' | 'activity';
+    id: number | string;
+    parentId?: number;
+    name: string;
+  }>({ isOpen: false, type: 'objective', id: 0, name: '' });
+
+  // Verifica se usuário pode editar (admin ou superadmin)
+  const canEdit = userRole === 'admin' || userRole === 'superadmin';
+
   // No mobile, sidebar começa fechada e é overlay
   const sidebarClasses = isMobile
     ? `fixed inset-y-0 left-0 z-50 ${isOpen ? 'w-[260px]' : 'w-0 overflow-hidden'}`
@@ -111,7 +149,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      <aside className={`${sidebarClasses} flex flex-col z-50 transition-all duration-300 ease-out relative shadow-xl bg-gradient-to-b from-[#0891b2] to-[#059669] text-white`}>
+      {/* Modais de segurança */}
+      <EditNameModal
+        isOpen={editModal.isOpen}
+        onClose={() => setEditModal(prev => ({ ...prev, isOpen: false }))}
+        onSave={(newName) => {
+          if (editModal.type === 'objective' && onUpdateObjective) {
+            onUpdateObjective(editModal.id as number, newName);
+          } else if (editModal.type === 'activity' && onUpdateActivity && editModal.parentId) {
+            onUpdateActivity(editModal.parentId, editModal.id as string, newName);
+          }
+        }}
+        title={`Editar ${editModal.type === 'objective' ? 'Objetivo' : 'Atividade'}`}
+        initialValue={editModal.initialValue}
+      />
+
+      <SecureDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {
+          if (deleteModal.type === 'objective' && onDeleteObjective) {
+            onDeleteObjective(deleteModal.id as number);
+          } else if (deleteModal.type === 'activity' && onDeleteActivity && deleteModal.parentId) {
+            onDeleteActivity(deleteModal.parentId, deleteModal.id as string);
+          }
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+        }}
+        title={`Excluir ${deleteModal.type === 'objective' ? 'Objetivo' : 'Atividade'}`}
+        itemName={deleteModal.name}
+      />
+
+      <aside className={`${sidebarClasses} flex flex-col z-50 transition-all duration-300 ease-out relative shadow-xl bg-gradient-to-b from-[#0891b2] to-[#059669] dark:from-slate-900 dark:to-slate-950 dark:border-r dark:border-slate-800 text-white`}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
           <div className="absolute top-[-50px] left-[-50px] w-[200px] h-[200px] bg-white rounded-full blur-3xl" />
         </div>
@@ -140,13 +208,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <nav className={`flex-1 px-3 py-2 space-y-1 ${isOpen ? 'overflow-y-auto' : 'overflow-visible'}`}>
+
+            {/* Admin Panel - só aparece para admin e gestor */}
+            {(isAdmin || userRole === 'gestor') && (
+              <>
+                <SidebarSectionTitle collapsed={!isOpen}>Administração</SidebarSectionTitle>
+                <SidebarItem
+                  icon={Shield}
+                  label="Painel Admin"
+                  isActive={false}
+                  onClick={onProfileClick}
+                  collapsed={!isOpen}
+                  badge={userRole === 'gestor' ? 'GESTOR' : 'ADM'}
+                />
+              </>
+            )}
+
             <SidebarItem icon={Home} label="Início" isActive={currentNav === 'home'} onClick={() => setCurrentNav('home')} collapsed={!isOpen} />
-            <SidebarSectionTitle collapsed={!isOpen}>Planejamento</SidebarSectionTitle>
+
+            {/* Seção Planejamento */}
+            <div className="flex items-center justify-between">
+              <SidebarSectionTitle collapsed={!isOpen}>Planejamento</SidebarSectionTitle>
+            </div>
 
             <div className="relative group">
               <SidebarItem
                 icon={Target}
-                label="Plano de Ação"
+                label="Objetivos"
                 isActive={currentNav === 'strategy'}
                 onClick={() => { setCurrentNav('strategy'); setViewMode('table'); }}
                 collapsed={!isOpen}
@@ -165,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => {
                           setCurrentNav('strategy');
                           setSelectedObjective(obj.id);
-                          setSelectedActivity(activities[obj.id][0].id);
+                          setSelectedActivity(activities[obj.id]?.[0]?.id || '');
                           setViewMode('table');
                         }}
                         className="w-full text-left px-3 py-2 text-xs rounded-md text-slate-600 hover:bg-blue-50 hover:text-blue-700 truncate transition-colors flex items-center gap-2"
@@ -179,37 +267,146 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
 
+            {/* Lista de objetivos (expandido) */}
             {isOpen && currentNav === 'strategy' && (
               <div className="ml-3 pl-3 border-l border-white/20 space-y-1 mt-1 mb-3">
                 {objectives.map(obj => (
-                  <button
-                    key={obj.id}
-                    onClick={() => {
-                      setSelectedObjective(obj.id);
-                      setSelectedActivity(activities[obj.id][0].id);
-                      setViewMode('table');
-                    }}
-                    className={`block w-full text-left py-1.5 px-2 text-[11px] rounded transition-colors truncate ${selectedObjective === obj.id ? "bg-white/20 font-bold text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
-                  >
-                    {obj.title}
-                  </button>
+                  <div key={obj.id} className="group/obj">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setSelectedObjective(obj.id);
+                          setSelectedActivity(activities[obj.id]?.[0]?.id || '');
+                          setViewMode('table');
+                        }}
+                        className={`flex-1 text-left py-1.5 px-2 text-[11px] rounded transition-colors truncate ${selectedObjective === obj.id ? "bg-white/20 font-bold text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
+                      >
+                        {obj.title}
+                      </button>
+
+                      {/* Controles de edição do objetivo */}
+                      {isEditMode && (
+                        <div className="flex items-center">
+                          {onUpdateObjective && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditModal({ isOpen: true, type: 'objective', id: obj.id, initialValue: obj.title });
+                              }}
+                              className="p-1 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
+                              title="Renomear objetivo"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          )}
+                          {onDeleteObjective && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteModal({ isOpen: true, type: 'objective', id: obj.id, name: obj.title });
+                              }}
+                              className="p-1 rounded hover:bg-red-500/20 text-red-300 hover:text-red-200 transition-colors"
+                              title="Excluir objetivo"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Lista de atividades do objetivo (só no modo edição quando selecionado) */}
+                    {isEditMode && selectedObjective === obj.id && activities[obj.id] && (
+                      <div className="ml-3 pl-2 border-l border-white/10 space-y-0.5 mt-1">
+                        {activities[obj.id].map(act => (
+                          <div key={act.id} className="flex items-center gap-1 group/act">
+                            <span className="flex-1 py-1 px-2 text-[10px] text-white/60 truncate">
+                              {act.id} - {act.title}
+                            </span>
+
+                            <div className="flex items-center opacity-0 group-hover/act:opacity-100 transition-opacity">
+                              {onUpdateActivity && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditModal({ isOpen: true, type: 'activity', id: act.id, parentId: obj.id, initialValue: act.title });
+                                  }}
+                                  className="p-0.5 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
+                                  title="Renomear atividade"
+                                >
+                                  <Edit2 size={10} />
+                                </button>
+                              )}
+                              {onDeleteActivity && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteModal({ isOpen: true, type: 'activity', id: act.id, parentId: obj.id, name: act.title });
+                                  }}
+                                  className="p-0.5 rounded hover:bg-red-500/20 text-red-300/50 hover:text-red-200 transition-colors"
+                                  title="Excluir atividade"
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {/* Botão adicionar atividade */}
+                        {onAddActivity && (
+                          <button
+                            onClick={() => onAddActivity(obj.id)}
+                            className="flex items-center gap-1 py-1 px-2 text-[10px] text-emerald-300/70 hover:text-emerald-200 transition-colors"
+                          >
+                            <Plus size={10} />
+                            <span>Adicionar Atividade</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
+
+                {/* Botão adicionar objetivo - só no modo edição */}
+                {isEditMode && onAddObjective && (
+                  <button
+                    onClick={onAddObjective}
+                    className="flex items-center gap-2 w-full py-2 px-2 text-[11px] text-emerald-300/80 hover:text-emerald-200 hover:bg-white/5 rounded transition-colors mt-2"
+                  >
+                    <Plus size={12} />
+                    <span>Adicionar Objetivo</span>
+                  </button>
+                )}
               </div>
             )}
 
-            {/* Admin Panel - só aparece para admin */}
-            {isAdmin && (
-              <>
-                <SidebarSectionTitle collapsed={!isOpen}>Administração</SidebarSectionTitle>
-                <SidebarItem
-                  icon={Shield}
-                  label="Painel Admin"
-                  isActive={false}
-                  onClick={onProfileClick}
-                  collapsed={!isOpen}
-                  badge="ADM"
-                />
-              </>
+
+
+            {/* Admin Controls - Edit Mode Toggle Switch (Mobile Style) */}
+            {canEdit && (
+              <div className="mt-4 mb-2 flex flex-col items-center gap-2">
+                <button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`
+                    relative w-10 h-6 rounded-full transition-all duration-500 ease-out focus:outline-none ring-1 ring-white/10
+                    ${isEditMode
+                      ? 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)] ring-amber-500/50'
+                      : 'bg-white/10 hover:bg-white/20'}
+                  `}
+                  title={isEditMode ? 'Desativar modo edição' : 'Ativar modo edição'}
+                >
+                  <span className="sr-only">Modo Edição</span>
+                  <span
+                    className={`
+                      absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-500 cubic-bezier(0.34, 1.56, 0.64, 1)
+                      ${isEditMode ? 'translate-x-4' : 'translate-x-0'}
+                      flex items-center justify-center
+                    `}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${isEditMode ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                  </span>
+                </button>
+              </div>
             )}
 
             <SidebarSectionTitle collapsed={!isOpen}>Sistema</SidebarSectionTitle>

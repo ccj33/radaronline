@@ -36,6 +36,8 @@ interface OptimizedViewProps {
   onAddRaci?: (uid: string, memberId: string, role: RaciRole) => void;
   onRemoveRaci?: (uid: string, idx: number, memberName: string) => void;
   onAddComment?: (uid: string, content: string) => void;
+  onEditComment?: (actionUid: string, commentId: string, content: string) => void;
+  onDeleteComment?: (actionUid: string, commentId: string) => void;
   readOnly?: boolean;
 }
 
@@ -48,16 +50,16 @@ const RACI_ROLES: { role: RaciRole; label: string; color: string }[] = [
 ];
 
 const OBJECTIVE_COLORS: Record<number, { border: string; bg: string; accent: string }> = {
-  1: { border: 'border-cyan-200', bg: 'bg-cyan-50', accent: 'bg-cyan-500' },
-  2: { border: 'border-indigo-200', bg: 'bg-indigo-50', accent: 'bg-indigo-500' },
-  3: { border: 'border-amber-200', bg: 'bg-amber-50', accent: 'bg-amber-500' },
+  1: { border: 'border-cyan-200 dark:border-cyan-800', bg: 'bg-cyan-50 dark:bg-cyan-900/30', accent: 'bg-cyan-500' },
+  2: { border: 'border-indigo-200 dark:border-indigo-800', bg: 'bg-indigo-50 dark:bg-indigo-900/30', accent: 'bg-indigo-500' },
+  3: { border: 'border-amber-200 dark:border-amber-800', bg: 'bg-amber-50 dark:bg-amber-900/30', accent: 'bg-amber-500' },
 };
 
 const STATUS_CONFIG: Record<Status, { icon: React.ReactNode; color: string; bg: string; header: string }> = {
-  'Concluído': { icon: <CheckCircle2 size={14} />, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', header: 'bg-emerald-50 text-emerald-700' },
-  'Em Andamento': { icon: <Clock size={14} />, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200', header: 'bg-blue-50 text-blue-700' },
-  'Não Iniciado': { icon: <Circle size={14} />, color: 'text-slate-400', bg: 'bg-slate-50 border-slate-200', header: 'bg-slate-50 text-slate-600' },
-  'Atrasado': { icon: <AlertTriangle size={14} />, color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200', header: 'bg-rose-50 text-rose-700' },
+  'Concluído': { icon: <CheckCircle2 size={14} />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800', header: 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
+  'Em Andamento': { icon: <Clock size={14} />, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800', header: 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' },
+  'Não Iniciado': { icon: <Circle size={14} />, color: 'text-slate-400', bg: 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600', header: 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300' },
+  'Atrasado': { icon: <AlertTriangle size={14} />, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800', header: 'bg-rose-50 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300' },
 };
 
 // Ordem tradicional: backlog -> em andamento -> risco/atraso -> concluído
@@ -72,7 +74,7 @@ const MiniProgress: React.FC<{ value: number; size?: 'sm' | 'md' }> = ({ value, 
   const height = size === 'sm' ? 'h-1.5' : 'h-2';
   const color = value >= 100 ? 'bg-emerald-500' : value >= 50 ? 'bg-blue-500' : value > 0 ? 'bg-amber-500' : 'bg-slate-200';
   return (
-    <div className={`w-full ${height} bg-slate-100 rounded-full overflow-hidden`}>
+    <div className={`w-full ${height} bg-slate-100 dark:bg-slate-600 rounded-full overflow-hidden`}>
       <div className={`${height} ${color} transition-all duration-300`} style={{ width: `${Math.min(100, value)}%` }} />
     </div>
   );
@@ -100,7 +102,7 @@ const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
       <img
         src={getAvatarUrl(comment.authorAvatarId || 'zg10')}
         alt={comment.authorName}
-        className="w-8 h-8 rounded-full bg-white border border-slate-200 shrink-0"
+        className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 shrink-0"
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -128,7 +130,7 @@ const ActionCard: React.FC<{
   const commentCount = action.comments?.length || 0;
   return (
     <div
-      className={`group relative p-2.5 rounded-lg border cursor-pointer transition-colors ${isLate ? 'border-rose-200 bg-rose-50/60' : 'border-slate-200 bg-white hover:border-teal-200 hover:bg-white'}`}
+      className={`group relative p-2.5 rounded-lg border cursor-pointer transition-colors ${isLate ? 'border-rose-200 bg-rose-50/60 dark:border-rose-700 dark:bg-rose-900/30' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 hover:border-teal-200 dark:hover:border-teal-700 hover:bg-white dark:hover:bg-slate-600'}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -136,11 +138,11 @@ const ActionCard: React.FC<{
           <span className="text-xs font-mono text-slate-400 shrink-0">{action.id}</span>
           <span className={`shrink-0 ${status.color}`}>{status.icon}</span>
         </div>
-        <span className="text-xs font-bold tabular-nums text-slate-600">{action.progress}%</span>
+        <span className="text-xs font-bold tabular-nums text-slate-600 dark:text-slate-300">{action.progress}%</span>
       </div>
-      <h4 className="text-sm font-medium text-slate-800 line-clamp-2 mb-2 leading-snug">{action.title}</h4>
+      <h4 className="text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-2 mb-2 leading-snug">{action.title}</h4>
       <MiniProgress value={action.progress} />
-      <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
+      <div className="flex items-center justify-between mt-2 text-xs text-slate-500 dark:text-slate-400">
         <span className="flex items-center gap-1 truncate">
           <Users size={12} />
           <span className="truncate">{responsible}</span>
@@ -176,16 +178,16 @@ const ActionRow: React.FC<{
   const commentCount = action.comments?.length || 0;
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-slate-50 border border-slate-100 ${isLate ? 'bg-rose-50/60' : 'bg-white'}`}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-100 dark:border-slate-600 ${isLate ? 'bg-rose-50/60 dark:bg-rose-900/30' : 'bg-white dark:bg-slate-800'}`}
       onClick={onClick}
     >
       <span className={`shrink-0 ${status.color}`}>{status.icon}</span>
       <span className="text-xs font-mono text-slate-400 w-12 shrink-0">{action.id}</span>
-      <span className="flex-1 text-sm text-slate-700 truncate">{action.title}</span>
+      <span className="flex-1 text-sm text-slate-700 dark:text-slate-200 truncate">{action.title}</span>
       <div className="w-20 shrink-0">
         <div className="flex items-center gap-1">
           <MiniProgress value={action.progress} />
-          <span className="text-xs tabular-nums text-slate-500 w-8 text-right">{action.progress}%</span>
+          <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 w-8 text-right">{action.progress}%</span>
         </div>
       </div>
       <span className="flex items-center gap-0.5 text-xs text-teal-600 w-8">
@@ -369,44 +371,44 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   const hasSelection = Boolean(selectedAction);
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-4 py-3">
+    <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center"><Target size={16} className="text-teal-600" /></div>
+              <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center"><Target size={16} className="text-teal-600 dark:text-teal-400" /></div>
               <div>
-                <p className="text-lg font-bold text-slate-800">{metrics.total}</p>
-                <p className="text-xs text-slate-500">Ações</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{metrics.total}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Ações</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center"><CheckCircle2 size={16} className="text-emerald-600" /></div>
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center"><CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" /></div>
               <div>
-                <p className="text-lg font-bold text-emerald-600">{metrics.completed}</p>
-                <p className="text-xs text-slate-500">Concluídas</p>
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{metrics.completed}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Concluídas</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center"><Clock size={16} className="text-blue-600" /></div>
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center"><Clock size={16} className="text-blue-600 dark:text-blue-400" /></div>
               <div>
-                <p className="text-lg font-bold text-blue-600">{metrics.inProgress}</p>
-                <p className="text-xs text-slate-500">Em Andamento</p>
+                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{metrics.inProgress}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Em Andamento</p>
               </div>
             </div>
             {metrics.late > 0 && (
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center"><AlertTriangle size={16} className="text-rose-600" /></div>
+                <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center"><AlertTriangle size={16} className="text-rose-600 dark:text-rose-400" /></div>
                 <div>
-                  <p className="text-lg font-bold text-rose-600">{metrics.late}</p>
-                  <p className="text-xs text-slate-500">Atrasadas</p>
+                  <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{metrics.late}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Atrasadas</p>
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-2 pl-4 border-l border-slate-200">
-              <TrendingUp size={16} className="text-teal-600" />
-              <span className="text-lg font-bold text-slate-800">{metrics.avgProgress}%</span>
-              <span className="text-xs text-slate-500">Progresso</span>
+            <div className="flex items-center gap-2 pl-4 border-l border-slate-200 dark:border-slate-600">
+              <TrendingUp size={16} className="text-teal-600 dark:text-teal-400" />
+              <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{metrics.avgProgress}%</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Progresso</span>
             </div>
           </div>
 
@@ -418,13 +420,13 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                 placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg w-40 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg w-40 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               <option value="all">Todos</option>
               <option value="late">⚠️ Atrasados</option>
@@ -432,12 +434,12 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
               <option value="Não Iniciado">⚪ Não Iniciado</option>
               <option value="Concluído">✅ Concluído</option>
             </select>
-            <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
               {(['tree', 'cards', 'list', 'kanban'] as const).map(mode => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${viewMode === mode ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-2 py-1 text-xs rounded-md transition-colors ${viewMode === mode ? 'bg-white dark:bg-slate-600 text-teal-600 dark:text-teal-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                 >
                   {mode === 'tree' ? 'Árvore' : mode === 'cards' ? 'Cards' : mode === 'list' ? 'Lista' : 'Kanban'}
                 </button>
@@ -449,7 +451,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
 
       {selectedUid && (
         <div className="px-4 pt-2">
-          <div className="mx-auto w-full max-w-6xl flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+          <div className="mx-auto w-full max-w-6xl flex items-center justify-between gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">
                 Ação selecionada
@@ -471,40 +473,40 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
       <div className="flex-1 w-full">
         <div className={`mx-auto w-full max-w-6xl grid ${hasSelection ? 'grid-cols-1 lg:grid-cols-[44%_56%]' : 'grid-cols-1'} gap-4 p-4 overflow-hidden transition-all`}>
           {/* Lista / Cards / Árvore */}
-          <div className={`bg-white rounded-xl border border-slate-200 h-full overflow-auto p-2.5 space-y-3 ${hasSelection ? '' : 'lg:col-span-1'}`}>
+          <div className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-full overflow-auto p-2.5 space-y-3 ${hasSelection ? '' : 'lg:col-span-1'}`}>
             {viewMode === 'tree' && (
               <div className="space-y-3">
                 {groupedData.map(obj => (
-                  <div key={obj.id} className={`bg-white rounded-xl border overflow-hidden ${OBJECTIVE_COLORS[obj.id]?.border || 'border-slate-200'}`}>
-                    <button onClick={() => setExpandedObjectives(prev => prev.includes(obj.id) ? prev.filter(x => x !== obj.id) : [...prev, obj.id])} className="w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                  <div key={obj.id} className={`bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${OBJECTIVE_COLORS[obj.id]?.border || 'border-slate-200 dark:border-slate-700'}`}>
+                    <button onClick={() => setExpandedObjectives(prev => prev.includes(obj.id) ? prev.filter(x => x !== obj.id) : [...prev, obj.id])} className="w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                       <span className="text-slate-400">{expandedObjectives.includes(obj.id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-teal-500'}`}>{obj.id}</div>
                       <div className="flex-1 text-left">
-                        <h3 className="font-semibold text-slate-800">{obj.title}</h3>
-                        <p className="text-xs text-slate-500">{obj.actionCount} ações • {obj.activities.length} atividades {obj.lateCount > 0 && <span className="text-rose-500 ml-2">• {obj.lateCount} atrasadas</span>}</p>
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-100">{obj.title}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{obj.actionCount} ações • {obj.activities.length} atividades {obj.lateCount > 0 && <span className="text-rose-500 ml-2">• {obj.lateCount} atrasadas</span>}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-24"><MiniProgress value={obj.progress} size="md" /></div>
-                        <span className="text-sm font-bold text-slate-600 w-10 text-right">{obj.progress}%</span>
+                        <span className="text-sm font-bold text-slate-600 dark:text-slate-300 w-10 text-right">{obj.progress}%</span>
                       </div>
                     </button>
                     {expandedObjectives.includes(obj.id) && (
-                      <div className="border-t border-slate-100">
+                      <div className="border-t border-slate-100 dark:border-slate-700">
                         {obj.activities.map(act => (
-                          <div key={act.id} className="border-b border-slate-50 last:border-0">
-                            <button onClick={() => setExpandedActivities(prev => prev.includes(act.id) ? prev.filter(x => x !== act.id) : [...prev, act.id])} className="w-full px-3.5 py-2.5 pl-11 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                          <div key={act.id} className="border-b border-slate-50 dark:border-slate-700 last:border-0">
+                            <button onClick={() => setExpandedActivities(prev => prev.includes(act.id) ? prev.filter(x => x !== act.id) : [...prev, act.id])} className="w-full px-3.5 py-2.5 pl-11 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                               <span className="text-slate-300">{expandedActivities.includes(act.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
-                              <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center relative">
-                                <Layers size={12} className="text-slate-500" />
+                              <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center relative">
+                                <Layers size={12} className="text-slate-500 dark:text-slate-300" />
                                 <span className={`absolute -left-2 w-2 h-2 rounded-full ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-slate-400'}`}></span>
                               </div>
                               <div className="flex-1 text-left">
-                                <h4 className="text-sm font-medium text-slate-700">{act.id}. {act.title}</h4>
+                                <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200">{act.id}. {act.title}</h4>
                                 <p className="text-xs text-slate-400">{act.actions.length} ações {act.lateCount > 0 && <span className="text-rose-500 ml-1">• {act.lateCount} atrasadas</span>}</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="w-16"><MiniProgress value={act.progress} /></div>
-                                <span className="text-xs font-medium text-slate-500 w-8 text-right">{act.progress}%</span>
+                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 w-8 text-right">{act.progress}%</span>
                               </div>
                             </button>
                             {expandedActivities.includes(act.id) && act.actions.length > 0 && (
@@ -544,8 +546,8 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
             )}
 
             {viewMode === 'list' && (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-3 text-xs font-semibold text-slate-500 uppercase">
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex items-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
                   <span className="w-5"></span>
                   <span className="w-12">ID</span>
                   <span className="flex-1">Ação</span>
@@ -555,7 +557,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                   <span className="w-20 text-right">Prazo</span>
                   <span className="w-5"></span>
                 </div>
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y divide-slate-50 dark:divide-slate-700">
                   {filteredActions.map(action => {
                     const isSelected = selectedUid === action.uid && showDetail;
                     return (
@@ -576,14 +578,14 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                     return (
                       <div
                         key={col.key}
-                        className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col"
+                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col"
                       >
-                        <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-200 ${STATUS_CONFIG[col.key].header}`}>
+                        <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 ${STATUS_CONFIG[col.key].header}`}>
                           <span className="text-sm font-semibold flex items-center gap-2">
                             {STATUS_CONFIG[col.key].icon}
                             {col.label}
                           </span>
-                          <span className="text-xs font-semibold bg-white/70 text-slate-600 px-2 py-0.5 rounded-full">
+                          <span className="text-xs font-semibold bg-white/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
                             {colActions.length}
                           </span>
                         </div>
@@ -624,12 +626,12 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
 
           {/* Painel de Detalhes + Comentários */}
           {hasSelection && (
-            <div className="bg-white rounded-xl border border-slate-200 h-full overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-full overflow-hidden flex flex-col">
               {!selectedAction ? (
                 <div className="flex-1 flex items-center justify-center text-slate-400">Selecione uma ação para visualizar</div>
               ) : (
                 <>
-                  <div className="border-b border-slate-200 px-5 py-4 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="border-b border-slate-200 dark:border-slate-700 px-5 py-4 bg-slate-50 dark:bg-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded shrink-0">{selectedAction.id}</span>
                       <h2 className="font-semibold text-slate-800 text-lg truncate">{selectedAction.title}</h2>
@@ -646,7 +648,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                           setSelectedUid(null);
                           setLocalAction(null);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors shadow-sm"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-lg transition-colors shadow-sm"
                         title="Fechar painel e expandir lista"
                       >
                         <X size={14} />
@@ -655,7 +657,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                       {!readOnly && (
                         <button
                           onClick={handleDelete}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition-colors shadow-sm"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-700 border border-rose-200 dark:border-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors shadow-sm"
                         >
                           <Trash2 size={14} />
                           Excluir
@@ -690,7 +692,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                           value={localAction?.status || selectedAction.status}
                           onChange={(e) => setLocalAction(prev => prev ? { ...prev, status: e.target.value as Status } : prev)}
                           disabled={readOnly}
-                          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 bg-white disabled:bg-slate-50"
+                          className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 bg-white dark:bg-slate-700 dark:text-slate-100 disabled:bg-slate-50 dark:disabled:bg-slate-800"
                         >
                           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -755,11 +757,15 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                       </div>
                       {!readOnly && availableTeam.length > 0 && (
                         <div className="flex gap-2">
-                          <select value={newRaciMember} onChange={(e) => setNewRaciMember(e.target.value)} className="flex-1 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                          <select value={newRaciMember} onChange={(e) => setNewRaciMember(e.target.value)} className="flex-1 px-2 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-slate-100">
                             <option value="">Selecionar membro...</option>
-                            {availableTeam.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+                            {availableTeam.map(t => (
+                              <option key={t.id} value={String(t.id)} disabled={t.isRegistered === false} className={t.isRegistered === false ? 'text-slate-400 italic' : ''}>
+                                {t.name} {t.isRegistered === false ? '(Pendente)' : ''}
+                              </option>
+                            ))}
                           </select>
-                          <select value={newRaciRole} onChange={(e) => setNewRaciRole(e.target.value as RaciRole)} className="w-24 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                          <select value={newRaciRole} onChange={(e) => setNewRaciRole(e.target.value as RaciRole)} className="w-24 px-2 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-slate-100">
                             {RACI_ROLES.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
                           </select>
                           <button onClick={handleAddRaciMember} disabled={!newRaciMember} className="px-3 py-2 bg-teal-500 text-white text-sm rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed">+</button>
@@ -786,7 +792,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                           </div>
                         )}
                       </div>
-                      <div className="border-t border-slate-200 px-4 py-3 bg-white">
+                      <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-white dark:bg-slate-800">
                         <div className="flex gap-3 items-start">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                             {user?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}

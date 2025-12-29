@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { User, ProfileDTO, UserRole } from '../types/auth.types';
 import { log, logError } from '../lib/logger';
-// ✅ ADICIONAR: Importar classes de erro do Supabase
+import { loggingService } from './loggingService';
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 
 // =====================================
@@ -60,6 +60,7 @@ function mapProfileToUser(profile: ProfileDTO): User {
     lgpdConsentimento: profile.lgpd_consentimento,
     lgpdConsentimentoData: profile.lgpd_consentimento_data || undefined,
     createdBy: profile.created_by || undefined,
+    municipio: profile.municipio || undefined,
     createdAt: profile.created_at,
   };
 }
@@ -76,7 +77,7 @@ export async function listUsers(): Promise<User[]> {
     // ✅ FASE 1: Select específico - apenas campos necessários
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, created_by, created_at')
+      .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, created_by, created_at, municipio')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -253,7 +254,16 @@ export async function createUser(userData: {
         'Perfil não foi criado pelo trigger. Verifique se o trigger está ativo no Supabase.'
       );
     }
-    return mapProfileToUser(newProfile);
+    const newUser = mapProfileToUser(newProfile);
+
+    // ✅ LOG ACTIVITY
+    loggingService.logActivity('user_created', 'user', newUser.id, {
+      name: newUser.nome,
+      email: newUser.email,
+      role: newUser.role
+    });
+
+    return newUser;
   } catch (error: any) {
     console.error('[authService] Erro inesperado ao criar usuário:', error);
     throw error;
@@ -284,6 +294,24 @@ export async function updateUser(
 ): Promise<User> {
   try {
     const { senha, ...userUpdates } = updates;
+
+    // ✅ AUDITORIA: Buscar dados ANTES da atualização para comparar
+    const { data: originalData } = await supabase
+      .from('profiles')
+      .select('nome, email, role, microregiao_id, ativo, lgpd_consentimento')
+      .eq('id', userId)
+      .single();
+
+    // ✅ AUDITORIA: Buscar nome de quem está fazendo a alteração
+    let authorName = 'Sistema';
+    if (currentUserId) {
+      const { data: authorProfile } = await supabase
+        .from('profiles')
+        .select('nome')
+        .eq('id', currentUserId)
+        .single();
+      authorName = authorProfile?.nome || 'Admin';
+    }
 
     // ✅ PROTEÇÃO SUPERADMIN: Verificar se está tentando alterar senha de superadmin
     if (senha) {
@@ -345,6 +373,9 @@ export async function updateUser(
 
       console.log('[authService] Senha atualizada com sucesso');
       log('[authService]', 'Senha atualizada com sucesso');
+
+      // ✅ LOG ACTIVITY
+      loggingService.logActivity('user_updated', 'user', userId, { changes: ['password'] });
     }
 
     // ✅ FASE 2: Buscar dados originais antes de atualizar (para rollback)
@@ -389,7 +420,46 @@ export async function updateUser(
         throw new Error('Usuário não encontrado');
       }
 
-      return mapProfileToUser(data as ProfileDTO);
+      const updatedUser = mapProfileToUser(data as ProfileDTO);
+
+      // ✅ AUDITORIA: Comparar valores e registrar apenas o que REALMENTE mudou
+      const realChanges: { field: string; from: any; to: any }[] = [];
+
+      if (originalData) {
+        if (userUpdates.nome !== undefined && originalData.nome !== data.nome) {
+          realChanges.push({ field: 'nome', from: originalData.nome, to: data.nome });
+        }
+        if (userUpdates.email !== undefined && originalData.email !== data.email) {
+          realChanges.push({ field: 'email', from: originalData.email, to: data.email });
+        }
+        if (userUpdates.role !== undefined && originalData.role !== data.role) {
+          realChanges.push({ field: 'role', from: originalData.role, to: data.role });
+        }
+        if (userUpdates.microregiaoId !== undefined && originalData.microregiao_id !== data.microregiao_id) {
+          realChanges.push({ field: 'microregiao', from: originalData.microregiao_id, to: data.microregiao_id });
+        }
+        if (userUpdates.ativo !== undefined && originalData.ativo !== data.ativo) {
+          realChanges.push({ field: 'ativo', from: originalData.ativo, to: data.ativo });
+        }
+        if (userUpdates.lgpdConsentimento !== undefined && originalData.lgpd_consentimento !== data.lgpd_consentimento) {
+          realChanges.push({ field: 'lgpd', from: originalData.lgpd_consentimento, to: data.lgpd_consentimento });
+        }
+      }
+
+      // Só registra log se houve mudanças reais
+      if (realChanges.length > 0) {
+        loggingService.logActivity('user_updated', 'user', userId, {
+          author_id: currentUserId,
+          author_name: authorName,
+          target_user_name: data.nome,
+          target_user_email: data.email,
+          changes: realChanges.map(c => c.field),
+          details: realChanges.map(c => `${c.field}: ${c.from} → ${c.to}`),
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      return updatedUser;
     }
 
     // Se não há campos para atualizar além da senha, buscar perfil atual
@@ -441,6 +511,9 @@ export async function deactivateUser(userId: string): Promise<boolean> {
       console.error('[authService] Erro ao desativar usuário:', error);
       throw new Error(`Erro ao desativar usuário: ${error.message}`);
     }
+
+    // ✅ LOG ACTIVITY
+    loggingService.logActivity('user_deactivated', 'user', userId, {});
 
     return true;
   } catch (error: any) {
@@ -495,6 +568,10 @@ export async function deleteUser(userId: string): Promise<boolean> {
     }
 
     console.log('[authService] Usuário excluído com sucesso');
+
+    // ✅ LOG ACTIVITY
+    loggingService.logActivity('user_deleted', 'user', userId, {});
+
     return true;
   } catch (error: any) {
     console.error('[authService] Erro inesperado ao excluir usuário:', error);
@@ -520,6 +597,9 @@ export async function acceptLgpd(userId: string): Promise<void> {
       console.error('[authService] Erro ao aceitar LGPD:', error);
       throw new Error(`Erro ao aceitar LGPD: ${error.message}`);
     }
+
+    // ✅ LOG ACTIVITY
+    loggingService.logActivity('lgpd_accepted', 'user', userId, {});
   } catch (error: any) {
     console.error('[authService] Erro inesperado ao aceitar LGPD:', error);
     throw error;

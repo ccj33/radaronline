@@ -16,6 +16,7 @@ export interface ProfileDTO {
   lgpd_consentimento_data: string | null;
   avatar_id: string | null;
   created_by: string | null;
+  municipio: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +33,7 @@ export interface User {
   lgpdConsentimentoData?: string;
   avatarId: string;
   createdBy?: string;
+  municipio?: string;
   createdAt: string;
 }
 

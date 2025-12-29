@@ -1,0 +1,7 @@
+﻿src/App.tsx(1083,18): error TS2741: Property 'onNavigate' is missing in type '{ actions: Action[]; team: TeamMember[]; objectives: Objective[]; activities: Record<number, Activity[]>; }' but required in type 'DashboardProps'.
+src/components/main/MainView.tsx(121,14): error TS2741: Property 'onNavigate' is missing in type '{ actions: Action[]; team: TeamMember[]; objectives: Objective[]; activities: Record<number, Activity[]>; }' but required in type 'DashboardProps'.
+src/features/admin/dashboard/ActivityCenter.tsx(5,10): error TS2724: '"../../../types"' has no exported member named 'ActivityType'. Did you mean 'Activity'?
+src/features/admin/dashboard/ActivityCenter.tsx(5,24): error TS2724: '"../../../types"' has no exported member named 'ActivityLog'. Did you mean 'Activity'?
+src/features/dashboard/Dashboard.tsx(237,36): error TS2339: Property 'activePayload' does not exist on type 'MouseHandlerDataParam'.
+src/features/dashboard/Dashboard.tsx(237,58): error TS2339: Property 'activePayload' does not exist on type 'MouseHandlerDataParam'.
+src/features/dashboard/Dashboard.tsx(238,40): error TS2339: Property 'activePayload' does not exist on type 'MouseHandlerDataParam'.

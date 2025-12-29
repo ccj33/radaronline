@@ -209,8 +209,8 @@ serve(async (req: Request) => {
       console.error('[create-user] Erro ao criar usuário:', authError);
 
       if (authError.message?.includes('already registered') ||
-          authError.message?.includes('already exists') ||
-          authError.message?.includes('já está cadastrado')) {
+        authError.message?.includes('already exists') ||
+        authError.message?.includes('já está cadastrado')) {
         return errorResponse('Este email já está cadastrado', 400);
       }
 
@@ -218,6 +218,9 @@ serve(async (req: Request) => {
     }
 
     // ✅ DICA 3: Insert com retry e timeout (safeguard automático)
+    // ✅ Avatar aleatório do Zé Gotinha (zg1 a zg16)
+    const randomAvatarId = `zg${Math.floor(Math.random() * 16) + 1}`;
+
     const profileData = {
       id: authData.user.id,
       nome: validated.nome,
@@ -227,6 +230,7 @@ serve(async (req: Request) => {
       created_by: validated.created_by,
       ativo: true,
       lgpd_consentimento: false,
+      avatar_id: randomAvatarId,
     };
 
     const { data: newProfile, error: profileInsertError } = await insertProfileWithRetry(
@@ -243,6 +247,34 @@ serve(async (req: Request) => {
 
       return errorResponse('Erro ao criar perfil de usuário', 500);
     }
+
+    // ✅ AUDITORIA: Log de criação de usuário
+    // Buscar nome do admin que criou
+    const { data: adminProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('nome')
+      .eq('id', currentUser.id)
+      .single();
+
+    await supabaseAdmin.from('activity_logs').insert({
+      user_id: currentUser.id, // Quem fez a ação (admin)
+      action_type: 'user_created',
+      entity_type: 'user',
+      entity_id: authData.user.id,
+      metadata: {
+        created_by_id: currentUser.id,
+        created_by_name: adminProfile?.nome || 'Admin',
+        created_by_email: currentUser.email,
+        target_user_id: authData.user.id,
+        target_user_name: validated.nome,
+        target_user_email: validated.email,
+        target_user_role: validated.role,
+        target_user_microregiao: validated.microregiao_id,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    console.log('[create-user] Log de auditoria registrado');
 
     // ✅ Resposta alinhada com app
     return successResponse({
@@ -264,9 +296,9 @@ serve(async (req: Request) => {
     });
 
     const errorMessage = error.message || 'Erro inesperado';
-    const status = errorMessage.includes('inválido') || 
-                   errorMessage.includes('obrigatório') || 
-                   errorMessage.includes('já está') ? 400 : 500;
+    const status = errorMessage.includes('inválido') ||
+      errorMessage.includes('obrigatório') ||
+      errorMessage.includes('já está') ? 400 : 500;
 
     return errorResponse(errorMessage, status);
   }

@@ -228,14 +228,63 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
     // É MELHOR usar um switch ou objeto de mapa.
 
     switch (color) {
-      case 'red': return { bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-700', iconBg: 'bg-red-100', iconColor: 'text-red-600', hoverBorder: 'hover:border-red-200' };
-      case 'amber': return { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', hoverBorder: 'hover:border-amber-200' };
-      case 'emerald': return { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', hoverBorder: 'hover:border-emerald-200' };
-      case 'blue': return { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', iconBg: 'bg-blue-100', iconColor: 'text-blue-600', hoverBorder: 'hover:border-blue-200' };
-      case 'violet': return { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', iconBg: 'bg-violet-100', iconColor: 'text-violet-600', hoverBorder: 'hover:border-violet-200' };
-      case 'purple': return { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-700', iconBg: 'bg-purple-100', iconColor: 'text-purple-600', hoverBorder: 'hover:border-purple-200' };
+      case 'red': return {
+        bg: 'bg-red-50 dark:bg-red-900/20',
+        border: 'border-red-100 dark:border-red-900/30',
+        text: 'text-red-700 dark:text-red-300',
+        iconBg: 'bg-red-100 dark:bg-red-900/40',
+        iconColor: 'text-red-600 dark:text-red-300',
+        hoverBorder: 'hover:border-red-200 dark:hover:border-red-800'
+      };
+      case 'amber': return {
+        bg: 'bg-amber-50 dark:bg-amber-900/20',
+        border: 'border-amber-100 dark:border-amber-900/30',
+        text: 'text-amber-700 dark:text-amber-300',
+        iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+        iconColor: 'text-amber-600 dark:text-amber-300',
+        hoverBorder: 'hover:border-amber-200 dark:hover:border-amber-800'
+      };
+      case 'emerald': return {
+        bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+        border: 'border-emerald-100 dark:border-emerald-900/30',
+        text: 'text-emerald-700 dark:text-emerald-300',
+        iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+        iconColor: 'text-emerald-600 dark:text-emerald-300',
+        hoverBorder: 'hover:border-emerald-200 dark:hover:border-emerald-800'
+      };
+      case 'blue': return {
+        bg: 'bg-blue-50 dark:bg-blue-900/20',
+        border: 'border-blue-100 dark:border-blue-900/30',
+        text: 'text-blue-700 dark:text-blue-300',
+        iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+        iconColor: 'text-blue-600 dark:text-blue-300',
+        hoverBorder: 'hover:border-blue-200 dark:hover:border-blue-800'
+      };
+      case 'violet': return {
+        bg: 'bg-violet-50 dark:bg-violet-900/20',
+        border: 'border-violet-100 dark:border-violet-900/30',
+        text: 'text-violet-700 dark:text-violet-300',
+        iconBg: 'bg-violet-100 dark:bg-violet-900/40',
+        iconColor: 'text-violet-600 dark:text-violet-300',
+        hoverBorder: 'hover:border-violet-200 dark:hover:border-violet-800'
+      };
+      case 'purple': return {
+        bg: 'bg-purple-50 dark:bg-purple-900/20',
+        border: 'border-purple-100 dark:border-purple-900/30',
+        text: 'text-purple-700 dark:text-purple-300',
+        iconBg: 'bg-purple-100 dark:bg-purple-900/40',
+        iconColor: 'text-purple-600 dark:text-purple-300',
+        hoverBorder: 'hover:border-purple-200 dark:hover:border-purple-800'
+      };
       case 'slate':
-      default: return { bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-700', iconBg: 'bg-slate-100', iconColor: 'text-slate-600', hoverBorder: 'hover:border-slate-200' };
+      default: return {
+        bg: 'bg-slate-50 dark:bg-slate-700/50',
+        border: 'border-slate-100 dark:border-slate-600',
+        text: 'text-slate-700 dark:text-slate-300',
+        iconBg: 'bg-slate-100 dark:bg-slate-700',
+        iconColor: 'text-slate-600 dark:text-slate-300',
+        hoverBorder: 'hover:border-slate-200 dark:hover:border-slate-500'
+      };
     }
   };
 
@@ -245,16 +294,16 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col h-[500px] transition-colors">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-700/30">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
-            <Activity className="w-5 h-5 text-indigo-600" />
+          <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
+            <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800 text-sm">Radar de Inteligência</h3>
-            <p className="text-xs text-slate-500 font-medium">Insights e alertas em tempo real</p>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Radar de Inteligência</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Insights e alertas em tempo real</p>
           </div>
         </div>
         {!isAllClear && (
@@ -266,15 +315,15 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-slate-200">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
         {/* State: All Clear Celebration */}
         {isAllClear && intelligenceItems.filter(i => i.type.startsWith('alert')).length === 0 && (
-          <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 p-6 text-center">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-emerald-100">
-              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+          <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/50 p-6 text-center">
+            <div className="w-12 h-12 bg-white dark:bg-emerald-800/30 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-emerald-100 dark:border-emerald-700/50">
+              <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
             </div>
-            <h4 className="font-bold text-emerald-900 text-sm mb-1">Tudo Operando Normalmente</h4>
-            <p className="text-xs text-emerald-700 leading-relaxed">
+            <h4 className="font-bold text-emerald-900 dark:text-emerald-300 text-sm mb-1">Tudo Operando Normalmente</h4>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
               Não há alertas críticos ou pendências urgentes no momento.
               O desempenho geral da equipe está positivo.
             </p>
@@ -290,8 +339,10 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
               key={item.id}
               className={`
                 group relative flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-200
-                hover:shadow-md ${colors.hoverBorder} bg-white
-                ${item.type === 'alert_critico' ? 'border-red-100 bg-red-50/30' : 'border-slate-100'}
+                hover:shadow-md ${colors.hoverBorder} bg-white dark:bg-slate-800
+                ${item.type === 'alert_critico'
+                  ? 'border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10'
+                  : 'border-slate-100 dark:border-slate-700'}
               `}
             >
               {/* Icon */}
@@ -302,7 +353,7 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
               {/* Content */}
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex justify-between items-start gap-2">
-                  <h4 className={`text-sm font-semibold ${item.type === 'alert_critico' ? 'text-red-700' : 'text-slate-700'}`}>
+                  <h4 className={`text-sm font-semibold ${item.type === 'alert_critico' ? 'text-red-700 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
                     {item.title}
                   </h4>
                   {item.value && (
@@ -312,7 +363,7 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
                   )}
                 </div>
 
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                   {item.description}
                 </p>
 
@@ -355,7 +406,7 @@ export function AlertsPanel({ actions, users, onViewMicrorregiao }: AlertsPanelP
       </div>
 
       {/* Footer Stats */}
-      <div className="py-2.5 px-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+      <div className="py-2.5 px-5 bg-slate-50 dark:bg-slate-700/30 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
         <span>Atualizado agora</span>
         <span>{intelligenceItems.length} Itens no Radar</span>
       </div>

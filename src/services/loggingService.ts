@@ -1,0 +1,90 @@
+import { supabase } from '../lib/supabase';
+import { ActivityType, ActivityLog } from '../types/activity.types';
+
+export const loggingService = {
+    /**
+     * Registra uma nova atividade no sistema
+     */
+    async logActivity(
+        type: ActivityType,
+        entityType: 'auth' | 'action' | 'user' | 'view',
+        entityId?: string,
+        metadata: Record<string, any> = {}
+    ) {
+        try {
+            // Obter o usuário atual
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                console.warn('[loggingService] Usuário não autenticado, log ignorado.');
+                return;
+            }
+
+            const { error } = await supabase.from('activity_logs').insert({
+                user_id: user.id,
+                action_type: type,
+                entity_type: entityType,
+                entity_id: entityId,
+                metadata
+            });
+
+            if (error) {
+                console.error('[loggingService] Erro ao registrar log:', error);
+            }
+        } catch (err) {
+            console.error('[loggingService] Erro inesperado ao registrar log:', err);
+        }
+    },
+
+    /**
+     * Busca atividades recentes
+     */
+    async fetchActivities(limit = 50, filter?: { type?: string; microregiaoId?: string }): Promise<ActivityLog[]> {
+        try {
+            // Primeiro tenta buscar com profiles join
+            let query = supabase
+                .from('activity_logs')
+                .select(`
+                    *,
+                    user:profiles!activity_logs_user_id_fkey (
+                        nome,
+                        role,
+                        avatar_id,
+                        microregiao_id
+                    )
+                `)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (filter?.type && filter.type !== 'todos') {
+                query = query.eq('action_type', filter.type);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('[loggingService] Erro na query com join:', error);
+                // Fallback: buscar sem join se der erro
+                const { data: dataSimple, error: errorSimple } = await supabase
+                    .from('activity_logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(limit);
+
+                if (errorSimple) {
+                    console.error('[loggingService] Erro na query simples:', errorSimple);
+                    throw errorSimple;
+                }
+
+                return (dataSimple || []).map(log => ({
+                    ...log,
+                    user: null
+                })) as ActivityLog[];
+            }
+
+            return data as ActivityLog[];
+        } catch (err) {
+            console.error('Erro ao buscar atividades:', err);
+            return [];
+        }
+    }
+};

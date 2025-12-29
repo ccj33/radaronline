@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, Clock, XCircle, MessageSquare, RotateCcw } from 'lucide-react';
+import { Bell, X, Check, Clock, XCircle, MessageSquare, RotateCcw, AtSign } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -57,10 +57,13 @@ export function NotificationBell({ className = '' }: NotificationBellProps) {
         if (readIds.has(request.id)) return false;
 
         if (isAdmin) {
-            // Para admins: não lida se está pendente
-            return request.status === 'pending';
+            // Para admins: não lida se está pendente (e não é menção)
+            return request.status === 'pending' && request.request_type !== 'mention';
         } else {
-            // Para usuários: não lida se tem resposta do admin
+            // Para usuários: não lida se é menção pendente OU tem resposta do admin
+            if (request.request_type === 'mention') {
+                return request.status === 'pending';
+            }
             return !!(request.admin_notes && request.status !== 'pending');
         }
     };
@@ -181,7 +184,7 @@ export function NotificationBell({ className = '' }: NotificationBellProps) {
     // ✅ REALTIME: Atualiza automaticamente quando novas solicitações chegam
     // Funciona para todos: admins veem novas solicitações, usuários veem respostas
     useEffect(() => {
-        if (!user) return;
+        if (!user?.id) return;
 
         console.log('[Notifications] Iniciando subscription em tempo real...');
 
@@ -208,7 +211,7 @@ export function NotificationBell({ className = '' }: NotificationBellProps) {
             console.log('[Notifications] Removendo subscription...');
             supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [user?.id]);
 
     // Fechar ao clicar fora
     useEffect(() => {
@@ -384,18 +387,23 @@ export function NotificationBell({ className = '' }: NotificationBellProps) {
                                                 <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
                                             )}
                                             <div className="flex items-start gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${request.status === 'pending' ? 'bg-amber-100 text-amber-600' :
-                                                    request.status === 'resolved' ? 'bg-green-100 text-green-600' :
-                                                        'bg-red-100 text-red-600'
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${request.request_type === 'mention' ? 'bg-blue-100 text-blue-600' :
+                                                    request.status === 'pending' ? 'bg-amber-100 text-amber-600' :
+                                                        request.status === 'resolved' ? 'bg-green-100 text-green-600' :
+                                                            'bg-red-100 text-red-600'
                                                     }`}>
-                                                    {request.status === 'pending' ? <Clock className="w-4 h-4" /> :
-                                                        request.status === 'resolved' ? <Check className="w-4 h-4" /> :
-                                                            <XCircle className="w-4 h-4" />}
+                                                    {request.request_type === 'mention' ? <AtSign className="w-4 h-4" /> :
+                                                        request.request_type === 'system' ? <Clock className="w-4 h-4" /> : // Using Clock for pending system, or maybe AlertCircle if available. Let's stick to existing imports or use Clock as 'Pending' generic if no specific icon imported yet. Warning: I didn't import AlertCircle.
+                                                            request.status === 'pending' ? <Clock className="w-4 h-4" /> :
+                                                                request.status === 'resolved' ? <Check className="w-4 h-4" /> :
+                                                                    <XCircle className="w-4 h-4" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`text-sm truncate ${unread ? 'font-bold text-slate-800' : 'font-medium text-slate-700'}`}>
-                                                            {isAdmin ? (request.user?.nome || 'Usuário') : 'Minha solicitação'}
+                                                            {request.request_type === 'mention' ? 'Você foi mencionado' :
+                                                                request.request_type === 'system' ? 'Aviso do Sistema' :
+                                                                    isAdmin ? (request.user?.nome || 'Usuário') : 'Minha solicitação'}
                                                         </span>
                                                         <span className={`text-xs px-1.5 py-0.5 rounded ${request.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                                                             request.status === 'resolved' ? 'bg-green-100 text-green-700' :
