@@ -994,16 +994,25 @@ function AppContent() {
   const handleSaveFullAction = useCallback(async (updatedAction: Action) => {
     setIsSaving(true);
     try {
-      // 1. Persistir no Supabase
-      // 1. Persistir no Supabase
-      const saved = await dataService.updateAction(updatedAction.uid, updatedAction);
+      // Usar upsert para criar se não existir, atualizar se existir
+      const saved = await dataService.upsertAction(updatedAction);
 
       // 2. Atualizar estado local
-      setActions(prev => prev.map(a => a.uid === saved.uid ? saved : a));
+      setActions(prev => {
+        const exists = prev.some(a => a.uid === saved.uid);
+        if (exists) {
+          return prev.map(a => a.uid === saved.uid ? saved : a);
+        } else {
+          return [...prev, saved];
+        }
+      });
 
       // 3. Feedback
       showToast('Ação salva com sucesso!', 'success');
-      handleCloseActionModal();
+
+      // Limpar estado de ação pendente e fechar modal
+      setPendingNewActionUid(null);
+      setExpandedActionUid(null);
     } catch (error: any) {
       console.error('[App] Erro ao salvar ação completa:', error);
       showToast(`Erro ao salvar ação: ${error.message}`, 'error');

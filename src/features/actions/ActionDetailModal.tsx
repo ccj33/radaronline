@@ -656,7 +656,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
                             <span className="text-[10px] uppercase font-bold text-blue-600 tracking-wider">Fim Planejado</span>
                             <input
                                 type="date"
-                                value={action.plannedEndDate || action.endDate}
+                                value={action.plannedEndDate || ''}
                                 onChange={(e) => updateDraftField('plannedEndDate', e.target.value)}
                                 disabled={!userCanEdit}
                                 className="text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-700 disabled:opacity-60 w-full"

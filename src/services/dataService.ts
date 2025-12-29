@@ -277,19 +277,25 @@ export async function updateAction(
             .from('actions')
             .update(updateData)
             .eq('uid', uid)
-            .select()
-            .single();
+            .select();
 
-        if (error) {
+        // data é um array aqui
+        const updatedRecord = data?.[0];
+
+        if (error || !updatedRecord) {
             console.error('[dataService] Erro ao atualizar ação:', error);
-            throw new Error(`Erro ao atualizar ação: ${error.message}`);
+            throw new Error(`Erro ao atualizar ação: ${error?.message || 'Ação não encontrada'}`);
         }
+
+        // Usar updatedRecord para o resto
+        const actionId = updatedRecord.id;
+
 
         // Buscar RACI e comentários atualizados
         const { data: raciData } = await supabase
             .from('action_raci')
             .select('*')
-            .eq('action_id', data.id);
+            .eq('action_id', actionId);
 
         const { data: commentsData } = await supabase
             .from('action_comments')
@@ -297,17 +303,17 @@ export async function updateAction(
         *,
         author:profiles(nome, microregiao_id, avatar_id, role)
       `)
-            .eq('action_id', data.id)
+            .eq('action_id', actionId)
             .order('created_at', { ascending: true });
 
         const updatedAction = mapActionDTOToAction(
-            data as ActionDTO,
+            updatedRecord as ActionDTO,
             (raciData || []) as ActionRaciDTO[],
             (commentsData || []) as ActionCommentDTO[]
         );
 
         // ✅ LOG ACTIVITY
-        loggingService.logActivity('action_updated', 'action', data.id, {
+        loggingService.logActivity('action_updated', 'action', actionId, {
             changes: Object.keys(updates),
             displayId: uid
         });
@@ -315,6 +321,79 @@ export async function updateAction(
         return updatedAction;
     } catch (error) {
         console.error('[dataService] Erro inesperado ao atualizar ação:', error);
+        throw error;
+    }
+}
+
+/**
+ * Upsert: Cria a ação se não existir, atualiza se existir
+ * Usado pelo handleSaveFullAction para garantir persistência
+ */
+export async function upsertAction(action: Action): Promise<Action> {
+    try {
+        // Primeiro, verificar se a ação existe
+        const { data: existing } = await supabase
+            .from('actions')
+            .select('id')
+            .eq('uid', action.uid)
+            .maybeSingle();
+
+        if (existing) {
+            // Ação existe, fazer update
+            return await updateAction(action.uid, {
+                title: action.title,
+                status: action.status,
+                startDate: action.startDate,
+                plannedEndDate: action.plannedEndDate,
+                endDate: action.endDate,
+                progress: action.progress,
+                notes: action.notes,
+            });
+        } else {
+            // Ação NÃO existe, criar nova
+            console.log('[dataService] Ação não existe no banco, criando:', action.uid);
+
+            // Extrair dados do UID e action
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const { data, error } = await supabase
+                .from('actions')
+                .insert({
+                    uid: action.uid,
+                    action_id: action.id,
+                    activity_id: action.activityId,
+                    microregiao_id: action.microregiaoId,
+                    title: action.title,
+                    status: action.status,
+                    start_date: action.startDate || null,
+                    planned_end_date: action.plannedEndDate || null,
+                    end_date: action.endDate || null,
+                    progress: action.progress,
+                    notes: action.notes || '',
+                    created_by: user?.id || null,
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error('[dataService] Erro ao criar ação via upsert:', error);
+                throw new Error(`Erro ao criar ação: ${error.message}`);
+            }
+
+            const newAction = mapActionDTOToAction(data as ActionDTO, [], []);
+
+            // LOG ACTIVITY
+            loggingService.logActivity('action_created', 'action', data.id, {
+                title: newAction.title,
+                displayId: newAction.uid,
+                microregiaoId: newAction.microregiaoId,
+                source: 'upsert'
+            });
+
+            return newAction;
+        }
+    } catch (error) {
+        console.error('[dataService] Erro inesperado ao upsert ação:', error);
         throw error;
     }
 }

@@ -380,7 +380,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                             <input
                               type="date"
                               className="w-full border border-blue-200 rounded p-2 text-sm mt-1 bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                              value={action.plannedEndDate || action.endDate}
+                              value={action.plannedEndDate || ''}
                               onChange={e => onUpdateAction(action.uid, 'plannedEndDate', e.target.value)}
                               disabled={!userCanEdit}
                             />
