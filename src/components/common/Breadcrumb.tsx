@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronRight, Home, Target, FileText } from 'lucide-react';
+import { getActivityDisplayId } from '../../lib/text';
 
 interface BreadcrumbItem {
   label: string;
@@ -13,8 +14,8 @@ interface BreadcrumbProps {
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
   return (
-    <nav 
-      aria-label="Navegação estrutural" 
+    <nav
+      aria-label="Navegação estrutural"
       className="flex items-center gap-1 text-xs font-medium overflow-x-auto pb-1"
     >
       {items.map((item, index) => (
@@ -32,7 +33,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
               <span className="truncate">{item.label}</span>
             </button>
           ) : (
-            <span 
+            <span
               className="flex items-center gap-1.5 text-slate-700 font-semibold truncate max-w-[150px] sm:max-w-[200px]"
               title={item.label}
             >
@@ -73,7 +74,7 @@ export const createBreadcrumbItems = (
 
     if (activityId && activityTitle) {
       items.push({
-        label: `${activityId} - ${activityTitle}`,
+        label: `${getActivityDisplayId(activityId)} - ${activityTitle}`,
         icon: <FileText size={12} />,
       });
     }

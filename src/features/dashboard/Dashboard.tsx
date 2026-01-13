@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Action, TeamMember, Objective, Activity } from '../../types';
 import { parseDateLocal, getTodayStr } from '../../lib/date';
+import { getActionDisplayId } from '../../lib/text';
 import { useAuth } from '../../auth';
 import { useResponsive } from '../../hooks/useMediaQuery';
 import { MobileStatusChart, MobileProgressChart, MobileKpiCard, MobileRingProgress } from '../../components/mobile';
@@ -409,7 +410,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               metrics.upcomingDeadlines.map(action => (
                 <div key={action.uid} className="flex items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                   <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 flex items-center justify-center shrink-0 text-slate-600 dark:text-slate-200 font-bold text-xs shadow-sm">
-                    {action.id}
+                    {getActionDisplayId(action.id)}
                   </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{action.title}</p>

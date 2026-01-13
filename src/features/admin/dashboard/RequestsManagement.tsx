@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Filter, ChevronLeft, ChevronRight, Check, XCircle, Clock,
-    MessageSquare, AtSign, RotateCcw, X, Shield, ClipboardList, User as UserIcon
+    MessageSquare, AtSign, RotateCcw, X, Shield, ClipboardList, User as UserIcon, Trash2, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../auth/AuthContext';
 import { MICROREGIOES, getMicroregiaoById } from '../../../data/microregioes';
 import { useToast } from '../../../components/common/Toast';
+import { log, logError } from '../../../lib/logger';
 
 interface UserRequest {
     id: string;
@@ -50,8 +51,10 @@ export function RequestsManagement() {
     const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
     const [adminNote, setAdminNote] = useState('');
     const [saving, setSaving] = useState(false);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+    const isSuperAdmin = user?.role === 'superadmin';
 
     // Load requests
     const loadRequests = useCallback(async () => {
@@ -91,7 +94,7 @@ export function RequestsManagement() {
             const { data: requestsData, error } = await query;
 
             if (error) {
-                console.error('Error loading requests:', error);
+                logError('RequestsManagement', 'Error loading requests', error);
                 return;
             }
 
@@ -102,7 +105,7 @@ export function RequestsManagement() {
 
             // Fetch profiles - fetch individually since batch queries return 400
             const userIds = [...new Set(requestsData.map(r => r.user_id).filter(Boolean))];
-            console.log('[RequestsManagement] Fetching profiles for user IDs:', userIds);
+            log('RequestsManagement', `Fetching profiles for ${userIds.length} user IDs`);
 
             if (userIds.length === 0) {
                 setRequests(requestsData);
@@ -118,7 +121,7 @@ export function RequestsManagement() {
                     .single();
 
                 if (error) {
-                    console.log('[RequestsManagement] Error fetching profile for', userId, error);
+                    log('RequestsManagement', `Error fetching profile for ${userId}`);
                     return null;
                 }
                 return data;
@@ -127,20 +130,18 @@ export function RequestsManagement() {
             const profilesResults = await Promise.all(profilePromises);
             const profilesData = profilesResults.filter(Boolean);
 
-            console.log('[RequestsManagement] Profiles fetched:', profilesData.length, 'of', userIds.length);
+            log('RequestsManagement', `Profiles fetched: ${profilesData.length} of ${userIds.length}`);
 
             const profilesMap = new Map(profilesData.map(p => [p!.id, p]));
-            console.log('[RequestsManagement] ProfilesMap size:', profilesMap.size);
 
             const mergedRequests = requestsData.map(req => ({
                 ...req,
                 user: profilesMap.get(req.user_id) || undefined
             }));
-            console.log('[RequestsManagement] Merged requests sample:', mergedRequests[0]);
 
             setRequests(mergedRequests);
         } catch (err) {
-            console.error('Unexpected error:', err);
+            logError('RequestsManagement', 'Unexpected error', err);
         } finally {
             setLoading(false);
         }
@@ -223,6 +224,31 @@ export function RequestsManagement() {
             loadRequests();
         } catch {
             showToast('Erro inesperado', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Handle delete request
+    const handleDelete = async (requestId: string) => {
+        setSaving(true);
+        try {
+            const { error } = await supabase
+                .from('user_requests')
+                .delete()
+                .eq('id', requestId);
+
+            if (error) {
+                showToast('Erro ao excluir solicitação', 'error');
+                return;
+            }
+
+            showToast('Solicitação excluída com sucesso!', 'success');
+            setSelectedRequest(null);
+            setDeleteConfirmId(null);
+            loadRequests();
+        } catch {
+            showToast('Erro inesperado ao excluir', 'error');
         } finally {
             setSaving(false);
         }
@@ -575,6 +601,83 @@ export function RequestsManagement() {
                                             <Check size={14} />
                                         </button>
                                     )}
+                                </div>
+                                {/* SuperAdmin Delete Action */}
+                                {isSuperAdmin && (
+                                    <div className="flex justify-start border-t border-slate-200 dark:border-slate-800 pt-4 mt-2">
+                                        <button
+                                            onClick={() => setDeleteConfirmId(selectedRequest.id)}
+                                            disabled={saving}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 size={14} /> Excluir permanentemente
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {deleteConfirmId && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700"
+                        >
+                            {/* Header with warning icon */}
+                            <div className="bg-gradient-to-br from-red-500 to-rose-600 px-6 py-5 text-center">
+                                <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                    <AlertTriangle size={32} className="text-white" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Confirmar Exclusão</h3>
+                                <p className="text-sm text-red-100 mt-1">Esta ação não pode ser desfeita</p>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6">
+                                <p className="text-slate-600 dark:text-slate-300 text-center text-sm leading-relaxed">
+                                    Você está prestes a excluir permanentemente esta solicitação.
+                                    Todos os dados associados serão removidos do sistema.
+                                </p>
+
+                                <div className="mt-6 flex items-center justify-center gap-3">
+                                    <button
+                                        onClick={() => setDeleteConfirmId(null)}
+                                        disabled={saving}
+                                        className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(deleteConfirmId)}
+                                        disabled={saving}
+                                        className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 rounded-xl shadow-lg shadow-red-500/25 transition-all flex items-center gap-2"
+                                    >
+                                        {saving ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Excluindo...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Trash2 size={16} />
+                                                Sim, excluir
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>

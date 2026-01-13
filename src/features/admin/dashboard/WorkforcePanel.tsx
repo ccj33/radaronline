@@ -13,20 +13,11 @@ interface WorkforcePanelProps {
 export function WorkforcePanel({ users, selectedMacroId, selectedMicroId, onViewMicrorregiao: _onViewMicrorregiao }: WorkforcePanelProps) {
 
     const filteredWorkforce = useMemo(() => {
-        // DEBUG: Log para verificar valores do filtro
-        console.log('[WorkforcePanel] selectedMacroId:', selectedMacroId, 'selectedMicroId:', selectedMicroId);
-        console.log('[WorkforcePanel] Total users:', users.length, 'Ativos:', users.filter(u => u.ativo).length);
+        // ✅ Logs de debug removidos para produção
 
         if (selectedMacroId) {
-            // Debug: mostrar quais micros correspondem a essa macro
-            const microsInMacro = users.filter(u => {
-                if (!u.ativo) return false;
-                if (u.microregiaoId === 'all') return false;
-                const micro = getMicroregiaoById(u.microregiaoId);
-                console.log('[WorkforcePanel] User:', u.nome, 'microregiaoId:', u.microregiaoId, 'micro.macroId:', micro?.macroId, 'matches:', micro?.macroId === selectedMacroId);
-                return micro?.macroId === selectedMacroId;
-            });
-            console.log('[WorkforcePanel] Users matching macro:', microsInMacro.length);
+            // Filtra usuários que pertencem à macrorregião selecionada
+            // (logs de debug removidos)
         }
 
         return users.filter(user => {

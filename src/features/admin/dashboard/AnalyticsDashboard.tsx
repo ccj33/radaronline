@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { analyticsService } from '../../../services/analyticsService';
 import { getMicroregiaoById } from '../../../data/microregioes';
+import { logError } from '../../../lib/logger';
 import type {
     AnalyticsSummary,
     HourlyUsage,
@@ -446,7 +447,7 @@ export const AnalyticsDashboard: React.FC = () => {
             setActionMetrics(actionData);
             setActiveUsersList(usersData);
         } catch (error) {
-            console.error('Erro ao carregar analytics:', error);
+            logError('AnalyticsDashboard', 'Erro ao carregar analytics', error);
         } finally {
             setLoading(false);
         }

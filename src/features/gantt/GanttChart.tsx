@@ -3,8 +3,10 @@ import { Calendar, Download, Maximize2, Minimize2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { Action, Status, GanttRange, RaciRole } from '../../types';
 import { parseDateLocal, getTodayStr, formatDateShort, ZOOM_LEVELS } from '../../lib/date';
+import { getActionDisplayId } from '../../lib/text';
 import { RaciCompactPill } from '../../components/common';
 import { Tooltip } from '../../components/common/Tooltip';
+import { logError } from '../../lib/logger';
 
 const rolePriority: Record<RaciRole, number> = { R: 0, A: 1, C: 2, I: 3 };
 
@@ -227,7 +229,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       showToast('Imagem exportada com sucesso!', 'success');
     } catch (error) {
       showToast('Erro ao exportar imagem', 'error');
-      console.error('Export error:', error);
+      logError('GanttChart', 'Export error', error);
     } finally {
       setIsExporting(false);
     }
@@ -338,7 +340,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-[11px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{action.id}</span>
+                        <span className="font-mono text-[11px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{getActionDisplayId(action.id)}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${statusColor}`}>
                           {action.status}
                         </span>
@@ -668,7 +670,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 rounded px-1.5 py-0.5 text-[10px] font-mono border border-slate-200 dark:border-slate-500">{action.id}</span>
+                            <span className="bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 rounded px-1.5 py-0.5 text-[10px] font-mono border border-slate-200 dark:border-slate-500">{getActionDisplayId(action.id)}</span>
                             {/* Badge de status */}
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${statusBadge.bg} ${statusBadge.text}`}>
                               {action.status}

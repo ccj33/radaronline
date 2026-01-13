@@ -16,6 +16,7 @@ import {
 // Lib
 import { formatISODate, parseDateLocal } from './lib/date';
 import { clampProgress } from './lib/validation';
+import { log, logError } from './lib/logger';
 
 // Data - Apenas constantes de configuração, sem mocks
 import { MICROREGIOES } from './data/microregioes';
@@ -37,7 +38,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 
 // Mobile Components
-import { MobileBottomNav, MobileFab, MobileActionList } from './components/mobile';
+import { MobileBottomNav, MobileFab } from './components/mobile';
 
 // Onboarding
 import { OnboardingTour } from './components/onboarding';
@@ -50,7 +51,6 @@ import {
   ConfirmModal,
   EditNameModal, // Added import
   ErrorBoundary,
-  createBreadcrumbItems,
 } from './components/common';
 
 // Feature Components
@@ -60,8 +60,9 @@ import { Dashboard, OptimizedView } from './features/dashboard';
 import { GanttChart } from './features/gantt/GanttChart';
 import { ActionTable } from './features/actions/ActionTable';
 import { ActionDetailModal } from './features/actions/ActionDetailModal';
-import { LoginPage, LgpdConsent } from './features/login';
+import { LoginPage, LgpdConsent, LandingOnboarding } from './features/login';
 import { AdminPanel } from './features/admin';
+import { LinearCalendar } from './features/admin/dashboard/LinearCalendar';
 import { UserSettingsModal } from './features/settings/UserSettingsModal';
 import { MunicipalityOnboardingModal } from './components/auth/MunicipalityOnboardingModal';
 
@@ -80,22 +81,23 @@ function AppContent() {
   const user = authContext?.user ?? null;
   const isAdmin = authContext?.isAdmin ?? false;
   const isAuthenticated = authContext?.isAuthenticated ?? false;
-  const _isLoading = authContext?.isLoading ?? true;
   const currentMicrorregiao = authContext?.currentMicrorregiao ?? null;
   const logout = useMemo(() => authContext?.logout ?? (() => { }), [authContext?.logout]);
   const viewingMicroregiaoId = authContext?.viewingMicroregiaoId ?? null;
-  const _isContextLoading = !authContext || authContext.isLoading;
+  // ✅ isContextLoading removido - _isLoading já cobre o caso de contexto null
 
   // --- NAVIGATION STATE ---
   const [currentPage, setCurrentPage] = useState<'main' | 'admin' | 'lgpd'>('main');
   const [didAutoOpenAdmin, setDidAutoOpenAdmin] = useState(false);
+  const [hasViewedLanding, setHasViewedLanding] = useState(false);
   const [selectedObjective, setSelectedObjective] = useState<number>(1);
   const [selectedActivity, setSelectedActivity] = useState<string>('1.1'); // Default inicial
-  const [viewMode, setViewMode] = useState<'table' | 'gantt' | 'team' | 'optimized'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'gantt' | 'team' | 'optimized' | 'calendar'>('table');
   const [ganttRange, setGanttRange] = useState<GanttRange>('all');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(!isMobile);
   const [currentNav, setCurrentNav] = useState<'strategy' | 'home' | 'settings'>('strategy');
-  const [_showStickyActivity, setShowStickyActivity] = useState<boolean>(false);
+  // NOTA: showStickyActivity calculado mas não consumido na UI atual - mantido para uso futuro
+  const [, setShowStickyActivity] = useState<boolean>(false);
   const [isEditMode, setIsEditMode] = useState(false); // New lifted state
   const activityTabsRef = useRef<HTMLDivElement | null>(null);
 
@@ -104,8 +106,8 @@ function AppContent() {
   const actionsRef = useRef<Action[]>(actions); // Referência atualizada para callbacks
   const [teamsByMicro, setTeamsByMicro] = useState<Record<string, TeamMember[]>>({});
   const [expandedActionUid, setExpandedActionUid] = useState<string | null>(null);
-  const [_isDataLoading, setIsDataLoading] = useState<boolean>(true);
-  const [_dataError, setDataError] = useState<string | null>(null);
+  const [, setIsDataLoading] = useState<boolean>(true);
+  const [, setDataError] = useState<string | null>(null);
 
   // --- OBJECTIVES & ACTIVITIES STATE (carregados do banco) ---
   const [objectives, setObjectives] = useState<{ id: number; title: string; status: 'on-track' | 'delayed' }[]>([]);
@@ -143,28 +145,31 @@ function AppContent() {
   // Check if user should see onboarding (first time using Radar)
   // Only show after municipality modal is closed (firstAccess completed)
   useEffect(() => {
-    if (isAuthenticated && user && !isAdmin) {
-      const onboardingKey = `radar_onboarding_completed_${user.id}`;
-      const hasCompletedOnboarding = localStorage.getItem(onboardingKey);
-      
-      // If user still needs to complete first access (password/municipality), mark as pending
-      if (user.firstAccess) {
-        if (!hasCompletedOnboarding) {
-          setPendingOnboarding(true);
-        }
-        return; // Don't show onboarding yet
+    if (!(isAuthenticated && user && !isAdmin)) return;
+
+    const onboardingKey = `radar_onboarding_completed_${user.id}`;
+    const hasCompletedOnboarding = localStorage.getItem(onboardingKey);
+
+    // If user still needs to complete first access (password/municipality), mark as pending
+    if (user.firstAccess) {
+      if (!hasCompletedOnboarding) {
+        setPendingOnboarding(true);
       }
-      
-      // User has completed first access, check if we should show onboarding
-      if (!hasCompletedOnboarding || pendingOnboarding) {
-        // Small delay to let the app render first
-        setTimeout(() => {
-          setShowOnboarding(true);
-          setPendingOnboarding(false);
-        }, 800);
-      }
+      return; // Don't show onboarding yet
     }
-  }, [isAuthenticated, user, isAdmin, user?.firstAccess, pendingOnboarding]);
+
+    // User has completed first access, check if we should show onboarding
+    if (!hasCompletedOnboarding || pendingOnboarding) {
+      // Small delay to let the app render first
+      const timerId = window.setTimeout(() => {
+        setShowOnboarding(true);
+        setPendingOnboarding(false);
+      }, 800);
+
+      // Cleanup: limpar timer se componente desmontar ou deps mudarem
+      return () => window.clearTimeout(timerId);
+    }
+  }, [isAuthenticated, user, isAdmin, pendingOnboarding]);
 
   const handleOnboardingComplete = useCallback(() => {
     if (user) {
@@ -214,10 +219,18 @@ function AppContent() {
     return user?.microregiaoId || '';
   }, [viewingMicroregiaoId, user?.microregiaoId]);
 
-  // Admin está vendo "todas" as microrregiões?
+  // Usuário está vendo "todas" as microrregiões? (somente admin pode, mas a lógica de readOnly usa isso)
+  // NOTA: Apenas admins podem realmente estar nesse estado, mas separamos a verificação
+  // para que `readOnly = isViewingAllMicros && !isAdmin` funcione corretamente se futuramente
+  // outros perfis puderem ver todas as micros em modo leitura.
   const isViewingAllMicros = useMemo(() => {
-    return isAdmin && !viewingMicroregiaoId;
-  }, [isAdmin, viewingMicroregiaoId]);
+    // Admin vendo todas = sem micro selecionada e sem micro própria
+    // Usuário comum nunca deve estar nesse estado, mas se estiver, será readOnly
+    if (isAdmin && !viewingMicroregiaoId) return true;
+    // Fallback: usuário sem micro definida (não deveria acontecer, mas protege)
+    if (!isAdmin && !viewingMicroregiaoId && !user?.microregiaoId) return true;
+    return false;
+  }, [isAdmin, viewingMicroregiaoId, user?.microregiaoId]);
 
   // Equipe da microrregião atual
   const allTeams = useMemo(() => Object.values(teamsByMicro).flat(), [teamsByMicro]);
@@ -254,11 +267,8 @@ function AppContent() {
 
   // ✅ FASE 2: Consolidar useEffects relacionados a autenticação e navegação
   useEffect(() => {
-    // Verificar se precisa aceitar LGPD
-    if (user && !user.lgpdConsentimento && currentPage !== 'lgpd') {
-      setCurrentPage('lgpd');
-      return;
-    }
+    // NOTA: A lógica de LGPD é tratada diretamente no render condicional,
+    // não precisamos setar currentPage para 'lgpd'
 
     // Administrador entra direto no painel admin após login
     if (isAuthenticated && isAdmin && !didAutoOpenAdmin) {
@@ -271,7 +281,7 @@ function AppContent() {
     if (!isAuthenticated && didAutoOpenAdmin) {
       setDidAutoOpenAdmin(false);
     }
-  }, [user, currentPage, isAuthenticated, isAdmin, didAutoOpenAdmin]);
+  }, [isAuthenticated, isAdmin, didAutoOpenAdmin]);
 
   // Check for first-time access onboarding (municipality + password)
   useEffect(() => {
@@ -317,7 +327,7 @@ function AppContent() {
 
     observer.observe(tabsElement);
     return () => observer.disconnect();
-  }, [viewMode, currentNav, selectedActivity]);
+  }, [viewMode, currentNav, selectedActivity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Quando abrir o modal de criação para admin, pré-seleciona a primeira micro
   useEffect(() => {
@@ -372,11 +382,12 @@ function AppContent() {
         const microId = isViewingAllMicros ? undefined : currentMicroId;
 
         // Carregar todos os dados em paralelo
+        // IMPORTANTE: Objetivos e Atividades são SEPARADOS por microrregião!
         const [actionsData, teamsData, objectivesData, activitiesData] = await Promise.all([
           dataService.loadActions(microId),
           dataService.loadTeams(microId),
-          dataService.loadObjectives(),
-          dataService.loadActivities(),
+          dataService.loadObjectives(microId),
+          dataService.loadActivities(microId),
         ]);
 
         setActions(actionsData);
@@ -384,18 +395,31 @@ function AppContent() {
         setObjectives(objectivesData);
         setActivities(activitiesData);
 
-        // Se não há objetivos/atividades selecionados, selecionar o primeiro
+        // Corrigir seleção usando variáveis locais para evitar estado stale
         if (objectivesData.length > 0) {
-          if (!objectivesData.some(o => o.id === selectedObjective)) {
-            setSelectedObjective(objectivesData[0].id);
+          // Determinar próximo objetivo selecionado baseado nos dados recém-carregados
+          const nextObjectiveId = objectivesData.some(o => o.id === selectedObjective)
+            ? selectedObjective
+            : objectivesData[0].id;
+
+          // Atualizar objetivo se mudou
+          if (nextObjectiveId !== selectedObjective) {
+            setSelectedObjective(nextObjectiveId);
           }
-          const firstObjectiveActivities = activitiesData[selectedObjective] || activitiesData[objectivesData[0].id];
-          if (firstObjectiveActivities?.length > 0 && !firstObjectiveActivities.some(a => a.id === selectedActivity)) {
-            setSelectedActivity(firstObjectiveActivities[0].id);
+
+          // Usar nextObjectiveId (variável local) para buscar atividades, não selectedObjective (state)
+          const nextObjectiveActivities = activitiesData[nextObjectiveId] || [];
+          
+          // Determinar próxima atividade selecionada
+          if (nextObjectiveActivities.length > 0) {
+            const activityStillExists = nextObjectiveActivities.some(a => a.id === selectedActivity);
+            if (!activityStillExists) {
+              setSelectedActivity(nextObjectiveActivities[0].id);
+            }
           }
         }
       } catch (error: any) {
-        console.error('[App] Erro ao carregar dados:', error);
+        logError('App', 'Erro ao carregar dados', error);
         setDataError(error.message || 'Erro ao carregar dados');
         showToast('Erro ao carregar dados do servidor. Verifique sua conexão.', 'error');
       } finally {
@@ -467,7 +491,8 @@ function AppContent() {
       return;
     }
 
-    const action = findActionByUid(actions, uid);
+    // Usar actionsRef.current para evitar closure stale em updates rápidos
+    const action = findActionByUid(actionsRef.current, uid);
     if (!action) {
       showToast('Ação não encontrada', 'error');
       return;
@@ -508,7 +533,7 @@ function AppContent() {
 
       return next;
     }));
-  }, [actions, checkCanEdit, showToast, currentMicroId, isViewingAllMicros, isAdmin]);
+  }, [checkCanEdit, showToast, currentMicroId, isViewingAllMicros, isAdmin]);
 
   const handleSaveAction = useCallback(async (uid?: string) => {
     if (!uid && !expandedActionUid) {
@@ -521,7 +546,7 @@ function AppContent() {
     const action = findActionByUid(actionsRef.current, actionUid);
 
     if (!action) {
-      console.error('[App] Ação não encontrada para UID:', actionUid, 'Actions disponíveis:', actionsRef.current.map(a => a.uid));
+      logError('App', 'Ação não encontrada para UID', { actionUid, availableActions: actionsRef.current.map(a => a.uid) });
       showToast('Ação não encontrada', 'error');
       return;
     }
@@ -578,7 +603,7 @@ function AppContent() {
 
       setExpandedActionUid(null);
     } catch (error: any) {
-      console.error('[App] Erro ao salvar ação:', error);
+      logError('App', 'Erro ao salvar ação', error);
       showToast(`Erro ao salvar: ${error.message}`, 'error');
     } finally {
       setIsSaving(false);
@@ -709,12 +734,17 @@ function AppContent() {
       message: `Tem certeza que deseja excluir "${action.title}"? Esta ação não pode ser desfeita.`,
       onConfirm: async () => {
         try {
+          // Fechar o modal de confirmação imediatamente para evitar ficar aberto durante a operação
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
           await dataService.deleteAction(uid);
           setActions(prev => prev.filter(a => a.uid !== uid));
           setExpandedActionUid(null);
           showToast('Ação excluída!', 'success');
         } catch (error: any) {
-          console.error('[App] Erro ao excluir ação:', error);
+          logError('App', 'Erro ao excluir ação', error);
+          // Garantir que o modal de confirmação seja fechado em caso de erro também
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
           showToast(`Erro ao excluir: ${error.message}`, 'error');
         }
       }
@@ -767,9 +797,9 @@ function AppContent() {
       const isNewActionError = error.message?.includes('Ação não encontrada') || error.message?.includes('row not found');
 
       if (isNewActionError) {
-        console.log('[App] Adicionando membro a ação não salva (local state only)');
+        log('App', 'Adicionando membro a ação não salva (local state only)');
       } else {
-        console.error('[App] Erro ao adicionar membro RACI:', error);
+        logError('App', 'Erro ao adicionar membro RACI', error);
         showToast(`Erro ao adicionar membro: ${error.message}`, 'error');
         // Se for erro real (network, etc) que não seja "não encontrado", aborta update local
         return;
@@ -784,7 +814,8 @@ function AppContent() {
     ));
   }, [currentTeam, showToast, actions, checkCanManageTeam, currentMicroId, isViewingAllMicros, isAdmin, allTeams]);
 
-  const handleRemoveRaci = useCallback((uid: string, idx: number, memberName: string) => {
+  const handleRemoveRaci = useCallback((uid: string, _idx: number, memberName: string) => {
+    // NOTA: _idx não é mais usado - removemos pelo nome para evitar inconsistências
     if (isViewingAllMicros && !isAdmin) {
       showToast('Selecione uma microrregião específica', 'error');
       return;
@@ -818,17 +849,18 @@ function AppContent() {
         } catch (error: any) {
           const isNewActionError = error.message?.includes('Ação não encontrada') || error.message?.includes('row not found');
           if (isNewActionError) {
-            console.log('[App] Removendo membro de ação não salva (local state only)');
+            log('App', 'Removendo membro de ação não salva (local state only)');
           } else {
-            console.error('[App] Erro ao remover membro RACI:', error);
+            logError('App', 'Erro ao remover membro RACI', error);
             showToast(`Erro ao remover: ${error.message}`, 'error');
             return;
           }
         }
 
+        // ✅ CORREÇÃO: Remover pelo NOME, não pelo índice, para evitar inconsistências
         setActions(prev => prev.map(a =>
           a.uid === uid
-            ? { ...a, raci: a.raci.filter((_, i) => i !== idx) }
+            ? { ...a, raci: a.raci.filter(r => r.name !== memberName) }
             : a
         ));
       }
@@ -855,7 +887,7 @@ function AppContent() {
       // Processar menções e criar notificações (assíncrono, não bloqueia)
       dataService.processMentions(content, action.title, newComment.authorName);
     } catch (error: any) {
-      console.error('[App] Erro ao adicionar comentário:', error);
+      logError('App', 'Erro ao adicionar comentário', error);
       showToast(`Erro ao adicionar comentário: ${error.message}`, 'error');
     }
   }, [actions, showToast]);
@@ -870,7 +902,7 @@ function AppContent() {
       ));
       showToast('Comentário atualizado!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao editar comentário:', error);
+      logError('App', 'Erro ao editar comentário', error);
       showToast(`Erro ao editar comentário: ${error.message}`, 'error');
     }
   }, [showToast]);
@@ -888,7 +920,7 @@ function AppContent() {
       ));
       showToast('Comentário excluído!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao excluir comentário:', error);
+      logError('App', 'Erro ao excluir comentário', error);
       showToast(`Erro ao excluir comentário: ${error.message}`, 'error');
     }
   }, [showToast]);
@@ -948,12 +980,20 @@ function AppContent() {
       return;
     }
 
+    // Determinar a microrregião para o objetivo
+    const targetMicroId = currentMicroId || user?.microregiaoId || 'all';
+    if (!targetMicroId || targetMicroId === 'all') {
+      showToast('Selecione uma microrregião específica para criar o objetivo', 'error');
+      return;
+    }
+
     try {
-      const maxId = Math.max(...objectives.map(o => o.id), 0);
-      const newTitle = `${maxId + 1}. Novo Objetivo`;
+      // Usar a posição sequencial (quantidade de objetivos + 1), não o ID do banco
+      const nextDisplayNumber = objectives.length + 1;
+      const newTitle = `${nextDisplayNumber}. Novo Objetivo`;
 
       // Salvar no banco
-      const newObjective = await dataService.createObjective(newTitle);
+      const newObjective = await dataService.createObjective(newTitle, targetMicroId);
 
       setObjectives(prev => [...prev, newObjective]);
       setActivities(prev => ({
@@ -962,10 +1002,10 @@ function AppContent() {
       }));
       showToast('Objetivo adicionado! Edite o título conforme necessário.', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao criar objetivo:', error);
+      logError('App', 'Erro ao criar objetivo', error);
       showToast(`Erro ao criar objetivo: ${error.message}`, 'error');
     }
-  }, [objectives, user?.role, showToast]);
+  }, [objectives, user?.role, user?.microregiaoId, currentMicroId, showToast]);
 
   const handleDeleteObjective = useCallback(async (id: number) => {
     if (user?.role !== 'admin' && user?.role !== 'superadmin') {
@@ -1009,7 +1049,7 @@ function AppContent() {
 
       showToast('Objetivo excluído!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao excluir objetivo:', error);
+      logError('App', 'Erro ao excluir objetivo', error);
       showToast(`Erro ao excluir objetivo: ${error.message}`, 'error');
     }
   }, [user?.role, activities, actions, objectives, selectedObjective, showToast]);
@@ -1020,19 +1060,43 @@ function AppContent() {
       return;
     }
 
+    // Determinar microregião correta para criar a atividade
+    const targetMicroId = currentMicroId && currentMicroId !== 'all' ? currentMicroId : user?.microregiaoId || '';
+
+    if (!targetMicroId) {
+      showToast('Selecione uma microrregião para criar atividades', 'error');
+      return;
+    }
+
     const currentActivities = activities[objectiveId] || [];
+
+    // Calcular a posição sequencial do objetivo (1, 2, 3...) baseado na lista de objetivos
+    const objectiveIndex = objectives.findIndex(o => o.id === objectiveId);
+    const objectiveDisplayNumber = objectiveIndex >= 0 ? objectiveIndex + 1 : objectiveId;
+
+    // Extrair números das atividades existentes (considerando formato "MicroId_Obj.X" ou "Obj.X")
     const activityNumbers = currentActivities.map(a => {
-      const parts = a.id.split('.');
-      return parseInt(parts[1] || '0', 10);
+      const id = a.id;
+      // Formato novo: "MR070_1.1" -> extrair "1" (último número após o ponto)
+      // Formato antigo: "1.1" -> extrair "1"
+      const parts = id.split('.');
+      const lastPart = parts[parts.length - 1];
+      // Remover qualquer sufixo não numérico (ex: "1abc123" -> 1)
+      const num = parseInt(lastPart, 10);
+      return isNaN(num) ? 0 : num;
     });
+
     const nextNum = activityNumbers.length > 0 ? Math.max(...activityNumbers) + 1 : 1;
-    const newActivityId = `${objectiveId}.${nextNum}`;
+
+    // Formato do ID: "MicroId_Objetivo.Sequencial" (ex: "MR070_1.1")
+    // Usa a posição sequencial do objetivo, não o ID do banco
+    const newActivityId = `${targetMicroId}_${objectiveDisplayNumber}.${nextNum}`;
     const newTitle = `Nova Atividade ${nextNum}`;
     const newDescription = 'Descrição da nova atividade.';
 
     try {
       // Salvar no banco
-      const newActivity = await dataService.createActivity(objectiveId, newActivityId, newTitle, newDescription);
+      const newActivity = await dataService.createActivity(objectiveId, newActivityId, newTitle, targetMicroId, newDescription);
 
       setActivities(prev => ({
         ...prev,
@@ -1041,10 +1105,10 @@ function AppContent() {
 
       showToast('Atividade adicionada!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao criar atividade:', error);
+      logError('App', 'Erro ao criar atividade', error);
       showToast(`Erro ao criar atividade: ${error.message}`, 'error');
     }
-  }, [user?.role, activities, showToast]);
+  }, [user?.role, user?.microregiaoId, currentMicroId, activities, showToast]);
 
   const handleDeleteActivity = useCallback(async (objectiveId: number, activityId: string) => {
     if (user?.role !== 'admin' && user?.role !== 'superadmin') {
@@ -1078,7 +1142,7 @@ function AppContent() {
 
       showToast('Atividade excluída!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao excluir atividade:', error);
+      logError('App', 'Erro ao excluir atividade', error);
       showToast(`Erro ao excluir atividade: ${error.message}`, 'error');
     }
   }, [user?.role, actions, activities, selectedActivity, showToast]);
@@ -1096,7 +1160,7 @@ function AppContent() {
       setObjectives(prev => prev.map(o => o.id === id ? { ...o, title: newTitle } : o));
       showToast('Objetivo atualizado!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao atualizar objetivo:', error);
+      logError('App', 'Erro ao atualizar objetivo', error);
       showToast(`Erro ao atualizar objetivo: ${error.message}`, 'error');
     }
   }, [user?.role, showToast]);
@@ -1117,7 +1181,7 @@ function AppContent() {
       }));
       showToast('Atividade atualizada!', 'success');
     } catch (error: any) {
-      console.error('[App] Erro ao atualizar atividade:', error);
+      logError('App', 'Erro ao atualizar atividade', error);
       showToast(`Erro ao atualizar atividade: ${error.message}`, 'error');
     }
   }, [user?.role, showToast]);
@@ -1167,7 +1231,7 @@ function AppContent() {
       setPendingNewActionUid(null);
       setExpandedActionUid(null);
     } catch (error: any) {
-      console.error('[App] Erro ao salvar ação completa:', error);
+      logError('App', 'Erro ao salvar ação completa', error);
       showToast(`Erro ao salvar ação: ${error.message}`, 'error');
     } finally {
       setIsSaving(false);
@@ -1224,7 +1288,7 @@ function AppContent() {
       setExpandedActionUid(tempUid);
 
     } catch (error: any) {
-      console.error('[App] Erro no fluxo Salvar e Nova:', error);
+      logError('App', 'Erro no fluxo Salvar e Nova', error);
       showToast(`Erro: ${error.message}`, 'error');
     } finally {
       setIsSaving(false);
@@ -1235,14 +1299,11 @@ function AppContent() {
   // UI HELPERS
   // =====================================
 
-  const _breadcrumbItems = createBreadcrumbItems(
-    currentNav,
-    currentObjective?.title,
-    currentActivity?.id,
-    currentActivity?.title,
-    () => setCurrentNav('home'),
-    () => setViewMode('table'),
-  );
+  // selectedAction para o ActionDetailModal (antes era calculado via IIFE)
+  const selectedAction = useMemo(() => {
+    if (!expandedActionUid) return null;
+    return microActions.find(a => a.uid === expandedActionUid) || null;
+  }, [expandedActionUid, microActions]);
 
   const microregiaoNome = currentMicrorregiao
     ? currentMicrorregiao.nome
@@ -1270,7 +1331,19 @@ function AppContent() {
     return <LoginPage />;
   }
 
+  // Verificar se é primeiro acesso (sem LGPD aceito) e ainda não viu a landing
   if (user && !user.lgpdConsentimento) {
+    if (!hasViewedLanding) {
+      return (
+        <LandingOnboarding
+          onComplete={() => {
+            // Atualiza o estado para forçar re-render e mostrar LGPD
+            setHasViewedLanding(true);
+          }}
+        />
+      );
+    }
+
     return <LgpdConsent onAccepted={() => setCurrentPage('main')} />;
   }
 
@@ -1313,18 +1386,8 @@ function AppContent() {
         .animate-pulse-soft { animation: pulse-soft 2s infinite; }
       `}</style>
 
-      {/* Municipality Onboarding Modal */}
-      {showMunicipalityModal && user && (
-        <MunicipalityOnboardingModal
-          user={user}
-          onSave={async (municipio) => {
-            if (!user.email) return;
-            await dataService.saveUserMunicipality(user.microregiaoId, user.email, municipio, user.nome);
-            setShowMunicipalityModal(false);
-            showToast('Município salvo com sucesso!', 'success');
-          }}
-        />
-      )}
+      {/* Municipality Onboarding Modal - REMOVIDO: estava duplicado */}
+      {/* O modal de primeiro acesso com completeFirstAccess está no final do arquivo */}
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
@@ -1421,6 +1484,7 @@ function AppContent() {
         setSelectedObjective={setSelectedObjective}
         selectedActivity={selectedActivity}
         setSelectedActivity={setSelectedActivity}
+        viewMode={viewMode}
         setViewMode={setViewMode}
         objectives={objectives}
         activities={activities}
@@ -1557,7 +1621,7 @@ function AppContent() {
                       showToast(`${member.name} adicionado à equipe!`, 'success');
                       return newMember;
                     } catch (error: any) {
-                      console.error('[App] Erro ao adicionar membro:', error);
+                      logError('App', 'Erro ao adicionar membro', error);
                       showToast(`Erro ao adicionar membro: ${error.message}`, 'error');
                       return null;
                     }
@@ -1576,7 +1640,7 @@ function AppContent() {
                       showToast('Membro removido da equipe!', 'success');
                       return true;
                     } catch (error: any) {
-                      console.error('[App] Erro ao remover membro:', error);
+                      logError('App', 'Erro ao remover membro', error);
                       showToast(`Erro ao remover membro: ${error.message}`, 'error');
                       return false;
                     }
@@ -1609,6 +1673,19 @@ function AppContent() {
                   onDeleteComment={handleDeleteComment}
                   readOnly={isViewingAllMicros && !isAdmin}
                 />
+              </ErrorBoundary>
+
+            ) : viewMode === 'calendar' ? (
+              /* --- CALENDAR VIEW - Agenda de Ações --- */
+              <ErrorBoundary>
+                <div className="h-[calc(100vh-200px)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                  <LinearCalendar
+                    actions={microActions}
+                    activities={activities}
+                    objectives={objectives}
+                    microId={currentMicroId}
+                  />
+                </div>
               </ErrorBoundary>
 
             ) : (
@@ -1650,28 +1727,20 @@ function AppContent() {
       </main>
 
       {/* ACTION DETAIL MODAL (Drawer) */}
-      {(() => {
-        const selectedAction = expandedActionUid
-          ? microActions.find(a => a.uid === expandedActionUid)
-          : null;
-
-        return (
-          <ActionDetailModal
-            isOpen={!!selectedAction}
-            action={selectedAction || null}
-            team={currentTeam}
-            activityName={currentActivity?.title || 'Atividade'}
-            onClose={handleCloseActionModal}
-            onSaveFullAction={handleSaveFullAction}
-            onSaveAndNew={handleSaveAndNewAction}
-            onDeleteAction={handleDeleteAction}
-            isSaving={isSaving}
-            canEdit={selectedAction ? checkCanEdit(selectedAction) : false}
-            canDelete={selectedAction ? checkCanDelete(selectedAction) : false}
-            readOnly={isViewingAllMicros && !isAdmin}
-          />
-        );
-      })()}
+      <ActionDetailModal
+        isOpen={!!selectedAction}
+        action={selectedAction}
+        team={currentTeam}
+        activityName={currentActivity?.title || 'Atividade'}
+        onClose={handleCloseActionModal}
+        onSaveFullAction={handleSaveFullAction}
+        onSaveAndNew={handleSaveAndNewAction}
+        onDeleteAction={handleDeleteAction}
+        isSaving={isSaving}
+        canEdit={selectedAction ? checkCanEdit(selectedAction) : false}
+        canDelete={selectedAction ? checkCanDelete(selectedAction) : false}
+        readOnly={isViewingAllMicros && !isAdmin}
+      />
 
       <EditNameModal
         isOpen={editModalConfig.isOpen}
@@ -1707,7 +1776,7 @@ function AppContent() {
 
               setShowMunicipalityModal(false);
               showToast('Configuração concluída! Bem-vindo(a) ao sistema.', 'success');
-              
+
               // Trigger onboarding tour after first access is completed
               const onboardingKey = `radar_onboarding_completed_${user.id}`;
               const hasCompletedOnboarding = localStorage.getItem(onboardingKey);
@@ -1715,7 +1784,7 @@ function AppContent() {
                 setTimeout(() => setShowOnboarding(true), 500);
               }
             } catch (error: any) {
-              console.error('[App] Erro no primeiro acesso:', error);
+              logError('App', 'Erro no primeiro acesso', error);
               throw error; // Re-throw para o modal mostrar o erro
             }
           }}
@@ -1785,7 +1854,7 @@ function LoadingFallback() {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
     } catch (e) {
-      console.error('Erro ao limpar sessão:', e);
+      logError('LoadingFallback', 'Erro ao limpar sessão', e);
     }
     window.location.reload();
   };

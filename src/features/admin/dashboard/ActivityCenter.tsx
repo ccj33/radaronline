@@ -1,8 +1,15 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Activity, Filter, Search, MapPin, User, Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import {
+  Activity, Filter, Search, MapPin, User, Clock, ChevronDown, ChevronUp, RefreshCw,
+  Calendar, Zap, LogIn, LogOut, CheckCircle, XCircle, AlertTriangle, Trash2, Edit, Plus, Shield,
+  TrendingUp, Users, AlertOctagon, LayoutList, CheckSquare
+} from 'lucide-react';
 import { MICROREGIOES } from '../../../data/microregioes';
 import { loggingService } from '../../../services/loggingService';
 import { ActivityType, ActivityLog } from '../../../types/activity.types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { logError } from '../../../lib/logger';
 
 export type ActivityItem = {
   id: string;
@@ -24,28 +31,25 @@ const mapLogToItem = (log: ActivityLog): ActivityItem => {
   // Construir detalhes baseados no tipo de ação
   switch (log.action_type) {
     case 'user_created': {
-      // Admin criou usuário
       const targetName = meta.target_user_name || meta.name || '';
       const targetEmail = meta.target_user_email || meta.email || '';
       const targetRole = meta.target_user_role || meta.role || '';
-      details = `Usuário: ${targetName} (${targetEmail}) - Role: ${targetRole}`;
+      details = `Criou usuário: ${targetName} (${targetRole})`;
       break;
     }
     case 'user_updated': {
-      // Mostrar detalhes completos (antes → depois)
       if (meta.details && Array.isArray(meta.details)) {
         details = meta.details.join(' | ');
       } else if (meta.changes && Array.isArray(meta.changes)) {
         details = `Alterou: ${meta.changes.join(', ')}`;
       }
-      // Adicionar info do usuário alvo
       if (meta.target_user_name) {
         details = `[${meta.target_user_name}] ${details}`;
       }
       break;
     }
     case 'user_deactivated': {
-      details = meta.target_user_name || meta.name || 'Usuário desativado';
+      details = meta.target_user_name ? `Desativou: ${meta.target_user_name}` : 'Usuário desativado';
       break;
     }
     case 'action_created': {
@@ -90,107 +94,172 @@ const mapLogToItem = (log: ActivityLog): ActivityItem => {
 const activityLabels: Record<ActivityType, string> = {
   login: 'Login',
   logout: 'Logout',
-  user_created: 'Usuário criado',
-  user_updated: 'Usuário atualizado',
-  user_deactivated: 'Usuário desativado',
-  user_deleted: 'Usuário excluído',
-  lgpd_accepted: 'LGPD aceito',
-  first_access_completed: 'Primeiro acesso',
-  action_created: 'Ação criada',
-  action_updated: 'Ação atualizada',
-  action_deleted: 'Ação removida',
-  view_micro: 'Visualizou microrregião',
+  user_created: 'Usuário',
+  user_updated: 'Usuário',
+  user_deactivated: 'Usuário',
+  user_deleted: 'Usuário',
+  lgpd_accepted: 'LGPD',
+  first_access_completed: 'Primeiro Acesso',
+  action_created: 'Ação',
+  action_updated: 'Ação',
+  action_deleted: 'Ação',
+  view_micro: 'Visualização',
 };
 
-const activityColors: Record<ActivityType, string> = {
-  login: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-  logout: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-  user_created: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
-  user_updated: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700',
-  user_deactivated: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
-  user_deleted: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
-  lgpd_accepted: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700',
-  first_access_completed: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700',
-  action_created: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-700',
-  action_updated: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700',
-  action_deleted: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
-  view_micro: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600',
+// Configuration for icons and colors per activity type
+const activityConfig: Record<ActivityType, { icon: any, color: string, bg: string, border: string }> = {
+  login: { icon: LogIn, color: 'text-blue-600', bg: 'bg-blue-100', border: 'border-blue-200' },
+  logout: { icon: LogOut, color: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' },
+  user_created: { icon: User, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-200' },
+  user_updated: { icon: Edit, color: 'text-amber-600', bg: 'bg-amber-100', border: 'border-amber-200' },
+  user_deactivated: { icon: User, color: 'text-red-600', bg: 'bg-red-100', border: 'border-red-200' },
+  user_deleted: { icon: Trash2, color: 'text-red-600', bg: 'bg-red-100', border: 'border-red-200' },
+  lgpd_accepted: { icon: Shield, color: 'text-purple-600', bg: 'bg-purple-100', border: 'border-purple-200' },
+  first_access_completed: { icon: CheckCircle, color: 'text-cyan-600', bg: 'bg-cyan-100', border: 'border-cyan-200' },
+  action_created: { icon: Plus, color: 'text-teal-600', bg: 'bg-teal-100', border: 'border-teal-200' },
+  action_updated: { icon: Edit, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'border-indigo-200' },
+  action_deleted: { icon: Trash2, color: 'text-red-600', bg: 'bg-red-100', border: 'border-red-200' },
+  view_micro: { icon: MapPin, color: 'text-slate-600', bg: 'bg-slate-100', border: 'border-slate-200' },
 };
-
-const timePresets = [
-  { id: '24h', label: '24h' },
-  { id: '7d', label: '7 dias' },
-  { id: '30d', label: '30 dias' },
-  { id: 'all', label: 'Tudo' },
-] as const;
-
-type TimePreset = typeof timePresets[number]['id'];
 
 const activityTypes = Object.keys(activityLabels) as ActivityType[];
 
-const formatTimeAgo = (date: Date) => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+// --- STATS COMPONENT ---
+function ActivityStats({ activities }: { activities: ActivityItem[] }) {
+  const stats = useMemo(() => {
+    const total = activities.length;
+    const today = new Date();
+    const last24h = activities.filter(a => (today.getTime() - a.timestamp.getTime()) < 24 * 60 * 60 * 1000).length;
 
-  if (diffMins < 1) return 'Agora mesmo';
-  if (diffMins < 60) return `${diffMins} min atrás`;
-  if (diffHours < 24) return `${diffHours}h atrás`;
-  if (diffDays === 1) return 'Ontem';
-  if (diffDays < 7) return `${diffDays} dias atrás`;
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
+    // Top User
+    const userCounts = activities.reduce((acc, curr) => {
+      acc[curr.userName] = (acc[curr.userName] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const topUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0];
 
-const matchesPreset = (date: Date, preset: TimePreset) => {
-  if (preset === 'all') return true;
-  const now = new Date().getTime();
-  const diff = now - date.getTime();
-  if (preset === '24h') return diff <= 24 * 60 * 60 * 1000;
-  if (preset === '7d') return diff <= 7 * 24 * 60 * 60 * 1000;
-  if (preset === '30d') return diff <= 30 * 24 * 60 * 60 * 1000;
-  return true;
-};
+    // Top Micro
+    const microCounts = activities.reduce((acc, curr) => {
+      if (curr.microregiaoNome) {
+        acc[curr.microregiaoNome] = (acc[curr.microregiaoNome] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    const topMicro = Object.entries(microCounts).sort((a, b) => b[1] - a[1])[0];
 
-function ActivityCard({ activity }: { activity: ActivityItem }) {
+    return { total, last24h, topUser, topMicro };
+  }, [activities]);
+
   return (
-    <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow transition-shadow">
-      <div className="flex items-start justify-between gap-3">
-        <div className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${activityColors[activity.type]}`}>
-          {activityLabels[activity.type]}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg">
+          <Activity size={24} />
         </div>
-        <span className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">{formatTimeAgo(activity.timestamp)}</span>
+        <div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Total de Eventos</p>
+          <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.total}</div>
+        </div>
       </div>
-      <div className="mt-2 text-sm text-slate-800 dark:text-slate-100">
-        <span className="font-semibold">{activity.userName}</span> — {activity.description}
+
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg">
+          <Clock size={24} />
+        </div>
+        <div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Últimas 24h</p>
+          <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.last24h}</div>
+        </div>
       </div>
-      {activity.details && (
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2" title={activity.details}>
-          {activity.details}
+
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg">
+          <Users size={24} />
         </div>
-      )}
-      {activity.microregiaoNome && (
-        <div className="flex items-center gap-1 text-[11px] text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded mt-2 w-fit">
-          <MapPin size={12} />
-          {activity.microregiaoNome}
+        <div className="min-w-0">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Usuário Mais Ativo</p>
+          <div className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
+            {stats.topUser ? stats.topUser[0] : '-'}
+          </div>
+          <p className="text-xs text-slate-400">{stats.topUser ? `${stats.topUser[1]} ações` : ''}</p>
         </div>
-      )}
+      </div>
+
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg">
+          <MapPin size={24} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Região Mais Ativa</p>
+          <div className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
+            {stats.topMicro ? stats.topMicro[0] : '-'}
+          </div>
+          <p className="text-xs text-slate-400">{stats.topMicro ? `${stats.topMicro[1]} ações` : ''}</p>
+        </div>
+      </div>
     </div>
   );
 }
 
+// --- TIMELINE ITEM COMPONENT ---
+function TimelineItem({ item, isLast }: { item: ActivityItem, isLast: boolean }) {
+  const config = activityConfig[item.type] || { icon: Activity, color: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' };
+  const Icon = config.icon;
+
+  return (
+    <div className="flex gap-4 group">
+      {/* Time & Line */}
+      <div className="flex flex-col items-center min-w-[60px]">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 py-1">
+          {format(item.timestamp, 'HH:mm')}
+        </span>
+        <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm ${config.bg} ${config.color}`}>
+          <Icon size={14} />
+        </div>
+        {!isLast && (
+          <div className="w-px flex-1 bg-slate-200 dark:bg-slate-700 my-1 group-last:hidden" />
+        )}
+      </div>
+
+      {/* Content Card */}
+      <div className="flex-1 pb-8 min-w-0">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-all hover:border-teal-200 dark:hover:border-teal-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-800 dark:text-slate-100">{item.userName}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">
+                {item.type.includes('action') ? 'realizou uma alteração em' : 'registrou atividade:'}
+              </span>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bg} ${config.color} border ${config.border}`}>
+                {activityLabels[item.type]}
+              </span>
+            </div>
+            {item.microregiaoNome && (
+              <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded shrink-0">
+                <MapPin size={10} />
+                {item.microregiaoNome}
+              </div>
+            )}
+          </div>
+
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 break-words mb-1">
+            {item.description} {item.details ? `- ${item.details}` : ''}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN COMPONENT ---
 export function ActivityCenter() {
   const [microFilter, setMicroFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all');
   const [search, setSearch] = useState('');
-  const [timeFilter, setTimeFilter] = useState<TimePreset>('7d');
-  const [expandedMicros, setExpandedMicros] = useState<Record<string, boolean>>({});
-
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
 
-  // Carregar atividades reais
+  // Carregar atividades
   const loadActivities = async () => {
     setLoading(true);
     try {
@@ -198,7 +267,7 @@ export function ActivityCenter() {
       const items = logs.map(mapLogToItem);
       setActivities(items);
     } catch (error) {
-      console.error('Erro ao carregar atividades:', error);
+      logError('ActivityCenter', 'Erro ao carregar atividades', error);
     } finally {
       setLoading(false);
     }
@@ -206,9 +275,7 @@ export function ActivityCenter() {
 
   useEffect(() => {
     loadActivities();
-
-    // Auto-refresh a cada 30 segundos
-    const interval = setInterval(loadActivities, 30000);
+    const interval = setInterval(loadActivities, 60000); // 1 min refresh
     return () => clearInterval(interval);
   }, []);
 
@@ -217,179 +284,111 @@ export function ActivityCenter() {
       const matchesMicro = microFilter === 'all' ? true : (microFilter === 'sem_micro' ? !a.microregiaoId : a.microregiaoId === microFilter);
       const matchesType = typeFilter === 'all' ? true : a.type === typeFilter;
       const matchesSearch = !search || `${a.userName} ${a.description} ${a.details || ''}`.toLowerCase().includes(search.toLowerCase());
-      const matchesTime = matchesPreset(a.timestamp, timeFilter);
-      return matchesMicro && matchesType && matchesSearch && matchesTime;
+      return matchesMicro && matchesType && matchesSearch;
     }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [activities, microFilter, typeFilter, search, timeFilter]);
+  }, [activities, microFilter, typeFilter, search]);
 
-  const grouped = useMemo(() => {
-    return filtered.reduce<Record<string, ActivityItem[]>>((acc, item) => {
-      const key = item.microregiaoId || 'sem_micro';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    }, {});
+  // Group by Date for Timeline
+  const groupedByDate = useMemo(() => {
+    const groups: Record<string, ActivityItem[]> = {};
+    const today = new Date().toLocaleDateString();
+
+    filtered.forEach(item => {
+      const dateKey = item.timestamp.toLocaleDateString();
+      const displayKey = dateKey === today ? 'Hoje' : dateKey;
+      if (!groups[displayKey]) groups[displayKey] = [];
+      groups[displayKey].push(item);
+    });
+    return groups;
   }, [filtered]);
 
-  const microOptions = useMemo(() => [
-    { id: 'all', label: 'Todas microrregiões' },
-    ...MICROREGIOES.map(m => ({ id: m.id, label: m.nome })),
-    { id: 'sem_micro', label: 'Sem microrregião' },
-  ], []);
-
   return (
-    <div className="space-y-4">
-      {/* Filtros */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300 mb-3 font-semibold">
-          <div className="flex items-center gap-2">
-            <Filter size={14} />
-            Filtros
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header & Stats */}
+      <div className="flex flex-col gap-6">
+        <ActivityStats activities={filtered} />
+      </div>
+
+      {/* Filters Overlay */}
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm sticky top-0 z-10 transition-shadow">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por usuário, ação ou detalhe..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+            />
           </div>
-          <button
-            onClick={loadActivities}
-            className="flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition-colors"
-            disabled={loading}
-          >
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'Atualizando...' : 'Atualizar'}
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Microrregião</label>
+
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
             <select
               value={microFilter}
               onChange={e => setMicroFilter(e.target.value)}
-              className="w-full mt-1 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+              className="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-teal-500 outline-none min-w-[160px]"
             >
-              {microOptions.map(o => (
-                <option key={o.id} value={o.id}>{o.label}</option>
+              <option value="all">Todas as Regiões</option>
+              {MICROREGIOES.map(m => (
+                <option key={m.id} value={m.id}>{m.nome}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Tipo</label>
+
             <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value as ActivityType | 'all')}
-              className="w-full mt-1 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+              className="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-teal-500 outline-none min-w-[140px]"
             >
-              <option value="all">Todos</option>
-              {activityTypes.map(t => (
-                <option key={t} value={t}>{activityLabels[t]}</option>
+              <option value="all">Todos os Tipos</option>
+              {Object.entries(activityLabels).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Intervalo</label>
-            <div className="grid grid-cols-4 gap-1 mt-1">
-              {timePresets.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setTimeFilter(p.id)}
-                  className={`px-2 py-1.5 text-xs rounded border transition-colors ${timeFilter === p.id
-                    ? 'bg-teal-600 text-white border-teal-600'
-                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Busca</label>
-            <div className="mt-1 relative">
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Usuário, descrição..."
-                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm pl-9 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
-              />
-              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            </div>
+
+            <button
+              onClick={loadActivities}
+              disabled={loading}
+              className="p-2 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-900/30 rounded-lg transition-colors ml-auto md:ml-0"
+              title="Atualizar"
+            >
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Geral */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <div>
-              <h3 className="font-semibold text-slate-800 dark:text-slate-100">Geral</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Todas as atividades após filtro</p>
-            </div>
+      {/* Timeline View */}
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {Object.entries(groupedByDate).length === 0 ? (
+          <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed">
+            <LayoutList className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">Nenhuma atividade encontrada</h3>
+            <p className="text-slate-500">Tente ajustar os filtros ou busque por outro termo.</p>
           </div>
-          <div className="p-4 space-y-3 max-h-[520px] overflow-y-auto">
-            {filtered.length === 0 && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum evento encontrado.</p>
-            )}
-            {filtered.map(item => (
-              <ActivityCard key={item.id} activity={item} />
-            ))}
-          </div>
-        </div>
+        ) : (
+          Object.entries(groupedByDate).map(([date, items]) => (
+            <div key={date}>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-px flex-1 bg-slate-200 dark:border-slate-700"></div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-4 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                  {date}
+                </h3>
+                <div className="h-px flex-1 bg-slate-200 dark:border-slate-700"></div>
+              </div>
 
-        {/* Por microrregião */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <div>
-              <h3 className="font-semibold text-slate-800 dark:text-slate-100">Por microrregião</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Eventos agrupados</p>
+              <div className="space-y-0">
+                {items.map((item, idx) => (
+                  <TimelineItem
+                    key={item.id}
+                    item={item}
+                    isLast={idx === items.length - 1}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-[520px] overflow-y-auto">
-            {Object.keys(grouped).length === 0 && (
-              <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Nenhum evento encontrado.</p>
-            )}
-            {Object.entries(grouped).map(([microId, items]) => {
-              const microNome = microId === 'sem_micro' ? 'Sem microrregião' : (MICROREGIOES.find(m => m.id === microId)?.nome || microId);
-              const open = expandedMicros[microId] ?? true;
-              return (
-                <div key={microId}>
-                  <button
-                    onClick={() => setExpandedMicros(prev => ({ ...prev, [microId]: !open }))}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-sm font-semibold text-slate-700 dark:text-slate-200"
-                  >
-                    <span className="flex items-center gap-2">
-                      <MapPin size={14} className="text-teal-600 dark:text-teal-400" />
-                      {microNome}
-                      <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">({items.length})</span>
-                    </span>
-                    {open ? <ChevronUp size={16} className="text-slate-400 dark:text-slate-500" /> : <ChevronDown size={16} className="text-slate-400 dark:text-slate-500" />}
-                  </button>
-                  {open && (
-                    <div className="px-4 pb-3 space-y-2">
-                      {items.map(item => (
-                        <div key={item.id} className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
-                          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1">
-                              <User size={12} className="text-slate-400 dark:text-slate-500" />
-                              {item.userName}
-                            </span>
-                            <span className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                              <Clock size={12} /> {formatTimeAgo(item.timestamp)}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-sm text-slate-800 dark:text-slate-100 font-semibold">{activityLabels[item.type]}</div>
-                          <div className="text-sm text-slate-600 dark:text-slate-300">{item.description}</div>
-                          {item.details && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{item.details}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+          ))
+        )}
       </div>
     </div>
   );

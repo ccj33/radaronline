@@ -10,7 +10,8 @@ import {
   Briefcase,
   UserPlus,
   ArrowRight,
-  TrendingDown
+  TrendingDown,
+  CalendarClock
 } from 'lucide-react';
 import {
   PieChart,
@@ -219,6 +220,25 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
     const taxaConclusao = totalAcoes > 0 ? Math.round((concluidas / totalAcoes) * 100) : 0;
     const usuariosAtivos = filteredUsers.filter(u => u.ativo).length;
 
+    // Ações concluídas com atraso (laranja no Gantt)
+    // Foram concluídas, mas depois da data planejada
+    const concluidasComAtraso = filteredActions.filter(a => {
+      if (a.status !== 'Concluído') return false;
+      if (!a.endDate || !a.plannedEndDate) return false;
+      const dataReal = new Date(a.endDate);
+      const dataPlanejada = new Date(a.plannedEndDate);
+      return dataReal > dataPlanejada;
+    }).length;
+
+    // Ações concluídas ANTES do prazo (verde - sucesso antecipado)
+    const concluidasAntes = filteredActions.filter(a => {
+      if (a.status !== 'Concluído') return false;
+      if (!a.endDate || !a.plannedEndDate) return false;
+      const dataReal = new Date(a.endDate);
+      const dataPlanejada = new Date(a.plannedEndDate);
+      return dataReal < dataPlanejada;
+    }).length;
+
     return {
       totalAcoes,
       concluidas,
@@ -228,6 +248,8 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
       taxaConclusao,
       taxaCobertura,
       usuariosAtivos,
+      concluidasComAtraso,
+      concluidasAntes,
       deadlineHorizon: [
         { name: 'Atrasadas', value: atrasadas, color: '#f43f5e' }, // Rose 500
         { name: 'Hoje', value: vencendoHoje, color: '#f59e0b' }, // Amber 500
@@ -247,7 +269,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
   ].filter(d => d.value > 0);
 
   // Modal state
-  const [openModal, setOpenModal] = useState<'conclusao' | 'risco' | 'cobertura' | 'horizonte' | 'status' | null>(null);
+  const [openModal, setOpenModal] = useState<'conclusao' | 'risco' | 'cobertura' | 'horizonte' | 'status' | 'reprogramadas' | null>(null);
 
   // Dados detalhados para modais (mantido da lógica anterior para consistência)
   const detailedData = useMemo(() => {
@@ -313,12 +335,46 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
     // ... [Manter lógica de reconstrução dos arrays com ações se necessário]
 
     // Para simplificar Step, retornamos os dados essenciais para os modais existentes
+    // Ações concluídas com atraso (detalhadas)
+    const lateCompletions = filteredActions
+      .filter(a => {
+        if (a.status !== 'Concluído') return false;
+        if (!a.endDate || !a.plannedEndDate) return false;
+        return new Date(a.endDate) > new Date(a.plannedEndDate);
+      })
+      .map(a => ({
+        uid: a.uid, id: a.id, title: a.title,
+        plannedEndDate: new Date(a.plannedEndDate).toLocaleDateString('pt-BR'),
+        actualEndDate: new Date(a.endDate).toLocaleDateString('pt-BR'),
+        responsible: a.raci?.find(r => r.role === 'R')?.name || '',
+        daysLate: Math.floor((new Date(a.endDate).getTime() - new Date(a.plannedEndDate).getTime()) / (1000 * 60 * 60 * 24)),
+      }))
+      .sort((a, b) => b.daysLate - a.daysLate);
+
+    // Ações concluídas antecipadamente (detalhadas)
+    const earlyCompletions = filteredActions
+      .filter(a => {
+        if (a.status !== 'Concluído') return false;
+        if (!a.endDate || !a.plannedEndDate) return false;
+        return new Date(a.endDate) < new Date(a.plannedEndDate);
+      })
+      .map(a => ({
+        uid: a.uid, id: a.id, title: a.title,
+        plannedEndDate: new Date(a.plannedEndDate).toLocaleDateString('pt-BR'),
+        actualEndDate: new Date(a.endDate).toLocaleDateString('pt-BR'),
+        responsible: a.raci?.find(r => r.role === 'R')?.name || '',
+        daysEarly: Math.floor((new Date(a.plannedEndDate).getTime() - new Date(a.endDate).getTime()) / (1000 * 60 * 60 * 24)),
+      }))
+      .sort((a, b) => b.daysEarly - a.daysEarly);
+
     return {
       objectiveProgress: objectiveProgress.filter(o => o.total > 0),
       overdueActions,
       microCoverage,
       deadlineHorizonWithActions: [], // Placeholder se não for abrir detalhe
-      statusWithActions: [] // Placeholder
+      statusWithActions: [], // Placeholder
+      lateCompletions,
+      earlyCompletions
     };
   }, [filteredData]);
 
@@ -337,7 +393,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
           variants={staggerContainer}
           initial="initial"
           animate="animate"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
         >
           {/* PRIMARY KPI */}
           <MetricCard
@@ -359,6 +415,16 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
             trend={{ value: 12, isPositive: false, label: "vs. semana passada" }}
             onClick={() => setOpenModal('risco')}
             variant={metrics.atrasadas > 0 ? "danger" : "default"}
+          />
+
+          {/* LATE COMPLETION KPI */}
+          <MetricCard
+            title="Reprogramadas"
+            value={metrics.concluidasComAtraso + metrics.concluidasAntes}
+            subtitle={`${metrics.concluidasAntes} antes • ${metrics.concluidasComAtraso} após o prazo`}
+            icon={<CalendarClock className="w-6 h-6" />}
+            onClick={() => setOpenModal('reprogramadas')}
+            variant={metrics.concluidasComAtraso > 0 ? "warning" : "default"}
           />
 
           {/* PENDING REGISTRATIONS - ALERT */}
@@ -504,12 +570,117 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
         </div>
       </section>
 
-      {/* KPI Detail Modals - Mantidos */}
       <KpiDetailModal type="conclusao" isOpen={openModal === 'conclusao'} onClose={() => setOpenModal(null)} objectiveProgress={detailedData.objectiveProgress} totalActions={metrics.totalAcoes} completedActions={metrics.concluidas} completionRate={metrics.taxaConclusao} />
       <KpiDetailModal type="risco" isOpen={openModal === 'risco'} onClose={() => setOpenModal(null)} overdueActions={detailedData.overdueActions} />
       <KpiDetailModal type="cobertura" isOpen={openModal === 'cobertura'} onClose={() => setOpenModal(null)} microCoverage={detailedData.microCoverage} coverageRate={metrics.taxaCobertura} />
       <KpiDetailModal type="horizonte" isOpen={openModal === 'horizonte'} onClose={() => setOpenModal(null)} deadlineHorizon={detailedData.deadlineHorizonWithActions} />
       <KpiDetailModal type="status" isOpen={openModal === 'status'} onClose={() => setOpenModal(null)} statusData={detailedData.statusWithActions} totalActions={metrics.totalAcoes} />
+
+      {/* Modal Reprogramadas - Inline */}
+      {openModal === 'reprogramadas' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpenModal(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-3xl max-h-[80vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CalendarClock className="w-8 h-8" />
+                  <div>
+                    <h2 className="text-xl font-bold">Ações Reprogramadas</h2>
+                    <p className="text-amber-100 text-sm">Concluídas fora da data planejada</p>
+                  </div>
+                </div>
+                <button onClick={() => setOpenModal(null)} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                  <ArrowRight className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+              {/* Stats Summary */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+                  <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.concluidasAntes}</div>
+                  <div className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Concluídas antes do prazo</div>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{metrics.concluidasComAtraso}</div>
+                  <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">Concluídas após o prazo</div>
+                </div>
+              </div>
+
+              {/* Early Completions */}
+              {detailedData.earlyCompletions.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Concluídas Antecipadamente
+                  </h3>
+                  <div className="space-y-2">
+                    {detailedData.earlyCompletions.map((action) => (
+                      <div key={action.uid} className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-slate-800 dark:text-slate-200 truncate">{action.title}</div>
+                          <div className="text-xs text-slate-500">
+                            Planejado: {action.plannedEndDate} → Real: {action.actualEndDate}
+                            {action.responsible && <span className="ml-2 text-emerald-600">{action.responsible}</span>}
+                          </div>
+                        </div>
+                        <div className="ml-4 text-right">
+                          <span className="inline-block px-2 py-1 bg-emerald-100 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-full">
+                            -{action.daysEarly}d
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Late Completions */}
+              {detailedData.lateCompletions.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-amber-600 dark:text-amber-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Concluídas com Atraso
+                  </h3>
+                  <div className="space-y-2">
+                    {detailedData.lateCompletions.map((action) => (
+                      <div key={action.uid} className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-slate-800 dark:text-slate-200 truncate">{action.title}</div>
+                          <div className="text-xs text-slate-500">
+                            Planejado: {action.plannedEndDate} → Real: {action.actualEndDate}
+                            {action.responsible && <span className="ml-2 text-amber-600">{action.responsible}</span>}
+                          </div>
+                        </div>
+                        <div className="ml-4 text-right">
+                          <span className="inline-block px-2 py-1 bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-full">
+                            +{action.daysLate}d
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {detailedData.earlyCompletions.length === 0 && detailedData.lateCompletions.length === 0 && (
+                <div className="text-center py-10 text-slate-400">
+                  <CalendarClock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhuma ação reprogramada encontrada</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div >
   );
 }

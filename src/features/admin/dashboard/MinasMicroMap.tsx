@@ -12,6 +12,7 @@ import {
     findMacroKeyInObject,
     resolveMicroId,
 } from '../../../utils/geoUtils';
+import { logError } from '../../../lib/logger';
 
 // Helper para determinar cor baseada no status
 const getStatusColor = (status: 'otimo' | 'bom' | 'atencao' | 'critico' | 'sem_dados', isDark: boolean) => {
@@ -1034,7 +1035,7 @@ const MinasMicroMap: React.FC<MinasMicroMapProps> = ({
 
 
             } catch (err) {
-                console.error("Erro ao carregar mapa:", err);
+                logError('MinasMicroMap', 'Erro ao carregar mapa', err);
                 setLoading(false);
             }
         };

@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/common/Toast';
+import { logError } from '../../lib/logger';
 // import { AVATARS, AVATAR_CATEGORIES, getAvatarUrl } from './AvatarData';
 import { fadeIn, scaleIn, slideInRight } from '../../lib/motion';
 
@@ -325,7 +326,7 @@ export function UserSettingsModal({ isOpen, onClose, initialTab = 'profile', mod
             showToast('Perfil atualizado com sucesso!', 'success');
             onClose();
         } catch (error) {
-            console.error('Error saving profile:', error);
+            logError('UserSettingsModal', 'Error saving profile', error);
             showToast('Erro ao salvar perfil', 'error');
         } finally {
             setIsSaving(false);
@@ -356,7 +357,7 @@ export function UserSettingsModal({ isOpen, onClose, initialTab = 'profile', mod
             showToast('Solicitação enviada!', 'success');
             setChangeRequest('');
         } catch (error) {
-            console.error(error);
+            logError('UserSettingsModal', 'Error sending request', error);
             showToast('Erro ao enviar solicitação', 'error');
         } finally {
             setIsSendingRequest(false);

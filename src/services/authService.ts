@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { User, ProfileDTO, UserRole } from '../types/auth.types';
 import { log, logError, logWarn } from '../lib/logger';
+import { isValidEmail } from '../lib/validation';
 import { loggingService } from './loggingService';
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 
@@ -117,9 +118,8 @@ export async function createUser(userData: {
     if (!userData.nome || !userData.email || !userData.senha) {
       throw new Error('Nome, email e senha são obrigatórios');
     }
-    // ✅ Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(userData.email)) {
+    // ✅ Validar formato de email (usando função centralizada)
+    if (!isValidEmail(userData.email)) {
       throw new Error('Formato de email inválido');
     }
     // ✅ Validar senha

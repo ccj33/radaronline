@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Target, AlertOctagon, MapPin, CheckCircle2, Clock, AlertTriangle, TrendingUp, Calendar, BarChart2, PieChart as PieChartIcon, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { getActionDisplayId } from '../../../lib/text';
 
 type KpiType = 'conclusao' | 'risco' | 'cobertura' | 'horizonte' | 'status';
 
@@ -149,7 +150,7 @@ export function KpiDetailModal({
                     >
                         <div className="flex items-start gap-2">
                             <span className="bg-slate-600 dark:bg-slate-500 text-white text-xs font-bold px-2 py-0.5 rounded shrink-0">
-                                #{action.id}
+                                #{getActionDisplayId(action.id)}
                             </span>
                             <span className="text-sm font-medium text-slate-800 dark:text-slate-100 flex-1">
                                 {action.title}
@@ -292,7 +293,7 @@ export function KpiDetailModal({
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded">
-                                                        #{action.id}
+                                                        #{getActionDisplayId(action.id)}
                                                     </span>
                                                     <span className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">
                                                         {action.title}

@@ -3,6 +3,7 @@ import { X, User as UserIcon, Mail, Shield, MapPin, ChevronDown, Lock, Eye, EyeO
 import { User, UserRole } from '../../types/auth.types';
 import { MICROREGIOES, getMacrorregioes, getMunicipiosByMicro } from '../../data/microregioes';
 import { log, logError } from '../../lib/logger';
+import { isValidEmail } from '../../lib/validation';
 
 type UserFormModalProps = {
   user: User | null;
@@ -83,9 +84,8 @@ export function UserFormModal({ user, onClose, onSave, isSaving = false, initial
       return;
     }
 
-    // ✅ CORREÇÃO: Validar formato de email no frontend (fail-fast)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email.trim())) {
+    // ✅ Validar formato de email usando função centralizada
+    if (!isValidEmail(formData.email)) {
       setError('Formato de email inválido');
       return;
     }

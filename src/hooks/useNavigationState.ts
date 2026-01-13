@@ -13,7 +13,7 @@ export function useNavigationState({ user, isAuthenticated, isAdmin, isMobile }:
   const [didAutoOpenAdmin, setDidAutoOpenAdmin] = useState(false);
   const [selectedObjective, setSelectedObjective] = useState<number>(1);
   const [selectedActivity, setSelectedActivity] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'table' | 'gantt' | 'team' | 'optimized'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'gantt' | 'team' | 'optimized' | 'calendar'>('table');
   const [ganttRange, setGanttRange] = useState<'all' | '3months' | '6months' | '1year'>('all');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(!isMobile);
   const [currentNav, setCurrentNav] = useState<'strategy' | 'home' | 'settings'>('strategy');

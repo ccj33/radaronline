@@ -12,6 +12,7 @@ import { formatRelativeTime } from './ActionTable';
 import { renderCommentWithMentions } from '../../components/common/MentionInput';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { useResponsive } from '../../hooks/useResponsive';
+import { getActionDisplayId } from '../../lib/text';
 
 // =====================================
 // PROPS DO COMPONENTE
@@ -603,7 +604,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
                         <div className="flex items-center text-xs font-semibold text-slate-400 uppercase tracking-wide">
                             <span>{activityName}</span>
                             <span className="mx-2 text-slate-300">/</span>
-                            <span className="text-teal-600">{action.id}</span>
+                            <span className="text-teal-600">{getActionDisplayId(action.id)}</span>
                         </div>
                         {/* Título Editável */}
                         <div className="flex items-center gap-2">

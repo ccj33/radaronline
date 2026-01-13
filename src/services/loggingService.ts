@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ActivityType, ActivityLog } from '../types/activity.types';
+import { logError, logWarn } from '../lib/logger';
 
 export const loggingService = {
     /**
@@ -15,7 +16,7 @@ export const loggingService = {
             // Obter o usuário atual
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                console.warn('[loggingService] Usuário não autenticado, log ignorado.');
+                logWarn('loggingService', 'Usuário não autenticado, log ignorado.');
                 return;
             }
 
@@ -28,10 +29,10 @@ export const loggingService = {
             });
 
             if (error) {
-                console.error('[loggingService] Erro ao registrar log:', error);
+                logError('loggingService', 'Erro ao registrar log', error);
             }
         } catch (err) {
-            console.error('[loggingService] Erro inesperado ao registrar log:', err);
+            logError('loggingService', 'Erro inesperado ao registrar log', err);
         }
     },
 
@@ -62,7 +63,7 @@ export const loggingService = {
             const { data, error } = await query;
 
             if (error) {
-                console.error('[loggingService] Erro na query com join:', error);
+                logError('loggingService', 'Erro na query com join', error);
                 // Fallback: buscar sem join se der erro
                 const { data: dataSimple, error: errorSimple } = await supabase
                     .from('activity_logs')
@@ -71,7 +72,7 @@ export const loggingService = {
                     .limit(limit);
 
                 if (errorSimple) {
-                    console.error('[loggingService] Erro na query simples:', errorSimple);
+                    logError('loggingService', 'Erro na query simples', errorSimple);
                     throw errorSimple;
                 }
 
@@ -83,7 +84,7 @@ export const loggingService = {
 
             return data as ActivityLog[];
         } catch (err) {
-            console.error('Erro ao buscar atividades:', err);
+            logError('loggingService', 'Erro ao buscar atividades', err);
             return [];
         }
     }

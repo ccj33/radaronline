@@ -1,10 +1,11 @@
 import React from 'react';
-import { List, BarChart2, Users, Menu, Shield, MapPin, Zap, ChevronRight, Pencil } from 'lucide-react';
+import { List, BarChart2, Users, Menu, Shield, MapPin, Zap, ChevronRight, Pencil, Calendar } from 'lucide-react';
 import { Objective } from '../../types';
 import { UserRole } from '../../types/auth.types';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { ZoomControl } from '../common/ZoomControl';
 import { NotificationBell } from '../common/NotificationBell';
+import { getObjectiveTitleWithoutNumber } from '../../lib/text';
 
 interface HeaderProps {
   macro: string;
@@ -12,8 +13,8 @@ interface HeaderProps {
   currentNav: 'strategy' | 'home' | 'settings';
   selectedObjective: number;
   objectives: Objective[];
-  viewMode: 'table' | 'gantt' | 'team' | 'optimized';
-  setViewMode: (mode: 'table' | 'gantt' | 'team' | 'optimized') => void;
+  viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
+  setViewMode: (mode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar') => void;
   onMenuClick?: () => void;
   isMobile?: boolean;
   isAdmin?: boolean;
@@ -41,9 +42,16 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleEditMode,
   onUpdateObjective,
 }) => {
-  const objective = objectives.find(o => o.id === selectedObjective);
-  const rawTitle = objective?.title;
-  const objectiveTitle = rawTitle && /^\d+\./.test(rawTitle) ? `Obj. ${rawTitle}` : rawTitle;
+  const objectiveIndex = objectives.findIndex(o => o.id === selectedObjective);
+  const objective = objectives[objectiveIndex];
+  const rawTitle = objective?.title || '';
+  // Usa a posição sequencial (índice + 1) e remove o número do título se existir
+  const objectiveTitle = objectiveIndex >= 0 
+    ? `Obj. ${objectiveIndex + 1}. ${getObjectiveTitleWithoutNumber(rawTitle)}`
+    : rawTitle;
+  
+  // Título limpo (sem prefixo) para passar ao modal de edição
+  const cleanTitleForEdit = getObjectiveTitleWithoutNumber(rawTitle);
 
   // State de edição inline removido em favor do modal centralizado
 
@@ -85,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
               <h1
                 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight truncate cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-1 rounded -ml-2 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all flex items-center gap-2"
                 title="Clique para editar"
-                onClick={() => onUpdateObjective?.(objective?.id || 0, objectiveTitle || '')}
+                onClick={() => onUpdateObjective?.(objective?.id || 0, cleanTitleForEdit)}
               >
                 {objectiveTitle}
                 <Pencil size={12} className="text-slate-400" />
@@ -133,6 +141,12 @@ export const Header: React.FC<HeaderProps> = ({
               icon={<Zap size={14} />}
               label="Visão Rápida"
             />
+            <TabButton
+              active={viewMode === 'calendar'}
+              onClick={() => setViewMode('calendar')}
+              icon={<Calendar size={14} />}
+              label="Agenda"
+            />
           </div>
         )}
 
@@ -142,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Selector de modo compacto */}
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as 'table' | 'gantt' | 'team' | 'optimized')}
+              onChange={(e) => setViewMode(e.target.value as 'table' | 'gantt' | 'team' | 'optimized' | 'calendar')}
               className="appearance-none bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-2 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
               <option value="table">📋 Ações</option>
@@ -150,6 +164,8 @@ export const Header: React.FC<HeaderProps> = ({
               {(userRole === 'admin' || userRole === 'superadmin' || userRole === 'gestor') && (
                 <option value="team">👥 Equipe</option>
               )}
+              <option value="optimized">⚡ Rápida</option>
+              <option value="calendar">📆 Agenda</option>
               <option value="optimized">⚡ Rápida</option>
             </select>
           </div>

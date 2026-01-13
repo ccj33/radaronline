@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { TeamMember } from '../../types';
 import { getMicroregiaoById, getMunicipiosByMicro } from '../../data/microregioes';
 import { ConfirmModal } from '../../components/common';
+import { logError } from '../../lib/logger';
 import {
   Mail, MapPin, Edit3, Trash2, Plus,
   User as UserIcon, Search, X,
@@ -126,7 +127,7 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
         setIsAddOpen(false);
       }
     } catch (error) {
-      console.error('Erro ao adicionar membro:', error);
+      logError('TeamView', 'Erro ao adicionar membro', error);
     } finally {
       setIsAdding(false);
     }
@@ -151,7 +152,7 @@ export function TeamView({ team, microId, onUpdateTeam, onAddMember, onRemoveMem
         onUpdateTeam?.(microId, team.filter(m => m.id !== removeConfirm.memberId));
       }
     } catch (error) {
-      console.error('Erro ao remover membro:', error);
+      logError('TeamView', 'Erro ao remover membro', error);
     } finally {
       setIsRemoving(false);
       setRemoveConfirm({ open: false, memberId: null });

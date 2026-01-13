@@ -6,12 +6,13 @@ import { OptimizedView } from '../../features/dashboard/OptimizedView';
 import { ActionTable } from '../../features/actions/ActionTable';
 import { ActionDetailModal } from '../../features/actions/ActionDetailModal';
 import { ActivityTabs } from '../../features/actions/ActivityTabs';
+import { LinearCalendar } from '../../features/admin/dashboard/LinearCalendar';
 // ExpandableDescription removido
 import { Action, TeamMember, Objective, Activity, GanttRange } from '../../types';
 
 interface MainViewProps {
   currentNav: 'strategy' | 'home' | 'settings';
-  viewMode: 'table' | 'gantt' | 'team' | 'optimized';
+  viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
   selectedActivity: string;
   microActions: Action[];
   ganttActions: Action[];
@@ -179,6 +180,19 @@ export function MainView({
               onAddComment={onAddComment}
               readOnly={isViewingAllMicros && !isAdmin}
             />
+          </ErrorBoundary>
+
+        ) : viewMode === 'calendar' ? (
+          /* CALENDAR VIEW - Agenda de Ações da Microrregião */
+          <ErrorBoundary>
+            <div className="h-[calc(100vh-200px)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+              <LinearCalendar
+                actions={microActions}
+                activities={activities}
+                objectives={objectives}
+                microId={currentMicroId}
+              />
+            </div>
           </ErrorBoundary>
 
         ) : (

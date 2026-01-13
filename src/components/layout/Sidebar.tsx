@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Home, Target, Settings, LogOut, Shield, Tras
 
 import { slideInLeft, staggerContainer, staggerItem, buttonTap } from '../../lib/motion';
 import { Objective, Activity as _ActivityType } from '../../types';
+import { getActivityDisplayId, getObjectiveTitleWithoutNumber } from '../../lib/text';
 import { UserRole } from '../../types/auth.types';
 import { getAvatarUrl } from '../../features/settings/UserSettingsModal';
 import { NotificationBell } from '../common/NotificationBell';
@@ -56,7 +57,8 @@ interface SidebarProps {
   setSelectedObjective: React.Dispatch<React.SetStateAction<number>>;
   selectedActivity: string | null;
   setSelectedActivity: React.Dispatch<React.SetStateAction<string>>;
-  setViewMode: React.Dispatch<React.SetStateAction<'table' | 'gantt' | 'team' | 'optimized'>> | (() => void);
+  viewMode?: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
+  setViewMode: React.Dispatch<React.SetStateAction<'table' | 'gantt' | 'team' | 'optimized' | 'calendar'>> | (() => void);
   objectives: Objective[];
   activities: Record<number, { id: string; title: string }[]>;
   onProfileClick?: () => void;
@@ -94,6 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setSelectedObjective,
   selectedActivity,
   setSelectedActivity,
+  viewMode,
   setViewMode,
   objectives,
   activities,
@@ -397,13 +400,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   collapsed={!isOpen}
                 />
                 <SidebarItem
-                  icon={Calendar}
-                  label="Calendário"
-                  isActive={adminActiveTab === 'calendar'}
-                  onClick={() => onAdminTabChange('calendar')}
-                  collapsed={!isOpen}
-                />
-                <SidebarItem
                   icon={ClipboardList}
                   label="Solicitações"
                   isActive={adminActiveTab === 'requests'}
@@ -457,7 +453,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <SidebarItem
                       icon={Target}
                       label="Objetivos"
-                      isActive={currentNav === 'strategy'}
+                      isActive={currentNav === 'strategy' && viewMode !== 'calendar'}
                       onClick={() => { setCurrentNav('strategy'); setViewMode('table'); }}
                       collapsed={!isOpen}
                     />
@@ -472,7 +468,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Objetivos Estratégicos</span>
                       </div>
                       <div className="space-y-1 p-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                        {objectives.map(obj => (
+                        {objectives.map((obj, objIndex) => (
                           <button
                             key={obj.id}
                             onClick={() => {
@@ -484,7 +480,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             className="w-full text-left px-3 py-2.5 text-xs rounded-lg text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-400 truncate transition-colors flex items-center gap-2.5"
                           >
                             <span className={`w-2 h-2 rounded-full shrink-0 ${selectedObjective === obj.id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300 dark:bg-slate-600'}`}></span>
-                            <span className="truncate">Obj {obj.title}</span>
+                            <span className="truncate">Obj {objIndex + 1}. {getObjectiveTitleWithoutNumber(obj.title)}</span>
                           </button>
                         ))}
                       </div>
@@ -493,9 +489,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 {/* Lista de objetivos (expandido) */}
-                {isOpen && currentNav === 'strategy' && (
+                {isOpen && currentNav === 'strategy' && viewMode !== 'calendar' && (
                   <div className="ml-1 pl-3 border-l-2 border-emerald-500/20 space-y-2 mt-2 mb-4 animate-slide-down">
-                    {objectives.map(obj => (
+                    {objectives.map((obj, objIndex) => (
                       <div key={obj.id} className="group/obj">
                         <div className="flex items-center gap-1 group-hover/obj:bg-white/5 rounded-lg pr-1 transition-colors">
                           <button
@@ -509,7 +505,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           >
                             <div className="flex items-center gap-2">
                               <div className={`w-1.5 h-1.5 rounded-full transition-all ${selectedObjective === obj.id ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] scale-110" : "bg-white/30"}`}></div>
-                              <span className="truncate">Obj {obj.title}</span>
+                              <span className="truncate">Obj {objIndex + 1}. {getObjectiveTitleWithoutNumber(obj.title)}</span>
                             </div>
                           </button>
 
@@ -557,7 +553,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                   }}
                                   className={`flex-1 text-left py-1.5 px-2 text-[10px] rounded-md transition-colors truncate ${selectedObjective === obj.id && act.id === selectedActivity ? (isEditMode ? "text-white font-bold bg-white/10" : "bg-emerald-500/10 text-white font-bold border border-emerald-500/20") : "text-white/50 hover:bg-white/5 hover:text-white"}`}
                                 >
-                                  Atv {act.id} - {act.title}
+                                  Atv {getActivityDisplayId(act.id)} - {act.title}
                                 </button>
 
                                 {isEditMode && (
@@ -618,7 +614,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 )}
 
-                {/* 3. Notificações (Notifications) - Moves below Objectives */}
+                {/* 3. Agenda (Calendar) */}
+                <SidebarItem 
+                  icon={Calendar} 
+                  label="Agenda" 
+                  isActive={currentNav === 'strategy' && viewMode === 'calendar'} 
+                  onClick={() => { setCurrentNav('strategy'); setViewMode('calendar'); }} 
+                  collapsed={!isOpen} 
+                />
+
+                {/* 4. Notificações (Notifications) - Moves below Objectives */}
                 {showNotifications && onAdminTabChange && (
                   <div className="relative mt-2 border-t border-white/5 pt-2">
                     <NotificationBell

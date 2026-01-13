@@ -4,6 +4,7 @@ import { Calendar, Plus, Trash2, Lock, Eye, MessageCircle, Send, CheckCircle2 } 
 import { staggerContainerFast, staggerItem } from '../../lib/motion';
 import { Action, Status, RaciRole, TeamMember, ActionComment } from '../../types';
 import { formatDateBr, getTodayStr } from '../../lib/date';
+import { getActionNumber, getActivityPrefixFromActionId, getActionDisplayId } from '../../lib/text';
 import {
   StatusBadge,
   RaciCompactPill,
@@ -82,10 +83,7 @@ const formatDateShortYear = (dateString?: string) => {
 
 };
 
-const formatActionId = (id: string) => {
-  const parts = id.split('.');
-  return parts[parts.length - 1];
-};
+// Usa getActionNumber de lib/text.ts para formatar ID da ação
 
 const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
   return (
@@ -226,7 +224,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
             ID
             {filteredActions.length > 0 && (
               <span className="ml-1 text-[10px] normal-case opacity-70">
-                {filteredActions[0].id.split('.').slice(0, -1).join('.')}.x
+                {getActivityPrefixFromActionId(filteredActions[0].id)}.x
               </span>
             )}
           </div>
@@ -281,9 +279,9 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                   onKeyDown={e => { if (e.key === 'Enter') toggleRow(action.uid); }}
                 >
                   <div className="col-span-1">
-                    <Tooltip content={`ID: ${action.id}`}>
+                    <Tooltip content={`ID: ${getActionDisplayId(action.id)}`}>
                       <span className="inline-block font-mono text-[10px] font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-600 cursor-help min-w-[24px] text-center">
-                        {formatActionId(action.id)}
+                        {getActionNumber(action.id)}
                       </span>
                     </Tooltip>
                   </div>
@@ -328,9 +326,9 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Tooltip content={`ID: ${action.id}`}>
+                        <Tooltip content={`ID: ${getActionDisplayId(action.id)}`}>
                           <span className="inline-block font-mono text-[10px] font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-600 cursor-help min-w-[24px] text-center">
-                            {formatActionId(action.id)}
+                            {getActionNumber(action.id)}
                           </span>
                         </Tooltip>
                         <StatusBadge status={action.status} />

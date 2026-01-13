@@ -4,6 +4,7 @@ import { Bell, X, Check, Clock, XCircle, MessageSquare, RotateCcw, AtSign, Shiel
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../auth/AuthContext';
 import { getMicroregiaoById } from '../../data/microregioes';
+import { logError } from '../../lib/logger';
 
 interface UserRequest {
     id: string;
@@ -108,7 +109,7 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
             const { data: requestsData, error: requestsError } = await query;
 
             if (requestsError) {
-                console.error('[NotificationBell] Error loading requests:', requestsError);
+                logError('NotificationBell', 'Error loading requests', requestsError);
                 return;
             }
 
@@ -151,7 +152,7 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
 
             setRequests(mergedRequests);
         } catch (err) {
-            console.error('[NotificationBell] Unexpected error:', err);
+            logError('NotificationBell', 'Unexpected error', err);
         } finally {
             setLoading(false);
         }

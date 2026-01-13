@@ -6,6 +6,7 @@ import {
   Users, BarChart2, CheckCircle, Sparkles,
   Zap, MessageCircle, Menu, Rocket
 } from 'lucide-react';
+import { logWarn } from '../../lib/logger';
 
 interface OnboardingStep {
   id: string;
@@ -139,7 +140,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
           }
         }
       } catch (e) {
-        console.warn('Invalid selector:', selector);
+        logWarn('OnboardingTour', `Invalid selector: ${selector}`);
       }
     }
     

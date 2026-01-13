@@ -42,7 +42,6 @@ import {
   defaultFiltersState,
   DashboardFiltersState,
   PendingRegistrationsPanel,
-  LinearCalendar,
   RequestsManagement,
 } from './dashboard';
 import { AnalyticsDashboard } from './dashboard/AnalyticsDashboard';
@@ -51,7 +50,7 @@ import { ConfirmModal, useToast } from '../../components/common';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { log, logError } from '../../lib/logger';
 
-type TabType = 'dashboard' | 'usuarios' | 'microregioes' | 'ranking' | 'atividades' | 'calendar' | 'requests';
+type TabType = 'dashboard' | 'usuarios' | 'microregioes' | 'ranking' | 'atividades' | 'requests';
 
 interface AdminPanelProps {
   onBack?: () => void;
@@ -140,7 +139,7 @@ export function AdminPanel(props: AdminPanelProps) {
       const pending = await loadPendingRegistrations();
       setPendingRegistrations(pending);
     } catch (error) {
-      console.error('Erro ao carregar pendentes:', error);
+      logError('AdminPanel', 'Erro ao carregar pendentes', error);
     } finally {
       setPendingLoading(false);
     }
@@ -152,7 +151,7 @@ export function AdminPanel(props: AdminPanelProps) {
       const usersList = await authService.listUsers();
       setUsers(usersList);
     } catch (error) {
-      console.error(error);
+      logError('AdminPanel', 'Erro ao carregar usuários', error);
       showToast('Não foi possível carregar usuários', 'error');
     } finally {
       setIsLoading(false);
@@ -323,7 +322,6 @@ export function AdminPanel(props: AdminPanelProps) {
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard, count: null },
     { id: 'atividades' as TabType, label: 'Atividades', icon: Activity, count: null },
     { id: 'usuarios' as TabType, label: 'Usuários', icon: Users, count: users.length },
-    { id: 'calendar' as TabType, label: 'Calendário', icon: CalendarRange, count: null },
     { id: 'ranking' as TabType, label: 'Ranking', icon: Trophy, count: null },
   ];
 
@@ -524,6 +522,11 @@ export function AdminPanel(props: AdminPanelProps) {
                     />
                   </AdminOverview>
 
+                  {/* Analytics Section - Agora logo após o Mapa */}
+                  <div id="analytics-section" className="pt-8 border-t border-slate-200 dark:border-slate-700 scroll-mt-24">
+                    <AnalyticsDashboard />
+                  </div>
+
                   {/* Grid com Workforce e Activity Log */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <WorkforcePanel
@@ -535,12 +538,7 @@ export function AdminPanel(props: AdminPanelProps) {
                     <ActivityLog maxItems={8} />
                   </div>
 
-                  {/* Analytics Section - Merged into Dashboard */}
-                  <div id="analytics-section" className="pt-8 border-t border-slate-200 dark:border-slate-700 scroll-mt-24">
-                    <AnalyticsDashboard />
-                  </div>
-
-                  {/* Ranking Section - Merged into Dashboard */}
+                  {/* Ranking Section */}
                   <div id="ranking-section" className="pt-8 border-t border-slate-200 dark:border-slate-700 scroll-mt-24">
                     <RankingPanel actions={actions} onViewMicrorregiao={handleViewMicrorregiao} />
                   </div>
@@ -557,16 +555,6 @@ export function AdminPanel(props: AdminPanelProps) {
               </div>
             )
           }
-
-          {/* Tab: Calendar */}
-          {activeTab === 'calendar' && (
-            <div className="h-[calc(100vh-140px)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-              <LinearCalendar
-                actions={actions}
-                microId={dashboardFilters.selectedMicroId}
-              />
-            </div>
-          )}
 
           {/* Tab: Requests (Solicitações) */}
           {activeTab === 'requests' && (
@@ -1019,7 +1007,7 @@ export function AdminPanel(props: AdminPanelProps) {
               showToast(`Usuário ${confirmToggle.nextStatus ? 'ativado' : 'desativado'}`, 'success');
               await loadUsers();
             } catch (error) {
-              console.error(error);
+              logError('AdminPanel', 'Erro ao atualizar status do usuário', error);
               showToast('Erro ao atualizar usuário', 'error');
             } finally {
               setActionLoadingId(null);
@@ -1048,7 +1036,7 @@ export function AdminPanel(props: AdminPanelProps) {
               await loadUsers();
               setConfirmDelete({ open: false });
             } catch (error: any) {
-              console.error(error);
+              logError('AdminPanel', 'Erro ao excluir usuário', error);
               showToast(error?.message || 'Erro ao excluir usuário', 'error');
             } finally {
               setActionLoadingId(null);

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Activity } from '../../types';
 import { Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
+import { getActivityDisplayId } from '../../lib/text';
 
 interface ActivityTabsProps {
   activities: Activity[];
@@ -100,7 +101,7 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
                 flex items-center justify-center h-5 sm:h-6 px-1 sm:px-1.5 rounded-md text-[9px] sm:text-[10px] font-bold shrink-0 transition-colors
                 ${isActive ? 'bg-teal-200 dark:bg-teal-800 text-teal-800 dark:text-teal-200' : 'bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-500'}
               `}>
-                {isMobile ? act.id : `Atv ${act.id}`}
+                {isMobile ? getActivityDisplayId(act.id) : `Atv ${getActivityDisplayId(act.id)}`}
               </div>
 
               <div className="flex flex-col flex-1 pl-0.5 sm:pl-1">

@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import type { Action, ActionComment, TeamMember, RaciMember, ProfileDTO } from '../types';
 import { generateActionUid } from '../types';
 import { loggingService } from './loggingService';
-import { log, logWarn } from '../lib/logger';
+import { log, logWarn, logError } from '../lib/logger';
 
 // =====================================
 // TIPOS PARA O BANCO DE DADOS
@@ -137,7 +137,7 @@ export async function loadActions(microregiaoId?: string): Promise<Action[]> {
         const { data: actionsData, error: actionsError } = await query;
 
         if (actionsError) {
-            console.error('[dataService] Erro ao carregar ações:', actionsError);
+            logError('dataService', 'Erro ao carregar ações:', actionsError);
             throw new Error(`Erro ao carregar ações: ${actionsError.message}`);
         }
 
@@ -153,7 +153,7 @@ export async function loadActions(microregiaoId?: string): Promise<Action[]> {
             .in('action_id', actionIds);
 
         if (raciError) {
-            console.error('[dataService] Erro ao carregar RACI:', raciError);
+            logError('dataService', 'Erro ao carregar RACI:', raciError);
         }
 
         // Buscar comentários para todas as ações
@@ -167,7 +167,7 @@ export async function loadActions(microregiaoId?: string): Promise<Action[]> {
             .order('created_at', { ascending: true });
 
         if (commentsError) {
-            console.error('[dataService] Erro ao carregar comentários:', commentsError);
+            logError('dataService', 'Erro ao carregar comentários:', commentsError);
         }
 
         // Mapear para formato da aplicação
@@ -193,7 +193,7 @@ export async function loadActions(microregiaoId?: string): Promise<Action[]> {
             )
         );
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao carregar ações:', error);
+        logError('dataService', 'Erro inesperado ao carregar ações:', error);
         throw error;
     }
 }
@@ -231,7 +231,7 @@ export async function createAction(input: {
             .single();
 
         if (error) {
-            console.error('[dataService] Erro ao criar ação:', error);
+            logError('dataService', 'Erro ao criar ação:', error);
             throw new Error(`Erro ao criar ação: ${error.message}`);
         }
 
@@ -249,7 +249,7 @@ export async function createAction(input: {
 
         return newAction;
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao criar ação:', error);
+        logError('dataService', 'Erro inesperado ao criar ação:', error);
         throw error;
     }
 }
@@ -285,7 +285,7 @@ export async function updateAction(
         const updatedRecord = data?.[0];
 
         if (error || !updatedRecord) {
-            console.error('[dataService] Erro ao atualizar ação:', error);
+            logError('dataService', 'Erro ao atualizar ação:', error);
             throw new Error(`Erro ao atualizar ação: ${error?.message || 'Ação não encontrada'}`);
         }
 
@@ -322,7 +322,7 @@ export async function updateAction(
 
         return updatedAction;
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao atualizar ação:', error);
+        logError('dataService', 'Erro inesperado ao atualizar ação:', error);
         throw error;
     }
 }
@@ -378,7 +378,7 @@ export async function upsertAction(action: Action): Promise<Action> {
                 .single();
 
             if (error) {
-                console.error('[dataService] Erro ao criar ação via upsert:', error);
+                logError('dataService', 'Erro ao criar ação via upsert:', error);
                 throw new Error(`Erro ao criar ação: ${error.message}`);
             }
             actionDbId = data.id;
@@ -419,7 +419,7 @@ export async function upsertAction(action: Action): Promise<Action> {
                     .insert(raciInserts);
 
                 if (raciError) {
-                    console.error('[dataService] Erro ao salvar RACI no upsert:', raciError);
+                    logError('dataService', 'Erro ao salvar RACI no upsert:', raciError);
                 }
             }
         }
@@ -430,7 +430,7 @@ export async function upsertAction(action: Action): Promise<Action> {
         return action;
 
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao upsert ação:', error);
+        logError('dataService', 'Erro inesperado ao upsert ação:', error);
         throw error;
     }
 }
@@ -446,14 +446,14 @@ export async function deleteAction(uid: string): Promise<void> {
             .eq('uid', uid);
 
         if (error) {
-            console.error('[dataService] Erro ao excluir ação:', error);
+            logError('dataService', 'Erro ao excluir ação:', error);
             throw new Error(`Erro ao excluir ação: ${error.message}`);
         }
 
         // ✅ LOG ACTIVITY
         loggingService.logActivity('action_deleted', 'action', uid, {});
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao excluir ação:', error);
+        logError('dataService', 'Erro inesperado ao excluir ação:', error);
         throw error;
     }
 }
@@ -493,7 +493,7 @@ export async function addRaciMember(
             .single();
 
         if (error) {
-            console.error('[dataService] Erro ao adicionar membro RACI:', error);
+            logError('dataService', 'Erro ao adicionar membro RACI:', error);
             throw new Error(`Erro ao adicionar membro: ${error.message}`);
         }
 
@@ -502,7 +502,7 @@ export async function addRaciMember(
             role: data.role as RaciMember['role'],
         };
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao adicionar membro RACI:', error);
+        logError('dataService', 'Erro inesperado ao adicionar membro RACI:', error);
         throw error;
     }
 }
@@ -533,11 +533,11 @@ export async function removeRaciMember(
             .eq('member_name', memberName);
 
         if (error) {
-            console.error('[dataService] Erro ao remover membro RACI:', error);
+            logError('dataService', 'Erro ao remover membro RACI:', error);
             throw new Error(`Erro ao remover membro: ${error.message}`);
         }
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao remover membro RACI:', error);
+        logError('dataService', 'Erro inesperado ao remover membro RACI:', error);
         throw error;
     }
 }
@@ -570,7 +570,7 @@ export async function addComment(
             .single();
 
         if (profileError) {
-            console.error('[dataService] Erro ao buscar perfil:', profileError);
+            logError('dataService', 'Erro ao buscar perfil:', profileError);
         }
 
         // Buscar ID da ação
@@ -596,7 +596,7 @@ export async function addComment(
             .single();
 
         if (error) {
-            console.error('[dataService] Erro ao adicionar comentário:', error);
+            logError('dataService', 'Erro ao adicionar comentário:', error);
             throw new Error(`Erro ao adicionar comentário: ${error.message}`);
         }
 
@@ -612,7 +612,7 @@ export async function addComment(
             createdAt: data.created_at,
         };
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao adicionar comentário:', error);
+        logError('dataService', 'Erro inesperado ao adicionar comentário:', error);
         throw error;
     }
 }
@@ -625,7 +625,7 @@ export async function updateComment(commentId: string, content: string): Promise
         .eq('id', commentId);
 
     if (error) {
-        console.error('[dataService] Erro ao atualizar comentário:', error);
+        logError('dataService', 'Erro ao atualizar comentário:', error);
         throw new Error(`Erro ao atualizar comentário: ${error.message}`);
     }
 }
@@ -639,7 +639,7 @@ export async function deleteComment(commentId: string): Promise<void> {
         .eq('parent_id', commentId);
 
     if (childError) {
-        console.error('[dataService] Erro ao excluir respostas:', childError);
+        logError('dataService', 'Erro ao excluir respostas:', childError);
     }
 
     // Depois, excluir o comentário principal
@@ -649,7 +649,7 @@ export async function deleteComment(commentId: string): Promise<void> {
         .eq('id', commentId);
 
     if (error) {
-        console.error('[dataService] Erro ao excluir comentário:', error);
+        logError('dataService', 'Erro ao excluir comentário:', error);
         throw new Error(`Erro ao excluir comentário: ${error.message}`);
     }
 }
@@ -679,7 +679,7 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
         const { data: profilesData, error: profilesError } = await profilesQuery;
 
         if (profilesError) {
-            console.error('[dataService] Erro ao carregar perfis:', profilesError);
+            logError('dataService', 'Erro ao carregar perfis:', profilesError);
         }
 
 
@@ -697,7 +697,7 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
         const { data: teamsData, error: teamsError } = await teamQuery;
 
         if (teamsError) {
-            console.error('[dataService] Erro ao carregar equipes:', teamsError);
+            logError('dataService', 'Erro ao carregar equipes:', teamsError);
             throw new Error(`Erro ao carregar equipes: ${teamsError.message}`);
         }
 
@@ -746,7 +746,7 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
 
         return teamsByMicro;
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao carregar equipes:', error);
+        logError('dataService', 'Erro inesperado ao carregar equipes:', error);
         throw error;
     }
 }
@@ -790,7 +790,7 @@ export async function saveUserMunicipality(
             .eq('email', email);
 
         if (profileError) {
-            console.error('[dataService] Erro ao atualizar município no profile:', profileError);
+            logError('dataService', 'Erro ao atualizar município no profile:', profileError);
             // Não lança erro para continuar com teams
         }
 
@@ -832,7 +832,7 @@ export async function saveUserMunicipality(
                 });
         }
     } catch (error) {
-        console.error('[dataService] Erro ao salvar município do usuário:', error);
+        logError('dataService', 'Erro ao salvar município do usuário:', error);
         throw error;
     }
 }
@@ -862,7 +862,7 @@ export async function addTeamMember(input: {
             .single();
 
         if (error) {
-            console.error('[dataService] Erro ao adicionar membro:', error);
+            logError('dataService', 'Erro ao adicionar membro:', error);
             throw new Error(`Erro ao adicionar membro: ${error.message}`);
         }
 
@@ -888,7 +888,7 @@ export async function addTeamMember(input: {
 
         return newMember;
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao adicionar membro:', error);
+        logError('dataService', 'Erro inesperado ao adicionar membro:', error);
         throw error;
     }
 }
@@ -927,11 +927,11 @@ export async function removeTeamMember(memberId: string): Promise<void> {
             .eq('id', memberId);
 
         if (error) {
-            console.error('[dataService] Erro ao remover membro:', error);
+            logError('dataService', 'Erro ao remover membro:', error);
             throw new Error(`Erro ao remover membro: ${error.message}`);
         }
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao remover membro:', error);
+        logError('dataService', 'Erro inesperado ao remover membro:', error);
         throw error;
     }
 }
@@ -976,11 +976,11 @@ export async function createMentionNotification(
             });
 
         if (error) {
-            console.error('[dataService] Erro ao criar notificação de menção:', error);
+            logError('dataService', 'Erro ao criar notificação de menção:', error);
             // Não lança erro para não interromper o fluxo de adicionar comentário
         }
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao criar notificação:', error);
+        logError('dataService', 'Erro inesperado ao criar notificação:', error);
         // Não lança erro para não interromper o fluxo
     }
 }
@@ -1042,7 +1042,7 @@ export async function loadPendingRegistrations(): Promise<PendingRegistration[]>
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('[dataService] Erro ao buscar pendentes:', error);
+            logError('dataService', 'Erro ao buscar pendentes:', error);
             return [];
         }
 
@@ -1056,7 +1056,7 @@ export async function loadPendingRegistrations(): Promise<PendingRegistration[]>
             createdAt: d.created_at,
         }));
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao buscar pendentes:', error);
+        logError('dataService', 'Erro inesperado ao buscar pendentes:', error);
         return [];
     }
 }
@@ -1071,7 +1071,7 @@ export async function deletePendingRegistration(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) {
-        console.error('[dataService] Erro ao excluir pendente:', error);
+        logError('dataService', 'Erro ao excluir pendente:', error);
         throw new Error('Erro ao excluir membro pendente');
     }
 }
@@ -1084,6 +1084,7 @@ interface ObjectiveDTO {
     id: number;
     title: string;
     status: string;
+    microregiao_id: string;
     created_at: string;
 }
 
@@ -1092,21 +1093,30 @@ interface ActivityDTO {
     objective_id: number;
     title: string;
     description: string | null;
+    microregiao_id: string;
     created_at: string;
 }
 
 /**
- * Carrega todos os objetivos do banco
+ * Carrega objetivos do banco filtrados por microrregião
+ * @param microregiaoId - ID da microrregião para filtrar
  */
-export async function loadObjectives(): Promise<{ id: number; title: string; status: 'on-track' | 'delayed' }[]> {
+export async function loadObjectives(microregiaoId?: string): Promise<{ id: number; title: string; status: 'on-track' | 'delayed' }[]> {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('objectives')
-            .select('id, title, status, created_at')
+            .select('id, title, status, microregiao_id, created_at')
             .order('id', { ascending: true });
 
+        // Filtrar por microrregião se fornecido
+        if (microregiaoId && microregiaoId !== 'all') {
+            query = query.eq('microregiao_id', microregiaoId);
+        }
+
+        const { data, error } = await query;
+
         if (error) {
-            console.error('[dataService] Erro ao carregar objectives:', error);
+            logError('dataService', 'Erro ao carregar objectives:', error);
             throw new Error(`Erro ao carregar objetivos: ${error.message}`);
         }
 
@@ -1116,29 +1126,37 @@ export async function loadObjectives(): Promise<{ id: number; title: string; sta
             status: (obj.status === 'delayed' ? 'delayed' : 'on-track') as 'on-track' | 'delayed',
         }));
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao carregar objectives:', error);
+        logError('dataService', 'Erro inesperado ao carregar objectives:', error);
         throw error;
     }
 }
 
 /**
- * Carrega todas as atividades do banco, agrupadas por objective_id
+ * Carrega atividades do banco, agrupadas por objective_id
+ * @param microregiaoId - ID da microrregião para filtrar
  */
-export async function loadActivities(): Promise<Record<number, { id: string; title: string; description: string }[]>> {
+export async function loadActivities(microregiaoId?: string): Promise<Record<number, { id: string; title: string; description: string }[]>> {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('activities')
-            .select('id, objective_id, title, description, created_at')
+            .select('id, objective_id, title, description, microregiao_id, created_at')
             .order('id', { ascending: true });
 
+        // Filtrar por microrregião se fornecido
+        if (microregiaoId && microregiaoId !== 'all') {
+            query = query.eq('microregiao_id', microregiaoId);
+        }
+
+        const { data, error } = await query;
+
         if (error) {
-            console.error('[dataService] Erro ao carregar activities:', error);
+            logError('dataService', 'Erro ao carregar activities:', error);
             throw new Error(`Erro ao carregar atividades: ${error.message}`);
         }
 
         // Agrupar por objective_id
         const grouped: Record<number, { id: string; title: string; description: string }[]> = {};
-        
+
         (data || []).forEach((act: ActivityDTO) => {
             if (!grouped[act.objective_id]) {
                 grouped[act.objective_id] = [];
@@ -1152,23 +1170,25 @@ export async function loadActivities(): Promise<Record<number, { id: string; tit
 
         return grouped;
     } catch (error) {
-        console.error('[dataService] Erro inesperado ao carregar activities:', error);
+        logError('dataService', 'Erro inesperado ao carregar activities:', error);
         throw error;
     }
 }
 
 /**
  * Cria um novo objetivo
+ * @param title - Título do objetivo
+ * @param microregiaoId - ID da microrregião
  */
-export async function createObjective(title: string): Promise<{ id: number; title: string; status: 'on-track' | 'delayed' }> {
+export async function createObjective(title: string, microregiaoId: string): Promise<{ id: number; title: string; status: 'on-track' | 'delayed' }> {
     const { data, error } = await supabase
         .from('objectives')
-        .insert({ title, status: 'on-track' })
+        .insert({ title, status: 'on-track', microregiao_id: microregiaoId })
         .select()
         .single();
 
     if (error) {
-        console.error('[dataService] Erro ao criar objective:', error);
+        logError('dataService', 'Erro ao criar objective:', error);
         throw new Error(`Erro ao criar objetivo: ${error.message}`);
     }
 
@@ -1189,7 +1209,7 @@ export async function updateObjective(id: number, updates: { title?: string; sta
         .eq('id', id);
 
     if (error) {
-        console.error('[dataService] Erro ao atualizar objective:', error);
+        logError('dataService', 'Erro ao atualizar objective:', error);
         throw new Error(`Erro ao atualizar objetivo: ${error.message}`);
     }
 }
@@ -1204,28 +1224,34 @@ export async function deleteObjective(id: number): Promise<void> {
         .eq('id', id);
 
     if (error) {
-        console.error('[dataService] Erro ao excluir objective:', error);
+        logError('dataService', 'Erro ao excluir objective:', error);
         throw new Error(`Erro ao excluir objetivo: ${error.message}`);
     }
 }
 
 /**
  * Cria uma nova atividade
+ * @param objectiveId - ID do objetivo pai
+ * @param id - ID da atividade (ex: "1.1")
+ * @param title - Título da atividade
+ * @param microregiaoId - ID da microrregião
+ * @param description - Descrição opcional
  */
-export async function createActivity(objectiveId: number, id: string, title: string, description: string = ''): Promise<{ id: string; title: string; description: string }> {
+export async function createActivity(objectiveId: number, id: string, title: string, microregiaoId: string, description: string = ''): Promise<{ id: string; title: string; description: string }> {
     const { data, error } = await supabase
         .from('activities')
-        .insert({ 
-            id, 
-            objective_id: objectiveId, 
-            title, 
-            description 
+        .insert({
+            id,
+            objective_id: objectiveId,
+            title,
+            description,
+            microregiao_id: microregiaoId
         })
         .select()
         .single();
 
     if (error) {
-        console.error('[dataService] Erro ao criar activity:', error);
+        logError('dataService', 'Erro ao criar activity:', error);
         throw new Error(`Erro ao criar atividade: ${error.message}`);
     }
 
@@ -1246,7 +1272,7 @@ export async function updateActivity(id: string, updates: { title?: string; desc
         .eq('id', id);
 
     if (error) {
-        console.error('[dataService] Erro ao atualizar activity:', error);
+        logError('dataService', 'Erro ao atualizar activity:', error);
         throw new Error(`Erro ao atualizar atividade: ${error.message}`);
     }
 }
@@ -1261,7 +1287,7 @@ export async function deleteActivity(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) {
-        console.error('[dataService] Erro ao excluir activity:', error);
+        logError('dataService', 'Erro ao excluir activity:', error);
         throw new Error(`Erro ao excluir atividade: ${error.message}`);
     }
 }

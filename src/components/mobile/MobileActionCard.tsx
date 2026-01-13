@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Action, Status, RaciRole } from '../../types';
 import { formatDateBr } from '../../lib/date';
+import { getActionNumber } from '../../lib/text';
 
 // =============================================
 // MOBILE ACTION CARD
@@ -122,7 +123,7 @@ export const MobileActionCard: React.FC<MobileActionCardProps> = ({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-              {action.id.split('.').pop()}
+              {getActionNumber(action.id)}
             </span>
             <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${status.bg} ${status.color}`}>
               {status.icon}

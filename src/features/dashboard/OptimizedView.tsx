@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Action, Activity, Objective, TeamMember, Status, RaciRole, ActionComment } from '../../types';
 import { formatDateBr, parseDateLocal, getTodayStr } from '../../lib/date';
+import { getActivityDisplayId, getActionDisplayId } from '../../lib/text';
 import { useAuth } from '../../auth';
 import { getAvatarUrl } from '../settings/UserSettingsModal';
 
@@ -135,7 +136,7 @@ const ActionCard: React.FC<{
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-xs font-mono text-slate-400 shrink-0">{action.id}</span>
+          <span className="text-xs font-mono text-slate-400 shrink-0">{getActionDisplayId(action.id)}</span>
           <span className={`shrink-0 ${status.color}`}>{status.icon}</span>
         </div>
         <span className="text-xs font-bold tabular-nums text-slate-600 dark:text-slate-300">{action.progress}%</span>
@@ -182,7 +183,7 @@ const ActionRow: React.FC<{
       onClick={onClick}
     >
       <span className={`shrink-0 ${status.color}`}>{status.icon}</span>
-      <span className="text-xs font-mono text-slate-400 w-12 shrink-0">{action.id}</span>
+      <span className="text-xs font-mono text-slate-400 w-12 shrink-0">{getActionDisplayId(action.id)}</span>
       <span className="flex-1 text-sm text-slate-700 dark:text-slate-200 truncate">{action.title}</span>
       <div className="w-20 shrink-0">
         <div className="flex items-center gap-1">
@@ -476,59 +477,62 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
           <div className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 h-full overflow-auto p-2.5 space-y-3 ${hasSelection ? '' : 'lg:col-span-1'}`}>
             {viewMode === 'tree' && (
               <div className="space-y-3">
-                {groupedData.map(obj => (
-                  <div key={obj.id} className={`bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${OBJECTIVE_COLORS[obj.id]?.border || 'border-slate-200 dark:border-slate-700'}`}>
-                    <button onClick={() => setExpandedObjectives(prev => prev.includes(obj.id) ? prev.filter(x => x !== obj.id) : [...prev, obj.id])} className="w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                      <span className="text-slate-400">{expandedObjectives.includes(obj.id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-teal-500'}`}>{obj.id}</div>
-                      <div className="flex-1 text-left">
-                        <h3 className="font-semibold text-slate-800 dark:text-slate-100">{obj.title}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{obj.actionCount} ações • {obj.activities.length} atividades {obj.lateCount > 0 && <span className="text-rose-500 ml-2">• {obj.lateCount} atrasadas</span>}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24"><MiniProgress value={obj.progress} size="md" /></div>
-                        <span className="text-sm font-bold text-slate-600 dark:text-slate-300 w-10 text-right">{obj.progress}%</span>
-                      </div>
-                    </button>
-                    {expandedObjectives.includes(obj.id) && (
-                      <div className="border-t border-slate-100 dark:border-slate-700">
-                        {obj.activities.map(act => (
-                          <div key={act.id} className="border-b border-slate-50 dark:border-slate-700 last:border-0">
-                            <button onClick={() => setExpandedActivities(prev => prev.includes(act.id) ? prev.filter(x => x !== act.id) : [...prev, act.id])} className="w-full px-3.5 py-2.5 pl-11 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                              <span className="text-slate-300">{expandedActivities.includes(act.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
-                              <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center relative">
-                                <Layers size={12} className="text-slate-500 dark:text-slate-300" />
-                                <span className={`absolute -left-2 w-2 h-2 rounded-full ${OBJECTIVE_COLORS[obj.id]?.accent || 'bg-slate-400'}`}></span>
-                              </div>
-                              <div className="flex-1 text-left">
-                                <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200">{act.id}. {act.title}</h4>
-                                <p className="text-xs text-slate-400">{act.actions.length} ações {act.lateCount > 0 && <span className="text-rose-500 ml-1">• {act.lateCount} atrasadas</span>}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-16"><MiniProgress value={act.progress} /></div>
-                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 w-8 text-right">{act.progress}%</span>
-                              </div>
-                            </button>
-                            {expandedActivities.includes(act.id) && act.actions.length > 0 && (
-                              <div className="px-3.5 pb-3 pl-16">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                  {act.actions.map(action => {
-                                    const isSelected = selectedUid === action.uid && showDetail;
-                                    return (
-                                      <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
-                                        <ActionCard action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
-                                      </div>
-                                    );
-                                  })}
+                {groupedData.map((obj, objIndex) => {
+                  const displayNum = objIndex + 1;
+                  return (
+                    <div key={obj.id} className={`bg-white dark:bg-slate-800 rounded-xl border overflow-hidden ${OBJECTIVE_COLORS[displayNum]?.border || 'border-slate-200 dark:border-slate-700'}`}>
+                      <button onClick={() => setExpandedObjectives(prev => prev.includes(obj.id) ? prev.filter(x => x !== obj.id) : [...prev, obj.id])} className="w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                        <span className="text-slate-400">{expandedObjectives.includes(obj.id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${OBJECTIVE_COLORS[displayNum]?.accent || 'bg-teal-500'}`}>{displayNum}</div>
+                        <div className="flex-1 text-left">
+                          <h3 className="font-semibold text-slate-800 dark:text-slate-100">{obj.title}</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{obj.actionCount} ações • {obj.activities.length} atividades {obj.lateCount > 0 && <span className="text-rose-500 ml-2">• {obj.lateCount} atrasadas</span>}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24"><MiniProgress value={obj.progress} size="md" /></div>
+                          <span className="text-sm font-bold text-slate-600 dark:text-slate-300 w-10 text-right">{obj.progress}%</span>
+                        </div>
+                      </button>
+                      {expandedObjectives.includes(obj.id) && (
+                        <div className="border-t border-slate-100 dark:border-slate-700">
+                          {obj.activities.map(act => (
+                            <div key={act.id} className="border-b border-slate-50 dark:border-slate-700 last:border-0">
+                              <button onClick={() => setExpandedActivities(prev => prev.includes(act.id) ? prev.filter(x => x !== act.id) : [...prev, act.id])} className="w-full px-3.5 py-2.5 pl-11 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                <span className="text-slate-300">{expandedActivities.includes(act.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</span>
+                                <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center relative">
+                                  <Layers size={12} className="text-slate-500 dark:text-slate-300" />
+                                  <span className={`absolute -left-2 w-2 h-2 rounded-full ${OBJECTIVE_COLORS[displayNum]?.accent || 'bg-slate-400'}`}></span>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                                <div className="flex-1 text-left">
+                                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200">{getActivityDisplayId(act.id)}. {act.title}</h4>
+                                  <p className="text-xs text-slate-400">{act.actions.length} ações {act.lateCount > 0 && <span className="text-rose-500 ml-1">• {act.lateCount} atrasadas</span>}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16"><MiniProgress value={act.progress} /></div>
+                                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 w-8 text-right">{act.progress}%</span>
+                                </div>
+                              </button>
+                              {expandedActivities.includes(act.id) && act.actions.length > 0 && (
+                                <div className="px-3.5 pb-3 pl-16">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {act.actions.map(action => {
+                                      const isSelected = selectedUid === action.uid && showDetail;
+                                      return (
+                                        <div key={action.uid} className={isSelected ? 'ring-1 ring-teal-300 rounded-lg shadow-sm' : ''}>
+                                          <ActionCard action={action} onClick={() => handleSelectAction(action.uid)} isLate={isActionLate(action)} />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -633,7 +637,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
                 <>
                   <div className="border-b border-slate-200 dark:border-slate-700 px-5 py-4 bg-slate-50 dark:bg-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded shrink-0">{selectedAction.id}</span>
+                      <span className="text-sm font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded shrink-0">{getActionDisplayId(selectedAction.id)}</span>
                       <h2 className="font-semibold text-slate-800 text-lg truncate">{selectedAction.title}</h2>
                       {savedFeedback && (
                         <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">

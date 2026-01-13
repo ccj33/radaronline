@@ -4,9 +4,9 @@ import { Home, Target, Calendar, Users, LayoutDashboard, Zap } from 'lucide-reac
 
 interface MobileBottomNavProps {
   currentNav: 'strategy' | 'home' | 'settings';
-  viewMode: 'table' | 'gantt' | 'team' | 'optimized';
+  viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
   onNavChange: (nav: 'strategy' | 'home' | 'settings') => void;
-  onViewModeChange: (mode: 'table' | 'gantt' | 'team' | 'optimized') => void;
+  onViewModeChange: (mode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar') => void;
   showTeamOption?: boolean;
 }
 
