@@ -65,7 +65,7 @@ export function LoginPage() {
           className="
             w-full md:w-[480px] h-auto md:h-full
             flex flex-col
-            px-6 py-8 sm:px-10 sm:py-10 md:p-12
+            px-6 py-6 sm:px-8 sm:py-8 md:p-10
             relative
             overflow-y-auto
             [&::-webkit-scrollbar]:hidden
@@ -88,13 +88,13 @@ export function LoginPage() {
             </span>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6">
             <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Login</h2>
-            <p className="text-white/50 text-sm mb-8">
+            <p className="text-white/50 text-sm mb-6">
               Acesse sua conta para continuar e gerenciar o monitoramento.
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-200 text-sm flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
@@ -108,7 +108,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Seu e-mail institucional"
-                  className="w-full px-0 py-4 bg-transparent border-b border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-cyan-400/60 transition-colors text-base"
+                  className="w-full px-0 py-3 bg-transparent border-b border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-cyan-400/60 transition-colors text-base"
                   disabled={isSubmitting}
                 />
 
@@ -118,7 +118,7 @@ export function LoginPage() {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="Senha"
-                    className="w-full px-0 py-4 bg-transparent border-b border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-cyan-400/60 transition-colors text-base pr-10"
+                    className="w-full px-0 py-3 bg-transparent border-b border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-cyan-400/60 transition-colors text-base pr-10"
                     disabled={isSubmitting}
                   />
                   <button
@@ -135,7 +135,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 bg-white hover:bg-white/90 text-black font-bold rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                className="w-full py-3 bg-white hover:bg-white/90 text-black font-bold rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
               >
                 {isSubmitting ? 'Entrando...' : 'Acessar Conta'}
               </button>
