@@ -530,7 +530,7 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
                                     <div className="flex flex-wrap gap-2">
                                         {selectedAction.raci.map((member, idx) => (
                                             <span key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-lg text-sm">
-                                                <span className={`w-5 h-5 rounded text-xs font-bold flex items-center justify-center text-white ${member.role === 'R' ? 'bg-blue-500' : member.role === 'A' ? 'bg-purple-500' : member.role === 'C' ? 'bg-amber-500' : 'bg-slate-400'}`}>
+                                                <span className={`w-5 h-5 rounded text-xs font-bold flex items-center justify-center text-white ${member.role === 'R' ? 'bg-blue-500' : member.role === 'A' ? 'bg-purple-500' : 'bg-slate-400'}`}>
                                                     {member.role}
                                                 </span>
                                                 <span className="text-slate-700 dark:text-slate-200">{member.name}</span>

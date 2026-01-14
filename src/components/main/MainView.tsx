@@ -52,7 +52,7 @@ interface MainViewProps {
   checkCanDelete: (action: Action) => boolean;
   onUpdateTeam?: (microId: string, updatedTeam: TeamMember[]) => void;
   setTeamsByMicro: React.Dispatch<React.SetStateAction<Record<string, TeamMember[]>>>;
-  onNavigate: (view: 'list', filters?: { status?: string; objectiveId?: number }) => void;
+  onNavigate: (view: 'list' | 'team', filters?: { status?: string; objectiveId?: number }) => void;
 }
 
 export function MainView({
