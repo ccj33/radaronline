@@ -68,6 +68,8 @@ export function LoginPage() {
             px-6 py-8 sm:px-10 sm:py-10 md:p-12
             relative
             overflow-y-auto
+            [&::-webkit-scrollbar]:hidden
+            [scrollbar-width:none]
           "
           style={{
             background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 100%)',
@@ -229,6 +231,9 @@ export function LoginPage() {
 
               <p className="text-white/60 text-sm leading-relaxed">
                 Para redefinir sua senha, entre em contato diretamente com a gestão do sistema.
+              </p>
+              <p className="text-cyan-400 font-medium text-sm mt-3">
+                Suporte: saudedigital@saude.mg.gov.br
               </p>
 
               <button
