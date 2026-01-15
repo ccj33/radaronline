@@ -60,34 +60,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * PADRÃO: Converte null do DB para 'all' no app (consistência)
    */
   const loadUserProfile = useCallback(async (userId: string, useCache = true): Promise<User | null> => {
+    console.log('[AuthContext] 🔍 loadUserProfile chamado para userId:', userId);
+
     // ✅ FASE 1: Verificar cache primeiro
     if (useCache) {
       const cached = profileCache.get(userId);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        // Cache HIT
+        console.log('[AuthContext] 📦 Cache HIT para userId:', userId);
         return cached.profile;
       }
     }
 
     try {
+      console.log('[AuthContext] 📡 Buscando perfil no Supabase...');
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, avatar_id, created_by, created_at, first_access')
         .eq('id', userId)
         .single();
 
+      console.log('[AuthContext] 📬 Resposta do profiles:', { data: data?.email, error: error?.message });
+
       if (error) {
-        // Erro ao carregar perfil - tratado silenciosamente
+        console.error('[AuthContext] ❌ Erro ao carregar perfil:', error);
         return null;
       }
 
       if (!data) {
-        // Perfil não encontrado
+        console.log('[AuthContext] ⚠️ Perfil não encontrado');
         return null;
       }
 
       if (!data.ativo) {
-        // Usuário inativo
+        console.log('[AuthContext] ⚠️ Usuário inativo');
         return null;
       }
 
@@ -108,14 +113,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         createdAt: data.created_at,
       };
 
+      console.log('[AuthContext] ✅ Perfil montado:', profile.nome);
+
       // ✅ FASE 1: Salvar no cache
       if (useCache) {
         profileCache.set(userId, { profile, timestamp: Date.now() });
       }
 
       return profile;
-    } catch {
-      // Erro inesperado ao carregar perfil
+    } catch (err) {
+      console.error('[AuthContext] 💥 Erro inesperado ao carregar perfil:', err);
       return null;
     }
   }, []);
