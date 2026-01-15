@@ -73,11 +73,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       console.log('[AuthContext] 📡 Buscando perfil no Supabase...');
-      const { data, error } = await supabase
+
+      // ✅ CORREÇÃO: Adicionar timeout para evitar travamento indefinido
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout ao carregar perfil (10s)')), 10000);
+      });
+
+      const queryPromise = supabase
         .from('profiles')
         .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, avatar_id, created_by, created_at, first_access')
         .eq('id', userId)
         .single();
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       console.log('[AuthContext] 📬 Resposta do profiles:', { data: data?.email, error: error?.message });
 
