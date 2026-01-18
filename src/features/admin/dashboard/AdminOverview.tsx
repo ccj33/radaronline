@@ -35,7 +35,7 @@ import { KpiDetailModal } from './KpiDetailModal';
 import { staggerContainer, staggerItem, cardHover } from '../../../lib/motion';
 
 // Safe ResponsiveContainer that prevents rendering with invalid dimensions
-function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
+function SafeResponsiveContainer({ children, minHeight = 150 }: { children: React.ReactNode; minHeight?: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -45,8 +45,8 @@ function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
     const checkDimensions = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect();
-        // Check for valid dimensions (minimum 100px to be safe)
-        const hasValidDimensions = width >= 100 && height >= 100;
+        // Check for valid dimensions
+        const hasValidDimensions = width >= 50 && height >= 50;
         setIsReady(hasValidDimensions);
       }
     };
@@ -69,23 +69,22 @@ function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '300px', minHeight: '300px' }}>
+    <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: `${minHeight}px` }}>
       {isReady ? (
-        <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
+        <ResponsiveContainer width="100%" height="100%">
           {children}
         </ResponsiveContainer>
       ) : (
         <div style={{
           width: '100%',
-          height: '300px',
+          height: '100%',
+          minHeight: `${minHeight}px`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px',
           color: '#6c757d'
         }}>
-          Carregando gráfico...
+          Carregando...
         </div>
       )}
     </div>
@@ -555,14 +554,14 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
             </div>
 
             <div className="flex-1 min-h-0 relative">
-              <SafeResponsiveContainer>
+              <SafeResponsiveContainer minHeight={120}>
                 <PieChart>
                   <Pie
                     data={statusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={45}
-                    outerRadius={65}
+                    innerRadius="55%"
+                    outerRadius="85%"
                     paddingAngle={4}
                     dataKey="value"
                     stroke="none"
@@ -610,7 +609,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
             </div>
 
             <div className="flex-1 mt-4">
-              <SafeResponsiveContainer>
+              <SafeResponsiveContainer minHeight={120}>
                 <BarChart data={metrics.deadlineHorizon} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.1)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />

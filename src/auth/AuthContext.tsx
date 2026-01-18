@@ -158,71 +158,76 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // EFFECT 1: Inicialização Única via getSession (roda uma vez só)
   // =====================================
   useEffect(() => {
+    // ✅ FIX: Limpar cache no início para evitar dados stale
+    profileCache.clear();
+
     // ✅ BUG FIX 3: Reset refs para HMR/dev (evita estado residual)
     hasResolvedSessionRef.current = false;
     initializedRef.current = false;
 
     let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const resetLoading = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (mounted) setIsLoading(false);
+    const bootstrap = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (!mounted || hasResolvedSessionRef.current) {
+          initializedRef.current = true;
+          return;
+        }
+        hasResolvedSessionRef.current = true;
+
+        if (error) {
+          console.error('[AuthContext] ❌ Erro ao obter sessão:', error.message);
+          if (error.message?.includes('invalid') || error.message?.includes('expired')) {
+            clearCorruptedSession();
+          }
+          setIsLoading(false);
+          initializedRef.current = true;
+          return;
+        }
+
+        if (session?.user) {
+          console.log('[AuthContext] 🔓 Sessão encontrada para:', session.user.email);
+
+          // ✅ FIX: Carregar perfil no bootstrap (não depender do listener)
+          const profile = await loadUserProfile(session.user.id, false);
+
+          if (!mounted) {
+            initializedRef.current = true;
+            return;
+          }
+
+          if (!profile || !profile.ativo) {
+            console.log('[AuthContext] ⛔ Perfil inválido no bootstrap - limpando sessão');
+            await supabase.auth.signOut();
+            clearCorruptedSession();
+            setUser(null);
+            setViewingMicroregiaoId(null);
+          } else {
+            setUser(profile);
+            setViewingMicroregiaoId(profile.microregiaoId === 'all' ? null : profile.microregiaoId);
+          }
+        } else {
+          console.log('[AuthContext] 🚪 Nenhuma sessão ativa');
+        }
+
+        if (mounted) setIsLoading(false);
+        initializedRef.current = true;
+      } catch (err) {
+        console.error('[AuthContext] 💥 Erro inesperado no bootstrap:', err);
+        if (mounted) setIsLoading(false);
+        initializedRef.current = true;
+      }
     };
 
-    // ✅ REMOVIDO: Timeout conflitante de 8s que causava logout forçado
-    // O timeout de 10s na função loadUserProfile é suficiente
-
-    // Verifica sessão atual
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (!mounted || hasResolvedSessionRef.current) {
-        // ✅ BUG FIX 2: Garantir init completa mesmo se mounted for false
-        initializedRef.current = true;
-        return;
-      }
-      hasResolvedSessionRef.current = true; // Marca como resolvido
-
-      if (error) {
-        console.error('[AuthContext] ❌ Erro ao obter sessão:', error.message);
-        if (error.message?.includes('invalid') || error.message?.includes('expired')) {
-          clearCorruptedSession();
-        }
-        resetLoading();
-        // ✅ BUG FIX 1: Marcar init completa em erro
-        initializedRef.current = true;
-        return;
-      }
-
-      if (session?.user) {
-        console.log('[AuthContext] 🔓 Sessão encontrada para:', session.user.email);
-        // ✅ REMOVIDO: Chamada loadUserProfile aqui para evitar duplicação
-        // O listener SIGNED_IN vai cuidar disso automaticamente
-        if (mounted) setIsLoading(false);
-      } else {
-        console.log('[AuthContext] 🚪 Nenhuma sessão ativa');
-        if (mounted) setIsLoading(false);
-      }
-      // ✅ BUG FIX 1: Marcar init completa no sucesso
-      initializedRef.current = true;
-    }).catch((_error) => {
-      if (!mounted) {
-        // ✅ BUG FIX 2: Garantir init completa mesmo em catch com unmount
-        initializedRef.current = true;
-        return;
-      }
-      console.error('[AuthContext] 💥 Erro inesperado ao obter sessão');
-      resetLoading();
-      // ✅ BUG FIX 1: Marcar init completa em catch
-      initializedRef.current = true;
-    });
+    bootstrap();
 
     return () => {
       mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
-      // ✅ BUG FIX 2: Garantir init completa no cleanup (para HMR)
       initializedRef.current = true;
     };
-  }, [loadUserProfile]); // Dependências mínimas: roda uma vez só
+  }, [loadUserProfile]);
 
   // =====================================
   // EFFECT 2: Listener de Auth Sempre Ativo
