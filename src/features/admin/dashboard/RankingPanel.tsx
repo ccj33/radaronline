@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy,
@@ -13,6 +13,64 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 
 import { Action } from '../../../types';
 import { MICROREGIOES } from '../../../data/microregioes';
 import { staggerContainer, staggerItem, cardHover } from '../../../lib/motion';
+
+// Safe ResponsiveContainer that prevents rendering with invalid dimensions
+function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const checkDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        // Check for valid dimensions (minimum 100px to be safe)
+        const hasValidDimensions = width >= 100 && height >= 100;
+        setIsReady(hasValidDimensions);
+      }
+    };
+
+    // Small delay to ensure DOM is fully rendered
+    timeoutId = setTimeout(() => {
+      checkDimensions();
+    }, 50);
+
+    // Also listen for resize
+    const observer = new ResizeObserver(checkDimensions);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: '300px', minHeight: '300px' }}>
+      {isReady ? (
+        <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
+          {children}
+        </ResponsiveContainer>
+      ) : (
+        <div style={{
+          width: '100%',
+          height: '300px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          color: '#6c757d'
+        }}>
+          Carregando gráfico...
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface RankingPanelProps {
   actions: Action[];
@@ -115,9 +173,8 @@ export function RankingPanel({ actions, onViewMicrorregiao, compact = false }: R
             className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
             onClick={() => onViewMicrorregiao(micro.id)}
           >
-            <span className={`text-sm font-bold w-5 ${
-              index === 0 ? 'text-yellow-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-amber-600' : 'text-slate-400'
-            }`}>
+            <span className={`text-sm font-bold w-5 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-amber-600' : 'text-slate-400'
+              }`}>
               {index + 1}º
             </span>
             <div className="flex-1 min-w-0">
@@ -125,7 +182,7 @@ export function RankingPanel({ actions, onViewMicrorregiao, compact = false }: R
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <div className="w-16 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-teal-500 rounded-full"
                   style={{ width: `${micro.progressoMedio}%` }}
                 />
@@ -247,7 +304,7 @@ export function RankingPanel({ actions, onViewMicrorregiao, compact = false }: R
           <span className="text-xs text-slate-500 dark:text-slate-400">Clique na barra para ver detalhes</span>
         </div>
         <div className="h-80" style={{ minHeight: '320px' }}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <SafeResponsiveContainer>
             <BarChart
               data={rankings.slice(0, 10).map(m => ({
                 name: m.nome.length > 15 ? m.nome.substring(0, 15) + '...' : m.nome,
@@ -303,7 +360,7 @@ export function RankingPanel({ actions, onViewMicrorregiao, compact = false }: R
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
+          </SafeResponsiveContainer>
         </div>
       </div>
 

@@ -62,6 +62,20 @@ export type RaciPermission = {
 };
 
 // =====================================
+// ENTRADA RACI (tipagem forte)
+// =====================================
+
+/**
+ * Representa uma entrada na matriz RACI de uma ação.
+ * Suporta o formato legado (por nome) e o novo formato (por userId).
+ */
+export interface RaciEntry {
+  userId?: string;         // ID do usuário (novo padrão)
+  name?: string;           // Nome do usuário (legado, para compatibilidade)
+  role: 'R' | 'A' | 'I';   // Responsável, Aprovador, Informado
+}
+
+// =====================================
 // CONTEXTO DE AUTENTICAÇÃO
 // =====================================
 

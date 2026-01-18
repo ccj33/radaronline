@@ -46,7 +46,7 @@ export const loggingService = {
                 .from('activity_logs')
                 .select(`
                     *,
-                    user:profiles!activity_logs_user_id_fkey (
+                    user:profiles (
                         nome,
                         role,
                         avatar_id,

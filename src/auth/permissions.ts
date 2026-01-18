@@ -1,5 +1,6 @@
-import { User, RaciPermission } from '../types/auth.types';
+import { User, RaciPermission, RaciEntry } from '../types/auth.types';
 import { Action, RaciRole } from '../types';
+import { isAdminLike, canMatchMicro } from '../lib/authHelpers';
 
 // =====================================
 // MAPEAMENTO DE PERMISSÕES RACI
@@ -31,46 +32,45 @@ export const RACI_PERMISSIONS: Record<RaciRole, RaciPermission> = {
 // =====================================
 
 /**
- * Obtém o papel RACI do usuário em uma ação específica
+ * Obtém o papel RACI do usuário em uma ação específica.
+ * Suporta busca por userId (novo) e por nome (legado).
  */
 export function getUserRaciRole(user: User, action: Action): RaciRole | null {
-  const raciEntry = action.raci.find(r => r.name === user.nome);
-  return raciEntry?.role || null;
+  const entries = action.raci as RaciEntry[] | undefined;
+  const entry = entries?.find((r) => {
+    // Novo formato: busca por userId
+    if (r.userId) return r.userId === user.id;
+    // Legado: busca por nome
+    return r.name === user.nome;
+  });
+  return entry?.role || null;
 }
 
 /**
  * Verifica se usuário pode VISUALIZAR uma ação
  */
 export function canViewAction(user: User, _action: Action, actionMicroregiaoId?: string): boolean {
-  // Admin pode ver tudo
-  if (user.role === 'admin') return true;
+  // Admin/SuperAdmin pode ver tudo
+  if (isAdminLike(user.role)) return true;
 
   // Verifica se está na mesma microrregião
-  if (actionMicroregiaoId && actionMicroregiaoId !== user.microregiaoId) {
-    return false;
-  }
-
-  // Qualquer pessoa da mesma microrregião pode visualizar
-  return true;
+  return canMatchMicro(user.microregiaoId, actionMicroregiaoId);
 }
 
 /**
  * Verifica se usuário pode EDITAR uma ação
  */
 export function canEditAction(user: User, action: Action, actionMicroregiaoId?: string): boolean {
-  // Admin pode editar tudo
-  if (user.role === 'admin') return true;
+  // Admin/SuperAdmin pode editar tudo
+  if (isAdminLike(user.role)) return true;
 
   // Gestor pode editar qualquer ação da sua microrregião
   if (user.role === 'gestor') {
-    if (actionMicroregiaoId && actionMicroregiaoId !== user.microregiaoId) {
-      return false;
-    }
-    return true;
+    return canMatchMicro(user.microregiaoId, actionMicroregiaoId);
   }
 
   // Verifica microrregião
-  if (actionMicroregiaoId && actionMicroregiaoId !== user.microregiaoId) {
+  if (!canMatchMicro(user.microregiaoId, actionMicroregiaoId)) {
     return false;
   }
 
@@ -85,19 +85,19 @@ export function canEditAction(user: User, action: Action, actionMicroregiaoId?: 
  * Verifica se usuário pode CRIAR ações
  */
 export function canCreateAction(user: User): boolean {
-  // Admin e gestor podem criar
-  return user.role === 'admin' || user.role === 'gestor';
+  // Admin, SuperAdmin e Gestor podem criar
+  return isAdminLike(user.role) || user.role === 'gestor';
 }
 
 /**
  * Verifica se usuário pode EXCLUIR uma ação
  */
 export function canDeleteAction(user: User, action: Action, actionMicroregiaoId?: string): boolean {
-  // Admin pode excluir qualquer coisa
-  if (user.role === 'admin') return true;
+  // Admin/SuperAdmin pode excluir qualquer coisa
+  if (isAdminLike(user.role)) return true;
 
   // Verifica microrregião
-  if (actionMicroregiaoId && actionMicroregiaoId !== user.microregiaoId) {
+  if (!canMatchMicro(user.microregiaoId, actionMicroregiaoId)) {
     return false;
   }
 
@@ -113,11 +113,11 @@ export function canDeleteAction(user: User, action: Action, actionMicroregiaoId?
  * Verifica se usuário pode GERENCIAR EQUIPE de uma ação
  */
 export function canManageTeam(user: User, action: Action, actionMicroregiaoId?: string): boolean {
-  // Admin pode tudo
-  if (user.role === 'admin') return true;
+  // Admin/SuperAdmin pode tudo
+  if (isAdminLike(user.role)) return true;
 
   // Verifica microrregião
-  if (actionMicroregiaoId && actionMicroregiaoId !== user.microregiaoId) {
+  if (!canMatchMicro(user.microregiaoId, actionMicroregiaoId)) {
     return false;
   }
 
@@ -133,21 +133,21 @@ export function canManageTeam(user: User, action: Action, actionMicroregiaoId?: 
  * Verifica se usuário pode acessar o painel admin
  */
 export function canAccessAdmin(user: User): boolean {
-  return user.role === 'admin';
+  return isAdminLike(user.role);
 }
 
 /**
  * Verifica se usuário pode criar outros usuários
  */
 export function canCreateUsers(user: User): boolean {
-  return user.role === 'admin';
+  return isAdminLike(user.role);
 }
 
 /**
  * Verifica se usuário pode ver todas as microrregiões
  */
 export function canViewAllMicroregioes(user: User): boolean {
-  return user.role === 'admin';
+  return isAdminLike(user.role);
 }
 
 // =====================================
@@ -169,7 +169,3 @@ export function getUserPermissions(user: User): UserPermissions {
     canCreateUsers: canCreateUsers(user),
   };
 }
-
-
-
-

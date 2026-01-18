@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -33,6 +33,64 @@ import { MICROREGIOES, getMicroregioesByMacro, MACRORREGIOES, getMicroregiaoById
 import { DashboardFiltersState } from './DashboardFilters';
 import { KpiDetailModal } from './KpiDetailModal';
 import { staggerContainer, staggerItem, cardHover } from '../../../lib/motion';
+
+// Safe ResponsiveContainer that prevents rendering with invalid dimensions
+function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const checkDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        // Check for valid dimensions (minimum 100px to be safe)
+        const hasValidDimensions = width >= 100 && height >= 100;
+        setIsReady(hasValidDimensions);
+      }
+    };
+
+    // Small delay to ensure DOM is fully rendered
+    timeoutId = setTimeout(() => {
+      checkDimensions();
+    }, 50);
+
+    // Also listen for resize
+    const observer = new ResizeObserver(checkDimensions);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: '300px', minHeight: '300px' }}>
+      {isReady ? (
+        <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
+          {children}
+        </ResponsiveContainer>
+      ) : (
+        <div style={{
+          width: '100%',
+          height: '300px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          color: '#6c757d'
+        }}>
+          Carregando gráfico...
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface AdminOverviewProps {
   actions: Action[];
@@ -497,7 +555,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
             </div>
 
             <div className="flex-1 min-h-0 relative">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <SafeResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={statusData}
@@ -516,7 +574,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
                   </Pie>
                   <Tooltip content={<CleanTooltip />} />
                 </PieChart>
-              </ResponsiveContainer>
+              </SafeResponsiveContainer>
 
               {/* Center Stat */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -552,7 +610,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
             </div>
 
             <div className="flex-1 mt-4">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <SafeResponsiveContainer>
                 <BarChart data={metrics.deadlineHorizon} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.1)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
@@ -564,7 +622,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
                     ))}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </SafeResponsiveContainer>
             </div>
           </div>
         </div>
