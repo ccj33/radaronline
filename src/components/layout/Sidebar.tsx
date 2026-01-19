@@ -22,7 +22,7 @@ interface SidebarItemProps {
   badge?: string;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, isActive, onClick, collapsed, badge }) => (
+const SidebarItem: React.FC<SidebarItemProps> = React.memo(({ icon: Icon, label, isActive, onClick, collapsed, badge }) => (
   <motion.button
     variants={staggerItem}
     whileTap={buttonTap}
@@ -40,12 +40,165 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, isActive, 
       </span>
     )}
   </motion.button>
-);
+));
 
 const SidebarSectionTitle: React.FC<{ children: React.ReactNode; collapsed: boolean }> = ({ children, collapsed }) => {
   if (collapsed) return <div className="h-px w-full bg-white/10 my-4 mx-auto w-10"></div>;
   return <div className="px-3 mt-6 mb-3 text-[10px] font-bold text-white/50 uppercase tracking-widest">{children}</div>;
 };
+
+// --- NOVOS COMPONENTES MEMOIZADOS ---
+
+interface SidebarActivityItemProps {
+  id: string;
+  title: string;
+  isActive: boolean;
+  isEditMode: boolean;
+  onSelect: () => void;
+  onEdit?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
+}
+
+const SidebarActivityItem = React.memo<SidebarActivityItemProps>(({ id, title, isActive, isEditMode, onSelect, onEdit, onDelete }) => (
+  <div className="flex items-center gap-1 group/act">
+    <button
+      onClick={onSelect}
+      className={`flex-1 text-left py-1.5 px-2 text-[10px] rounded-md transition-colors truncate ${isActive
+          ? (isEditMode ? "text-white font-bold bg-white/10" : "bg-emerald-500/10 text-white font-bold border border-emerald-500/20")
+          : "text-white/50 hover:bg-white/5 hover:text-white"
+        }`}
+    >
+      Atv {getActivityDisplayId(id)} - {title}
+    </button>
+
+    {isEditMode && (
+      <div className="flex items-center opacity-0 group-hover/act:opacity-100 transition-opacity">
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="p-1 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
+            title="Renomear atividade"
+          >
+            <Edit2 size={10} />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="p-1 rounded hover:bg-red-500/20 text-red-300/50 hover:text-red-200 transition-colors"
+            title="Excluir atividade"
+          >
+            <Trash2 size={10} />
+          </button>
+        )}
+      </div>
+    )}
+  </div>
+));
+
+interface SidebarObjectiveItemProps {
+  obj: { id: number; title: string };
+  objIndex: number;
+  isActive: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onEdit?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
+  activities?: { id: string; title: string }[];
+  selectedActivity: string | null;
+  onSelectActivity: (actId: string) => void;
+  onEditActivity?: (actId: string, initialTitle: string) => void;
+  onDeleteActivity?: (actId: string, actTitle: string) => void;
+  onAddActivity?: () => void;
+  isEditMode: boolean;
+}
+
+const SidebarObjectiveItem = React.memo<SidebarObjectiveItemProps>(({
+  obj,
+  objIndex,
+  isActive,
+  isExpanded,
+  onToggle,
+  onEdit,
+  onDelete,
+  activities,
+  selectedActivity,
+  onSelectActivity,
+  onEditActivity,
+  onDeleteActivity,
+  onAddActivity,
+  isEditMode
+}) => (
+  <div className="group/obj">
+    <div className="flex items-center gap-1 group-hover/obj:bg-white/5 rounded-lg pr-1 transition-colors">
+      <button
+        onClick={onToggle}
+        className={`flex-1 text-left py-2 px-2.5 text-[11px] rounded-lg transition-all truncate leading-snug ${isActive
+            ? "bg-emerald-500/20 font-bold text-white shadow-sm ring-1 ring-emerald-500/30"
+            : "text-white/70 hover:text-white"
+          }`}
+      >
+        <div className="flex items-center gap-2">
+          <div className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] scale-110" : "bg-white/30"
+            }`}></div>
+          <span className="truncate">Obj {objIndex + 1}. {getObjectiveTitleWithoutNumber(obj.title)}</span>
+        </div>
+      </button>
+
+      {/* Controls */}
+      {isEditMode && (
+        <div className="flex items-center opacity-0 group-hover/obj:opacity-100 transition-opacity px-1">
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="p-1.5 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
+              title="Renomear objetivo"
+            >
+              <Edit2 size={12} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="p-1.5 rounded hover:bg-red-500/20 text-red-300 hover:text-red-200 transition-colors"
+              title="Excluir objetivo"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Activities List */}
+    {isExpanded && activities && (
+      <div className="ml-3 pl-3 border-l border-white/10 space-y-1 mt-1 mb-2 animate-fade-in relative">
+        {activities.map(act => (
+          <SidebarActivityItem
+            key={act.id}
+            id={act.id}
+            title={act.title}
+            isActive={isActive && act.id === selectedActivity}
+            isEditMode={isEditMode}
+            onSelect={() => onSelectActivity(act.id)}
+            onEdit={onEditActivity ? (e) => { e.stopPropagation(); onEditActivity(act.id, act.title); } : undefined}
+            onDelete={onDeleteActivity ? (e) => { e.stopPropagation(); onDeleteActivity(act.id, act.title); } : undefined}
+          />
+        ))}
+
+        {isEditMode && onAddActivity && (
+          <button
+            onClick={onAddActivity}
+            className="flex items-center gap-1.5 py-1 px-2 text-[10px] text-emerald-300/70 hover:text-emerald-200 transition-colors hover:bg-emerald-500/10 rounded-md w-full"
+          >
+            <Plus size={10} />
+            <span>Nova Atividade</span>
+          </button>
+        )}
+      </div>
+    )}
+  </div>
+));
 
 interface SidebarProps {
   isOpen: boolean;
@@ -86,7 +239,7 @@ interface SidebarProps {
   showNotifications?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+const SidebarContent: React.FC<SidebarProps> = ({
   isOpen,
   onToggle,
   currentNav,
@@ -491,113 +644,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {isOpen && currentNav === 'strategy' && viewMode !== 'calendar' && viewMode !== 'team' && (
                   <div className="ml-1 pl-3 border-l-2 border-emerald-500/20 space-y-2 mt-2 mb-4 animate-slide-down">
                     {objectives.map((obj, objIndex) => (
-                      <div key={obj.id} className="group/obj">
-                        <div className="flex items-center gap-1 group-hover/obj:bg-white/5 rounded-lg pr-1 transition-colors">
-                          <button
-                            onClick={() => {
-                              setSelectedObjective(obj.id);
-                              setSelectedActivity(activities[obj.id]?.[0]?.id || '');
-                              setViewMode('table');
-                              if (isOpen) toggleObjective(obj.id);
-                            }}
-                            className={`flex-1 text-left py-2 px-2.5 text-[11px] rounded-lg transition-all truncate leading-snug ${selectedObjective === obj.id ? "bg-emerald-500/20 font-bold text-white shadow-sm ring-1 ring-emerald-500/30" : "text-white/70 hover:text-white"}`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className={`w-1.5 h-1.5 rounded-full transition-all ${selectedObjective === obj.id ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] scale-110" : "bg-white/30"}`}></div>
-                              <span className="truncate">Obj {objIndex + 1}. {getObjectiveTitleWithoutNumber(obj.title)}</span>
-                            </div>
-                          </button>
-
-                          {/* Controles de edição do objetivo */}
-                          {isEditMode && (
-                            <div className="flex items-center opacity-0 group-hover/obj:opacity-100 transition-opacity px-1">
-                              {onUpdateObjective && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditModal({ isOpen: true, type: 'objective', id: obj.id, initialValue: obj.title });
-                                  }}
-                                  className="p-1.5 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
-                                  title="Renomear objetivo"
-                                >
-                                  <Edit2 size={12} />
-                                </button>
-                              )}
-                              {onDeleteObjective && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteModal({ isOpen: true, type: 'objective', id: obj.id, name: obj.title });
-                                  }}
-                                  className="p-1.5 rounded hover:bg-red-500/20 text-red-300 hover:text-red-200 transition-colors"
-                                  title="Excluir objetivo"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Lista de atividades do objetivo (no modo edição OU quando expandido) */}
-                        {(isEditMode || (isOpen && expandedObjectives.has(obj.id))) && activities[obj.id] && (
-                          <div className="ml-3 pl-3 border-l border-white/10 space-y-1 mt-1 mb-2 animate-fade-in relative">
-                            {activities[obj.id].map(act => (
-                              <div key={act.id} className="flex items-center gap-1 group/act">
-                                <button
-                                  onClick={() => {
-                                    setSelectedObjective(obj.id);
-                                    setSelectedActivity(act.id);
-                                    setViewMode('table');
-                                  }}
-                                  className={`flex-1 text-left py-1.5 px-2 text-[10px] rounded-md transition-colors truncate ${selectedObjective === obj.id && act.id === selectedActivity ? (isEditMode ? "text-white font-bold bg-white/10" : "bg-emerald-500/10 text-white font-bold border border-emerald-500/20") : "text-white/50 hover:bg-white/5 hover:text-white"}`}
-                                >
-                                  Atv {getActivityDisplayId(act.id)} - {act.title}
-                                </button>
-
-                                {isEditMode && (
-                                  <div className="flex items-center opacity-0 group-hover/act:opacity-100 transition-opacity">
-                                    {onUpdateActivity && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditModal({ isOpen: true, type: 'activity', id: act.id, parentId: obj.id, initialValue: act.title });
-                                        }}
-                                        className="p-1 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
-                                        title="Renomear atividade"
-                                      >
-                                        <Edit2 size={10} />
-                                      </button>
-                                    )}
-                                    {onDeleteActivity && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDeleteModal({ isOpen: true, type: 'activity', id: act.id, parentId: obj.id, name: act.title });
-                                        }}
-                                        className="p-1 rounded hover:bg-red-500/20 text-red-300/50 hover:text-red-200 transition-colors"
-                                        title="Excluir atividade"
-                                      >
-                                        <Trash2 size={10} />
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                            {/* Botão adicionar atividade */}
-                            {isEditMode && onAddActivity && (
-                              <button
-                                onClick={() => onAddActivity(obj.id)}
-                                className="flex items-center gap-1.5 py-1 px-2 text-[10px] text-emerald-300/70 hover:text-emerald-200 transition-colors hover:bg-emerald-500/10 rounded-md w-full"
-                              >
-                                <Plus size={10} />
-                                <span>Nova Atividade</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      <SidebarObjectiveItem
+                        key={obj.id}
+                        obj={obj}
+                        objIndex={objIndex}
+                        isActive={selectedObjective === obj.id}
+                        isExpanded={isEditMode || (isOpen && expandedObjectives.has(obj.id))}
+                        onToggle={() => {
+                          setSelectedObjective(obj.id);
+                          setSelectedActivity(activities[obj.id]?.[0]?.id || '');
+                          setViewMode('table');
+                          if (isOpen) toggleObjective(obj.id);
+                        }}
+                        onEdit={isEditMode && onUpdateObjective ? (e) => {
+                          e.stopPropagation();
+                          setEditModal({ isOpen: true, type: 'objective', id: obj.id, initialValue: obj.title });
+                        } : undefined}
+                        onDelete={isEditMode && onDeleteObjective ? (e) => {
+                          e.stopPropagation();
+                          setDeleteModal({ isOpen: true, type: 'objective', id: obj.id, name: obj.title });
+                        } : undefined}
+                        activities={activities[obj.id]}
+                        selectedActivity={selectedActivity}
+                        onSelectActivity={(actId) => {
+                          setSelectedObjective(obj.id);
+                          setSelectedActivity(actId);
+                          setViewMode('table');
+                        }}
+                        onEditActivity={isEditMode && onUpdateActivity ? (actId, initialTitle) => {
+                          setEditModal({ isOpen: true, type: 'activity', id: actId, parentId: obj.id, initialValue: initialTitle });
+                        } : undefined}
+                        onDeleteActivity={isEditMode && onDeleteActivity ? (actId, actTitle) => {
+                          setDeleteModal({ isOpen: true, type: 'activity', id: actId, parentId: obj.id, name: actTitle });
+                        } : undefined}
+                        onAddActivity={isEditMode && onAddActivity ? () => onAddActivity(obj.id) : undefined}
+                        isEditMode={isEditMode}
+                      />
                     ))}
 
                     {/* Botão adicionar objetivo */}
@@ -724,3 +806,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
+export const Sidebar = React.memo(SidebarContent);
