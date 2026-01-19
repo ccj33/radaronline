@@ -117,6 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Timeout ao carregar perfil (10s). Verifique RLS policies ou conexão.'
         );
 
+        if (import.meta.env.DEV) {
+          console.log('[AuthDebug] loadUserProfile result:', { userId, data, error });
+        }
+
         if (error) {
           setProfileLoadError(error.message || 'Falha ao carregar perfil');
           return null;
@@ -147,6 +151,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firstAccess: data.first_access ?? true,
           createdAt: data.created_at,
         };
+
+        if (import.meta.env.DEV) {
+          console.log('[AuthDebug] Profile constructed successfully:', profile);
+        }
 
         setProfileLoadError(null);
         profileCache.set(userId, profile);
@@ -197,6 +205,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Se o cache era de outro usuário, limpar
           if (cachedProfile && cachedProfile.id !== sid) {
             clearCachedProfile();
+          }
+
+          if (import.meta.env.DEV) {
+            const session = (await supabase.auth.getSession()).data.session;
+            console.log('[AuthDebug] Session found on init:', {
+              sid,
+              expires_at: session?.expires_at,
+              role: session?.user?.role,
+              app_metadata: session?.user?.app_metadata
+            });
           }
 
           const profile = await loadUserProfile(sid);
@@ -305,6 +323,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profileCache.clear();
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+
+    if (import.meta.env.DEV) {
+      console.log('[AuthDebug] Login attempt:', { email, success: !error, error });
+    }
 
     if (error) {
       setIsLoading(false);

@@ -35,43 +35,52 @@ import { staggerContainer, staggerItem } from '../../../lib/motion';
 // Safe ResponsiveContainer that prevents rendering with invalid dimensions
 function SafeResponsiveContainer({ children, minHeight = 150 }: { children: React.ReactNode; minHeight?: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let animationFrameId: number;
 
     const checkDimensions = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect();
-        // Check for valid dimensions
-        const hasValidDimensions = width >= 50 && height >= 50;
-        setIsReady(hasValidDimensions);
+        if (width >= 50 && height >= 50) {
+          setDimensions({ width, height });
+        } else {
+          setDimensions(null);
+        }
       }
     };
 
-    // Small delay to ensure DOM is fully rendered
-    timeoutId = setTimeout(() => {
-      checkDimensions();
-    }, 50);
+    // Check immediately and on resize
+    checkDimensions();
 
-    // Also listen for resize
-    const observer = new ResizeObserver(checkDimensions);
+    const observer = new ResizeObserver(() => {
+      // Use animation frame to throttle and ensure layout is done
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(checkDimensions);
+    });
+
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
       observer.disconnect();
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
+  // Clone child to inject explicit width/height if it's a ResponsiveContainer
+  // Or just render a div with fixed size and let ResponsiveContainer fill it (but 100% can fail)
+  // BETTER STRATEGY: Render div with 100%, but only show content if dimensions exist.
+  // We use the 'dimensions' state to trigger re-render only when safe.
+
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: `${minHeight}px` }}>
-      {isReady ? (
-        <ResponsiveContainer width="100%" height="100%">
+      {dimensions ? (
+        <div style={{ width: dimensions.width, height: dimensions.height }}>
           {children}
-        </ResponsiveContainer>
+        </div>
       ) : (
         <div style={{
           width: '100%',
