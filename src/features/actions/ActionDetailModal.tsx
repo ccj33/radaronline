@@ -278,6 +278,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
     const [newTagName, setNewTagName] = useState('');
     const [isLoadingTags, setIsLoadingTags] = useState(false);
     const [tagToDelete, setTagToDelete] = useState<ActionTag | null>(null);
+    const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
 
 
     // Mention autocomplete states
