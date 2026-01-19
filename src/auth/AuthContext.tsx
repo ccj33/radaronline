@@ -325,3 +325,9 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   return ctx;
 }
+
+export function useAuthSafe() {
+  return useContext(AuthContext);
+}
+
+export { AuthContext };
