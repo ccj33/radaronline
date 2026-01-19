@@ -176,6 +176,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(cachedProfile);
         setSessionUserId(cachedProfile.id);
         setViewingMicroregiaoId(cachedProfile.microregiaoId === 'all' ? null : cachedProfile.microregiaoId);
+
+        // MEMORY CACHE SYNC: Vital for loadUserProfile to not re-fetch immediately
+        profileCache.set(cachedProfile.id, cachedProfile);
+
         setIsLoading(false);
         // Atualiza em background para manter sincronizado
       } else {
@@ -276,10 +280,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(profile);
         setViewingMicroregiaoId(profile.microregiaoId === 'all' ? null : profile.microregiaoId);
       } else {
-        // Garante consistência: se não carregou perfil (erro RLS/Rede), não mantém usuário anterior
-        // Isso evita que o app fique m estado misto (sessão nova + perfil velho ou null)
-        setUser(null);
-        setViewingMicroregiaoId(null);
+        // RESILIENCE: Se a sessão existe mas o perfil falhou (ex: erro de rede temporário),
+        // NÃO deslogamos o usuário se ele já tinha dados estale (stale-while-revalidate).
+        // Apenas 'zeramos' se realmente não tivermos nada para mostrar.
+        if (!user) {
+          setUser(null);
+          setViewingMicroregiaoId(null);
+        }
+        // Se user já existia, mantemos ele (cache) e o erro fica em 'profileLoadError' para a UI decidir se mostra aviso
       }
 
       setIsLoading(false);
