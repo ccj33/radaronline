@@ -53,6 +53,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // 3. Tem sessão, mas user está null (Perfil falhou ou ainda carregando pós-sessão)
   if (hasSession && !user) {
     if (profileLoadError) {
+      // Extrai funções de recuperação do contexto (force refresh ou logout total)
+      const { refreshUser, logout } = useAuth();
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
           <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 text-center border border-red-100">
@@ -60,13 +63,23 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
               <span className="text-2xl">⚠️</span>
             </div>
             <h2 className="text-lg font-bold text-slate-800 mb-2">Erro ao carregar perfil</h2>
-            <p className="text-slate-600 mb-6 text-sm">{profileLoadError}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium w-full"
-            >
-              Tentar Novamente
-            </button>
+            <p className="text-slate-600 mb-6 text-sm whitespace-pre-wrap">{profileLoadError}</p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => refreshUser()}
+                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium w-full"
+              >
+                Tentar Novamente
+              </button>
+
+              <button
+                onClick={() => logout()}
+                className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium w-full"
+              >
+                Sair e entrar de novo
+              </button>
+            </div>
           </div>
         </div>
       );

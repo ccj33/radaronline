@@ -1425,6 +1425,47 @@ function AppContent() {
     return <LoadingFallback />;
   }
 
+  // ✅ FIX P0: Tratar sessão existente mas perfil falho (Ghost Session)
+  // Se existe sessão no Supabase mas o perfil não carregou (user == null), 
+  // não podemos mostrar LoginPage senão o usuário entra em loop.
+  // IMPORTANTE: Usamos as variáveis já extraídas (user) e acessamos as novas do contexto
+  if (authContext.hasSession && !user) {
+    if (authContext.profileLoadError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+          <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 text-center border border-rose-100">
+            <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-rose-500" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Erro ao carregar perfil</h2>
+            <p className="text-slate-600 mb-6 text-sm">{authContext.profileLoadError}</p>
+            <div className="p-4 bg-slate-50 rounded-lg mb-6 text-left text-xs text-slate-500 font-mono overflow-auto max-h-32">
+              Dica: Verifique sua conexão ou se suas permissões de acesso (RLS) estão corretas.
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => authContext.refreshUser()}
+                className="w-full px-4 py-3 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <span>Tentar Novamente</span>
+              </button>
+
+              <button
+                onClick={() => logout()}
+                className="w-full px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+              >
+                Fazer Logout e Limpar Cache
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // Se não tem erro ainda, está carregando perfil
+    return <LoadingFallback />;
+  }
+
   // ✅ CORREÇÃO: Se não está autenticado, mostra login (independente de isLoading)
   // O LoginPage tem seu próprio estado de loading interno
   if (!isAuthenticated) {

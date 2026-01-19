@@ -78,7 +78,7 @@ export function canEditAction(user: User, action: Action, actionMicroregiaoId?: 
   const raciRole = getUserRaciRole(user, action);
   if (!raciRole) return false;
 
-  return RACI_PERMISSIONS[raciRole].editar;
+  return !!RACI_PERMISSIONS[raciRole]?.editar;
 }
 
 /**

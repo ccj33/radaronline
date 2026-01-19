@@ -72,6 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           // Importante: guardar erro para UI/Router não entrar em loop
+          console.error('[AuthContext] ❌ Erro ao buscar perfil:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
           setProfileLoadError(error.message || 'Falha ao carregar perfil');
           return null;
         }
@@ -106,7 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileCache.set(userId, profile);
         return profile;
       } catch (err: any) {
-        setProfileLoadError(err?.message || 'Erro crítico ao carregar perfil');
+        const errorMsg = err?.message || 'Erro crítico ao carregar perfil';
+        console.error('[AuthContext] 💥 Exception in loadUserProfile:', err);
+        setProfileLoadError(errorMsg);
         return null;
       } finally {
         inFlightProfileRef.current.delete(userId);
@@ -132,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionUserId(sid);
 
         if (sid) {
+          console.log('[AuthContext] Init: Session found for user:', sid);
           const profile = await loadUserProfile(sid);
 
           if (mounted && profile) {
@@ -171,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sid = session?.user?.id ?? null;
       setSessionUserId(sid);
 
+      // Logout explícito
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setViewingMicroregiaoId(null);
@@ -181,9 +191,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (!sid) return;
+      if (!sid) {
+        // Garante que loading nao fique preso caso algum evento venha sem sessão
+        setIsLoading(false);
+        return;
+      }
 
-      // Evita recarga redundante usando ref atualizada
+      // Se mudou de usuário, limpa estado anterior antes de carregar o novo para evitar inconsistência
+      if (userIdRef.current && userIdRef.current !== sid) {
+        console.log('[AuthContext] 🔄 Troca de usuário detectada. Limpando estado anterior...');
+        setUser(null);
+        setViewingMicroregiaoId(null);
+        profileCache.clear();
+      }
+
+      // Evita recarga redundante se for o mesmo usuário e não for refresh de token
       if (userIdRef.current === sid && event !== 'TOKEN_REFRESHED') return;
 
       setIsLoading(true);
@@ -193,9 +215,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const profile = await loadUserProfile(sid);
+
       if (profile) {
         setUser(profile);
         setViewingMicroregiaoId(profile.microregiaoId === 'all' ? null : profile.microregiaoId);
+      } else {
+        // Garante consistência: se não carregou perfil (erro RLS/Rede), não mantém usuário anterior
+        // Isso evita que o app fique m estado misto (sessão nova + perfil velho ou null)
+        setUser(null);
+        setViewingMicroregiaoId(null);
       }
 
       setIsLoading(false);
@@ -252,12 +280,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await supabase.auth.signOut();
-    setUser(null);
-    setViewingMicroregiaoId(null);
-    setSessionUserId(null);
-    setProfileLoadError(null);
-    profileCache.clear();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('[AuthContext] Erro no signOut (ignorando):', error);
+    } finally {
+      // ✅ FIX P0: Garantir limpeza local mesmo se signOut falhar (rede/token inválido)
+      clearSupabaseAuthStorage();
+      setUser(null);
+      setViewingMicroregiaoId(null);
+      setSessionUserId(null);
+      setProfileLoadError(null);
+      profileCache.clear();
+      setIsLoading(false);
+    }
   };
 
   const loginAsDemo = () => {
