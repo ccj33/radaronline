@@ -77,58 +77,58 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
             <ChevronLeft size={isMobile ? 16 : 20} className="text-slate-400 dark:text-slate-500" />
           </button>
         )}
-        
-        <div 
+
+        <div
           ref={scrollRef}
           onScroll={checkScroll}
           className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto px-4 sm:px-6 py-2 scrollbar-hide scroll-smooth snap-x snap-mandatory"
           style={{ scrollPaddingInline: '1rem' }}
         >
-        {activities?.map(act => {
-          const isActive = selectedActivity === act.id;
-          return (
-            <button
-              key={act.id}
-              data-activity-id={act.id}
-              onClick={() => setSelectedActivity(act.id)}
-              className={`
+          {activities?.map(act => {
+            const isActive = selectedActivity === act.id;
+            return (
+              <button
+                key={act.id}
+                data-activity-id={act.id}
+                onClick={() => setSelectedActivity(act.id)}
+                className={`
                 group flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-lg text-left transition-all duration-200 shrink-0 border snap-center touch-target
                 ${isActive
-                  ? "bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-700 text-teal-800 dark:text-teal-200 shadow-sm"
-                  : "bg-white dark:bg-slate-700 border-transparent hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                }
+                    ? "bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-700 text-teal-800 dark:text-teal-200 shadow-sm"
+                    : "bg-white dark:bg-slate-700 border-transparent hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                  }
               `}
-            >
-              <div className={`
+              >
+                <div className={`
                 flex items-center justify-center h-5 sm:h-6 px-1 sm:px-1.5 rounded-md text-[9px] sm:text-[10px] font-bold shrink-0 transition-colors
                 ${isActive ? 'bg-teal-200 dark:bg-teal-800 text-teal-800 dark:text-teal-200' : 'bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-500'}
               `}>
-                {isMobile ? getActivityDisplayId(act.id) : `Atv ${getActivityDisplayId(act.id)}`}
-              </div>
+                  {isMobile ? getActivityDisplayId(act.id) : `Atv ${getActivityDisplayId(act.id)}`}
+                </div>
 
-              <div className="flex flex-col flex-1 pl-0.5 sm:pl-1">
-                <span
-                  className={`text-[11px] sm:text-xs font-semibold whitespace-nowrap max-w-[100px] sm:max-w-none truncate ${isActive ? 'text-teal-900 dark:text-teal-100' : 'text-slate-700 dark:text-slate-200'} ${isEditMode ? 'cursor-pointer hover:underline decoration-dashed' : ''}`}
-                  onClick={(e) => {
-                    if (isEditMode) {
-                      e.stopPropagation();
-                      onUpdateActivity?.(act.id, 'title', act.title);
-                    }
-                  }}
-                  title={isEditMode ? "Clique para editar título" : act.title}
-                >
-                  {act.title}
-                </span>
-              </div>
+                <div className="flex flex-col flex-1 pl-0.5 sm:pl-1">
+                  <span
+                    className={`text-[11px] sm:text-xs font-semibold whitespace-nowrap max-w-[120px] sm:max-w-[200px] truncate ${isActive ? 'text-teal-900 dark:text-teal-100' : 'text-slate-700 dark:text-slate-200'} ${isEditMode ? 'cursor-pointer hover:underline decoration-dashed' : ''}`}
+                    onClick={(e) => {
+                      if (isEditMode) {
+                        e.stopPropagation();
+                        onUpdateActivity?.(act.id, 'title', act.title);
+                      }
+                    }}
+                    title={act.title} // Sempre mostrar o título completo no tooltip
+                  >
+                    {act.title}
+                  </span>
+                </div>
 
-              {isActive && (
-                <div className="w-1.5 h-1.5 rounded-full bg-teal-500 ml-0.5 sm:ml-1 animate-pulse shrink-0" />
-              )}
-            </button>
-          );
-        })}
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 ml-0.5 sm:ml-1 animate-pulse shrink-0" />
+                )}
+              </button>
+            );
+          })}
         </div>
-        
+
         {/* Right scroll indicator/button */}
         {showRightArrow && (
           <button

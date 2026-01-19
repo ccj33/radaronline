@@ -261,6 +261,12 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
         }
     }, [activeTab, user, loadRequests]);
 
+    // Realtime subscription optimized
+    const loadRequestsRef = useRef(loadRequests);
+    useEffect(() => {
+        loadRequestsRef.current = loadRequests;
+    }, [loadRequests]);
+
     useEffect(() => {
         if (!user?.id) return;
         const channel = supabase
@@ -268,11 +274,11 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'user_requests' },
-                () => loadRequests()
+                () => loadRequestsRef.current()
             )
             .subscribe();
         return () => { supabase.removeChannel(channel); };
-    }, [user?.id, loadRequests]);
+    }, [user?.id]);
 
     // Reset when opening
     useEffect(() => {

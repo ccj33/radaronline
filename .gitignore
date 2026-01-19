@@ -28,3 +28,7 @@ semgrep-*.log
 ggshield-report.json
 snyk-report.json
 tsc-*.txt
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

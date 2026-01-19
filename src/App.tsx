@@ -1,13 +1,13 @@
 import { useState, useMemo, useRef, useEffect, useCallback, Suspense } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
+
 // Types
 import {
   Status,
   RaciRole,
   Action,
   Objective,
-  Activity,
   GanttRange,
   TeamMember,
   filterActionsByMicro,
@@ -21,7 +21,7 @@ import { clampProgress } from './lib/validation';
 import { log, logError } from './lib/logger';
 import { getActivityDisplayId, getObjectiveTitleWithoutNumber } from './lib/text';
 import { filterOrphanedActions } from './lib/actionValidation';
-import { getCache, setCache, invalidateAllCache, CACHE_KEYS } from './lib/sessionCache';
+import { getCache, setCache, CACHE_KEYS } from './lib/sessionCache';
 
 // Data - Apenas constantes de configuração, sem mocks
 import { MICROREGIOES } from './data/microregioes';
@@ -286,7 +286,7 @@ function AppContent() {
   }, [microActions, selectedObjective, activities]);
 
   const currentActivity = activities[selectedObjective]?.find(a => a.id === selectedActivity) || activities[selectedObjective]?.[0];
-  const currentObjective = objectives.find(o => o.id === selectedObjective);
+
 
   // =====================================
   // EFFECTS
@@ -367,7 +367,7 @@ function AppContent() {
 
     observer.observe(tabsElement);
     return () => observer.disconnect();
-  }, [viewMode, currentNav, selectedActivity]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [viewMode, currentNav, selectedActivity]);
 
   // Quando abrir o modal de criação para admin, pré-seleciona a primeira micro
   useEffect(() => {
@@ -719,7 +719,7 @@ function AppContent() {
     } finally {
       setIsSaving(false);
     }
-  }, [expandedActionUid, pendingNewActionUid, showToast]);
+  }, [expandedActionUid, pendingNewActionUid, showToast, isDemoMode]);
 
   // Handler para fechar o modal de ação - remove ação pendente se não foi salva
   const handleCloseActionModal = useCallback(() => {
@@ -786,7 +786,7 @@ function AppContent() {
     if (viewMode === 'gantt') setViewMode('table');
     setExpandedActionUid(tempUid);
     showToast('Preencha os dados e clique em Salvar', 'info');
-  }, [actions, checkCanCreate, currentMicroId, isAdmin, isViewingAllMicros, selectedActivity, viewMode, showToast]);
+  }, [actions, checkCanCreate, currentMicroId, isAdmin, isViewingAllMicros, selectedActivity, viewMode, showToast, isDemoMode]);
 
   const handleConfirmCreateInMicro = useCallback(() => {
     if (!createActionMicroId) {
@@ -874,7 +874,7 @@ function AppContent() {
         }
       }
     });
-  }, [actions, showToast, checkCanDelete, currentMicroId, isViewingAllMicros, isAdmin]);
+  }, [actions, showToast, checkCanDelete, currentMicroId, isViewingAllMicros, isAdmin, isDemoMode]);
 
   const handleAddRaci = useCallback(async (uid: string, memberId: string, role: RaciRole) => {
     if (isViewingAllMicros && !isAdmin) {
@@ -1017,38 +1017,8 @@ function AppContent() {
     }
   }, [actions, showToast]);
 
-  const handleEditComment = useCallback(async (actionUid: string, commentId: string, content: string) => {
-    try {
-      await dataService.updateComment(commentId, content);
-      setActions(prev => prev.map(a =>
-        a.uid === actionUid
-          ? { ...a, comments: a.comments?.map(c => c.id === commentId ? { ...c, content } : c) }
-          : a
-      ));
-      showToast('Comentário atualizado!', 'success');
-    } catch (error: any) {
-      logError('App', 'Erro ao editar comentário', error);
-      showToast(`Erro ao editar comentário: ${error.message}`, 'error');
-    }
-  }, [showToast]);
 
-  const handleDeleteComment = useCallback(async (actionUid: string, commentId: string) => {
-    try {
-      await dataService.deleteComment(commentId);
-      setActions(prev => prev.map(a =>
-        a.uid === actionUid
-          ? {
-            ...a,
-            comments: a.comments?.filter(c => c.id !== commentId && c.parentId !== commentId)
-          }
-          : a
-      ));
-      showToast('Comentário excluído!', 'success');
-    } catch (error: any) {
-      logError('App', 'Erro ao excluir comentário', error);
-      showToast(`Erro ao excluir comentário: ${error.message}`, 'error');
-    }
-  }, [showToast]);
+
 
   // =====================================
   // NAVIGATION HANDLERS
@@ -1358,7 +1328,7 @@ function AppContent() {
       logError('App', 'Erro ao criar atividade', error);
       showToast(`Erro ao criar atividade: ${error.message}`, 'error');
     }
-  }, [user?.role, user?.microregiaoId, currentMicroId, activities, showToast]);
+  }, [user?.role, user?.microregiaoId, currentMicroId, activities, showToast, objectives]);
 
   const handleDeleteActivity = useCallback(async (objectiveId: number, activityId: string) => {
     if (user?.role !== 'admin' && user?.role !== 'superadmin') {

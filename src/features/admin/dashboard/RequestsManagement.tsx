@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Filter, ChevronLeft, ChevronRight, Check, XCircle, Clock,
-    MessageSquare, AtSign, RotateCcw, X, Shield, ClipboardList, User as UserIcon, Trash2, AlertTriangle
+    Search, ChevronLeft, ChevronRight, Check, XCircle, Clock,
+    AtSign, RotateCcw, X, Shield, ClipboardList, User as UserIcon, Trash2, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../auth/AuthContext';
@@ -152,6 +152,11 @@ export function RequestsManagement() {
     }, [loadRequests]);
 
     // Realtime subscription
+    const loadRequestsRef = useRef(loadRequests);
+    useEffect(() => {
+        loadRequestsRef.current = loadRequests;
+    }, [loadRequests]);
+
     useEffect(() => {
         if (!user?.id) return;
 
@@ -160,12 +165,16 @@ export function RequestsManagement() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'user_requests' },
-                () => loadRequests()
+                () => {
+                    if (loadRequestsRef.current) {
+                        loadRequestsRef.current();
+                    }
+                }
             )
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [user?.id, loadRequests]);
+    }, [user?.id]); // Dependência apenas do ID (primitivo estável)
 
     // Filter displayed requests by micro and search
     const filteredRequests = useMemo(() => {

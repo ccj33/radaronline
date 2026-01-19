@@ -1,31 +1,21 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
-  ChevronRight,
   ChevronDown,
   CheckCircle2,
   Clock,
   AlertTriangle,
   Circle,
-  Target,
   Layers,
   Zap,
   Calendar,
-  Users,
-  TrendingUp,
   Search,
   Edit3,
-  Save,
-  Trash2,
   MessageCircle,
-  Send,
-  MapPin,
-  X
+  MapPin
 } from 'lucide-react';
-import { Action, Activity, Objective, TeamMember, Status, RaciRole, ActionComment } from '../../types';
+import { Action, Activity, Objective, TeamMember, Status, RaciRole } from '../../types';
 import { formatDateBr, parseDateLocal, getTodayStr } from '../../lib/date';
 import { getActivityDisplayId, getActionDisplayId } from '../../lib/text';
-import { useAuth } from '../../auth';
-import { getAvatarUrl } from '../settings/UserSettingsModal';
 import { ActionDetailModal } from '../actions/ActionDetailModal';
 
 interface OptimizedViewProps {
@@ -44,12 +34,7 @@ interface OptimizedViewProps {
   readOnly?: boolean;
 }
 
-const STATUSES: Status[] = ['Não Iniciado', 'Em Andamento', 'Concluído', 'Atrasado'];
-const RACI_ROLES: { role: RaciRole; label: string; color: string }[] = [
-  { role: 'R', label: 'Responsável', color: 'bg-blue-500' },
-  { role: 'A', label: 'Aprovador', color: 'bg-purple-500' },
-  { role: 'I', label: 'Informado', color: 'bg-slate-400' },
-];
+
 
 const OBJECTIVE_COLORS: Record<number, { border: string; bg: string; accent: string; text: string }> = {
   1: { border: 'border-cyan-200 dark:border-cyan-800', bg: 'bg-cyan-50 dark:bg-cyan-900/30', accent: 'bg-cyan-500', text: 'text-cyan-600 dark:text-cyan-400' },
@@ -91,44 +76,9 @@ const MiniProgress: React.FC<{ value: number; size?: 'sm' | 'md' }> = ({ value, 
   );
 };
 
-const formatRelativeTime = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'agora';
-  if (diffMins < 60) return `há ${diffMins} min`;
-  if (diffHours < 24) return `há ${diffHours}h`;
-  if (diffDays === 1) return 'ontem';
-  if (diffDays < 7) return `há ${diffDays} dias`;
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
 
-const CommentItem: React.FC<{ comment: ActionComment }> = ({ comment }) => {
-  return (
-    <div className="flex gap-3 py-3 border-b border-slate-100/80 dark:border-slate-700/50 last:border-0">
-      <img
-        src={getAvatarUrl(comment.authorAvatarId || 'zg10')}
-        alt={comment.authorName}
-        className="w-9 h-9 rounded-full bg-white dark:bg-slate-700 border-2 border-white dark:border-slate-600 shadow-sm shrink-0 ring-2 ring-slate-100 dark:ring-slate-700"
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">{comment.authorName}</span>
-          <span className="text-xs text-slate-400 flex items-center gap-1 bg-slate-50 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">
-            <MapPin size={10} />
-            {comment.authorMunicipio}
-          </span>
-          <span className="text-xs text-slate-400">{formatRelativeTime(comment.createdAt)}</span>
-        </div>
-        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
-      </div>
-    </div>
-  );
-};
+
 
 const ActionCard: React.FC<{
   action: Action;
@@ -322,7 +272,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   onAddComment,
   readOnly = false,
 }) => {
-  const { user } = useAuth();
+
   const [expandedObjectives, setExpandedObjectives] = useState<number[]>(objectives.map(o => o.id));
   const [expandedActivities, setExpandedActivities] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'tree' | 'cards' | 'list' | 'kanban'>('tree');

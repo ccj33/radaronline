@@ -11,7 +11,7 @@ import {
     MACRORREGIOES,
     MICROREGIOES,
     getMicroregioesByMacro,
-    getMunicipiosByMicro,
+
 } from '../../../data/microregioes';
 
 export type CompareLevel = 'macro' | 'micro';
@@ -53,10 +53,7 @@ export function DashboardFilters({ filters, onChange }: DashboardFiltersProps) {
         return [...MACRORREGIOES].sort((a, b) => a.nome.localeCompare(b.nome));
     }, []);
 
-    const _municipioOptions = useMemo(() => {
-        if (!filters.selectedMicroId) return [];
-        return getMunicipiosByMicro(filters.selectedMicroId);
-    }, [filters.selectedMicroId]);
+
 
     // Entity options for comparison
     const entityOptions = useMemo(() => {
@@ -98,12 +95,7 @@ export function DashboardFilters({ filters, onChange }: DashboardFiltersProps) {
         });
     };
 
-    const _handleMunicipioChange = (codigo: string) => {
-        onChange({
-            ...filters,
-            selectedMunicipioCode: codigo || null,
-        });
-    };
+
 
     const toggleCompareMode = () => {
         onChange({

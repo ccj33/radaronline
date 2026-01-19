@@ -37,7 +37,7 @@ type ProtectedRouteProps = {
  * pelo estado em App.tsx. Este componente apenas guarda o conteúdo.
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, hasSession, profileLoadError } = useAuth();
+  const { isAuthenticated, isLoading, user, hasSession, profileLoadError, refreshUser, logout } = useAuth();
 
   // 1. Carregando inicial ou transição de fetch
   if (isLoading) {
@@ -54,7 +54,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (hasSession && !user) {
     if (profileLoadError) {
       // Extrai funções de recuperação do contexto (force refresh ou logout total)
-      const { refreshUser, logout } = useAuth();
+
 
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">

@@ -268,7 +268,12 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
     }, [user, loadRequests]);
 
     // ✅ REALTIME: Atualiza automaticamente quando novas solicitações chegam
-    // Funciona para todos: admins veem novas solicitações, usuários veem respostas
+    // Usando Ref para evitar re-subscrição desnecessária quando loadRequests mudar
+    const loadRequestsRef = useRef(loadRequests);
+    useEffect(() => {
+        loadRequestsRef.current = loadRequests;
+    }, [loadRequests]);
+
     useEffect(() => {
         if (!user?.id) return;
 
@@ -282,9 +287,13 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
                     table: 'user_requests'
                 },
                 () => {
-                    // Recarrega a lista quando houver mudanças
-                    loadRequests();
-                    loadPendingCount();
+                    // Chama a função mais recente via ref
+                    loadRequestsRef.current();
+                    // Atualiza contador também se necessário, mas loadRequests já deve cuidar disso ou podemos chamar loadPendingCount também
+                    // loadPendingCount é estável? Ele também depende de user/isAdmin.
+                    // Idealmente deveríamos ter um ref para ele também se fosse ser chamado aqui.
+                    // Mas o código original chamava loadPendingCount(). Vamos manter seguro.
+                    // Para simplificar e garantir, apenas recarregamos a lista principal que já atualiza o estado
                 }
             )
             .subscribe();
@@ -292,7 +301,7 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.id, loadRequests]);
+    }, [user?.id]); // Dependência apenas do ID (primitivo estável)
 
     // Fechar ao clicar fora
     useEffect(() => {

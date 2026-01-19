@@ -18,15 +18,10 @@ import {
   Download,
   Maximize,
   Minimize,
-  CalendarRange,
-  Menu,
-  X,
   ChevronRight,
-  Settings,
   Bell,
   MapPin,
   Target,
-  TrendingUp,
   UserPlus,
 } from 'lucide-react';
 import { NotificationBell } from '../../components/common/NotificationBell';
@@ -36,7 +31,7 @@ import { useAuth } from '../../auth';
 import { User } from '../../types/auth.types';
 import { Action, TeamMember, Objective, Activity as ActivityType } from '../../types';
 import { Sidebar } from '../../components/layout/Sidebar';
-import { MICROREGIOES, getMicroregiaoById, getMacrorregioes, getMicroregioesByMacro } from '../../data/microregioes';
+import { MICROREGIOES, getMicroregiaoById, getMacrorregioes } from '../../data/microregioes';
 import * as authService from '../../services/authService';
 import { saveUserMunicipality, loadPendingRegistrations, deletePendingRegistration, PendingRegistration } from '../../services/dataService';
 import { UserFormModal } from './UserFormModal';
@@ -79,7 +74,7 @@ export function AdminPanel(props: AdminPanelProps) {
   const { isMobile, isTablet } = useResponsive();
 
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const [showMicroSelector, setShowMicroSelector] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -394,11 +389,10 @@ export function AdminPanel(props: AdminPanelProps) {
                 <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                   Painel Admin
                 </h1>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  isSuperAdmin
-                    ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                }`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isSuperAdmin
+                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'
+                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}>
                   {isSuperAdmin ? 'Super Admin' : 'Admin'}
                 </span>
               </div>
@@ -421,11 +415,11 @@ export function AdminPanel(props: AdminPanelProps) {
         {/* Mobile Content - Com padding para bottom nav */}
         <main className="flex-1 overflow-y-auto pb-20">
           <div className="px-3 py-4 space-y-4">
-            
+
             {/* Tab: Dashboard Mobile - REDESIGNED */}
             {activeTab === 'dashboard' && (
               <div className="space-y-4">
-                
+
                 {/* Botão de Selecionar Microrregião - PRINCIPAL */}
                 <button
                   onClick={() => setShowMicroSelector(true)}
@@ -453,7 +447,7 @@ export function AdminPanel(props: AdminPanelProps) {
                     <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{users.length}</p>
                     <p className="text-xs text-slate-400 mt-1">{users.filter(u => u.ativo !== false).length} ativos</p>
                   </div>
-                  
+
                   <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
                       <Activity className="w-3.5 h-3.5" />
@@ -556,7 +550,7 @@ export function AdminPanel(props: AdminPanelProps) {
                       {pendingRegistrations.slice(0, 3).map(pending => {
                         const micro = getMicroregiaoById(pending.microregiaoId);
                         return (
-                          <div 
+                          <div
                             key={pending.id}
                             className="bg-white dark:bg-slate-800 rounded-lg p-3 flex items-center gap-3 shadow-sm"
                           >
@@ -638,7 +632,7 @@ export function AdminPanel(props: AdminPanelProps) {
                       <option key={macro} value={macro}>{macro}</option>
                     ))}
                   </select>
-                  
+
                   {isSuperAdmin && (
                     <button
                       onClick={() => { setEditingUser(null); setShowUserModal(true); }}
@@ -695,7 +689,7 @@ export function AdminPanel(props: AdminPanelProps) {
                             </button>
                           </div>
                         </div>
-                        
+
                         {/* Menu expandido */}
                         {expandedUserId === user.id && (
                           <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex gap-2">
@@ -707,11 +701,10 @@ export function AdminPanel(props: AdminPanelProps) {
                             </button>
                             <button
                               onClick={() => { setConfirmToggle({ open: true, user, nextStatus: user.ativo === false }); setExpandedUserId(null); }}
-                              className={`flex-1 py-2 text-xs font-medium rounded-lg ${
-                                user.ativo !== false
-                                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                                  : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                              }`}
+                              className={`flex-1 py-2 text-xs font-medium rounded-lg ${user.ativo !== false
+                                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                }`}
                             >
                               {user.ativo !== false ? 'Desativar' : 'Ativar'}
                             </button>
@@ -728,7 +721,7 @@ export function AdminPanel(props: AdminPanelProps) {
                       </div>
                     );
                   })}
-                  
+
                   {filteredUsers.length === 0 && (
                     <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
                       Nenhum usuário encontrado
@@ -781,7 +774,7 @@ export function AdminPanel(props: AdminPanelProps) {
               await authService.updateUser(confirmToggle.user.id, { ativo: confirmToggle.nextStatus });
               showToast(`Usuário ${confirmToggle.nextStatus ? 'ativado' : 'desativado'}`, 'success');
               loadUsers();
-            } catch (error) {
+            } catch {
               showToast('Erro ao alterar status', 'error');
             } finally {
               setActionLoadingId(null);
@@ -816,7 +809,7 @@ export function AdminPanel(props: AdminPanelProps) {
               await authService.deleteUser(confirmDelete.user.id);
               showToast('Usuário excluído', 'success');
               loadUsers();
-            } catch (error) {
+            } catch {
               showToast('Erro ao excluir usuário', 'error');
             } finally {
               setActionLoadingId(null);
@@ -853,16 +846,15 @@ export function AdminPanel(props: AdminPanelProps) {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const hasBadge = tab.id === 'requests' && pendingRegistrations.length > 0;
-              
+
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 min-h-[56px] transition-all ${
-                    isActive
-                      ? 'text-teal-600 dark:text-teal-400'
-                      : 'text-slate-400 dark:text-slate-500'
-                  }`}
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 min-h-[56px] transition-all ${isActive
+                    ? 'text-teal-600 dark:text-teal-400'
+                    : 'text-slate-400 dark:text-slate-500'
+                    }`}
                 >
                   <div className="relative">
                     {isActive && (

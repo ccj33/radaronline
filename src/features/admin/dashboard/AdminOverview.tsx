@@ -23,16 +23,14 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
-  AreaChart,
-  Area
+  CartesianGrid
 } from 'recharts';
 import { Action, TeamMember } from '../../../types';
 import { User } from '../../../types/auth.types';
-import { MICROREGIOES, getMicroregioesByMacro, MACRORREGIOES, getMicroregiaoById } from '../../../data/microregioes';
+import { MICROREGIOES, getMicroregioesByMacro, MACRORREGIOES } from '../../../data/microregioes';
 import { DashboardFiltersState } from './DashboardFilters';
 import { KpiDetailModal } from './KpiDetailModal';
-import { staggerContainer, staggerItem, cardHover } from '../../../lib/motion';
+import { staggerContainer, staggerItem } from '../../../lib/motion';
 
 // Safe ResponsiveContainer that prevents rendering with invalid dimensions
 function SafeResponsiveContainer({ children, minHeight = 150 }: { children: React.ReactNode; minHeight?: number }) {
@@ -205,7 +203,7 @@ const CleanTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function AdminOverview({ actions, users, teams: _teams, filters, children, onTabChange, pendingCount }: AdminOverviewProps) {
+export function AdminOverview({ actions, users, filters, children, onTabChange, pendingCount }: AdminOverviewProps) {
   // Filter actions and users based on selected filters
   const filteredData = useMemo(() => {
     let filteredActions = actions;
@@ -339,16 +337,7 @@ export function AdminOverview({ actions, users, teams: _teams, filters, children
     // assumindo a mesma estrutura do original.
     // ... (Mantendo a interface dos dados para os modais)
 
-    // Helper to create action summary
-    const toActionSummary = (a: Action) => {
-      const micro = getMicroregiaoById(a.microregiaoId);
-      return {
-        uid: a.uid, id: a.id, title: a.title, status: a.status,
-        plannedEndDate: new Date(a.plannedEndDate).toLocaleDateString('pt-BR'),
-        responsible: a.raci?.find(r => r.role === 'R')?.name || '',
-        microName: micro?.nome || '',
-      };
-    };
+
 
     // Micro Coverage
     const actionCountByMicro = new Map<string, number>();

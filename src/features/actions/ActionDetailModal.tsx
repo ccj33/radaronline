@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     X, Save, Trash2, Calendar, MessageCircle, Send,
-    Users, Target, Clock, ChevronDown, Plus, Lock, Eye, Reply, CornerDownRight, Pencil, Check, ChevronUp, Tag, Hash
+    Users, Target, Clock, ChevronDown, Plus, Lock, Eye, Reply, CornerDownRight, Pencil, Check, Hash
 } from 'lucide-react';
 import { Action, Status, RaciRole, TeamMember, ActionComment, ActionTag } from '../../types';
 import { LoadingButton } from '../../components/common/LoadingSpinner';
@@ -14,7 +14,7 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { useResponsive } from '../../hooks/useResponsive';
 import { getActionDisplayId } from '../../lib/text';
 import { applyActionRules, canSaveAction, ActionRuleErrors } from '../../lib/actionRules';
-import { loadTags, createTag, addTagToAction, removeTagFromAction, deleteTag } from '../../services/dataService';
+import { loadTags, createTag, deleteTag } from '../../services/dataService';
 
 // =====================================
 // PROPS DO COMPONENTE
@@ -278,7 +278,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
     const [newTagName, setNewTagName] = useState('');
     const [isLoadingTags, setIsLoadingTags] = useState(false);
     const [tagToDelete, setTagToDelete] = useState<ActionTag | null>(null);
-    const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
 
     // Mention autocomplete states
     const [showMentions, setShowMentions] = useState(false);
@@ -368,29 +368,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
         setIsDirty(true);
     }, [draftAction]);
 
-    // Adicionar tag existente à ação (mantém compatibilidade)
-    const handleAddTag = useCallback((tag: ActionTag) => {
-        if (!draftAction) return;
 
-        // Verifica se já existe
-        if (draftAction.tags.some(t => t.id === tag.id)) return;
-
-        setDraftAction(prev => {
-            if (!prev) return null;
-            return { ...prev, tags: [...prev.tags, tag] };
-        });
-        setIsDirty(true);
-        setShowTagPopover(false);
-    }, [draftAction]);
-
-    // Remover tag da ação
-    const handleRemoveTag = useCallback((tagId: string) => {
-        setDraftAction(prev => {
-            if (!prev) return null;
-            return { ...prev, tags: prev.tags.filter(t => t.id !== tagId) };
-        });
-        setIsDirty(true);
-    }, []);
 
     // Criar nova tag e selecioná-la
     const handleCreateTag = useCallback(async () => {
@@ -407,18 +385,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
         }
     }, [newTagName]);
 
-    // Apenas salvar tag para uso futuro (não adiciona à ação atual)
-    const handleSaveTagOnly = useCallback(async () => {
-        if (!newTagName.trim()) return;
 
-        try {
-            const newTag = await createTag(newTagName.trim());
-            setNewTagName('');
-            setAvailableTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-        } catch (error) {
-            console.error('Erro ao salvar tag:', error);
-        }
-    }, [newTagName]);
 
     // Solicitar confirmação para excluir tag
     const handleDeleteTag = useCallback((tag: ActionTag) => {
@@ -535,7 +502,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
             setRuleErrors(errors);
             setUiState(ui);
         }
-    }, [draftAction?.uid]); // Rodar a validação inicial quando mudar de ação
+    }, [draftAction]); // Rodar a validação inicial quando mudar de ação
 
     // Helper para atalhos de data
     const setDateShortcut = useCallback((field: 'startDate' | 'plannedEndDate' | 'endDate', daysToAdd: number = 0) => {
