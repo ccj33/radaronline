@@ -23,20 +23,13 @@ export function LoginPage() {
       return;
     }
 
-    console.log('[LoginPage] 🔐 Iniciando login para:', email);
-
     try {
       const result = await login(email, senha);
-      console.log('[LoginPage] 📬 Resultado do login:', result);
 
       if (!result.success) {
-        console.log('[LoginPage] ❌ Login falhou:', result.error);
         setError(result.error || 'Erro ao fazer login');
-      } else {
-        console.log('[LoginPage] ✅ Login bem-sucedido! Aguardando redirecionamento...');
       }
-    } catch (err) {
-      console.error('[LoginPage] 💥 Erro inesperado no login:', err);
+    } catch {
       setError('Erro inesperado ao fazer login');
     }
 
@@ -47,7 +40,7 @@ export function LoginPage() {
     <div
       className="min-h-[100svh] w-full relative flex items-center justify-center p-4"
       style={{
-        backgroundImage: 'url(/login-bg-3.png)',
+        backgroundImage: 'url(/login-bg.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

@@ -1044,7 +1044,6 @@ const FloatingCTA = ({ onClick, isVisible }: { onClick: () => void; isVisible: b
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[FloatingCTA] Button clicked!');
                         onClick();
                     }}
                     className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-lg cursor-pointer whitespace-nowrap transition-transform hover:scale-105 active:scale-95"
@@ -1090,7 +1089,6 @@ export function LandingOnboarding({ onComplete }: LandingOnboardingProps) {
     }, []);
 
     const handleContinue = () => {
-        console.log('[LandingOnboarding] Calling onComplete...');
         onComplete();
     };
 

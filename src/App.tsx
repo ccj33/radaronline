@@ -18,6 +18,7 @@ import { formatISODate, parseDateLocal } from './lib/date';
 import { clampProgress } from './lib/validation';
 import { log, logError } from './lib/logger';
 import { filterOrphanedActions } from './lib/actionValidation';
+import { getCache, setCache, invalidateAllCache, CACHE_KEYS } from './lib/sessionCache';
 
 // Data - Apenas constantes de configuração, sem mocks
 import { MICROREGIOES } from './data/microregioes';
@@ -400,10 +401,6 @@ function AppContent() {
       setIsDataLoading(true);
       setDataError(null);
 
-      // Limpar dados imediatamente para evitar flash de dados antigos durante a transição
-      setObjectives([]);
-      setActivities({});
-
       try {
         // ✅ DEMO MODE: Usar dados fictícios em vez de carregar do banco
         if (isDemoMode) {
@@ -419,9 +416,41 @@ function AppContent() {
 
         // Carregar ações (filtradas por micro se não for admin vendo todas)
         const microId = isViewingAllMicros ? undefined : currentMicroId;
+        const cacheKey = microId || 'all';
 
-        // Carregar todos os dados em paralelo
-        // IMPORTANTE: Objetivos e Atividades são SEPARADOS por microrregião!
+        // ✅ CACHE-FIRST: Tentar usar dados do cache para render instantâneo
+        const cachedActions = getCache<Action[]>(CACHE_KEYS.ACTIONS, cacheKey);
+        const cachedTeams = getCache<Record<string, TeamMember[]>>(CACHE_KEYS.TEAMS, cacheKey);
+        const cachedObjectives = getCache<{ id: number; title: string; status: 'on-track' | 'delayed' }[]>(CACHE_KEYS.OBJECTIVES, cacheKey);
+        const cachedActivities = getCache<Record<number, { id: string; title: string; description: string }[]>>(CACHE_KEYS.ACTIVITIES, cacheKey);
+
+        const hasCache = cachedActions && cachedTeams && cachedObjectives && cachedActivities;
+
+        // Se tem cache válido, usa imediatamente e carrega do servidor em background
+        if (hasCache) {
+          log('App', '⚡ Usando dados do cache para render instantâneo');
+          setActions(cachedActions);
+          setTeamsByMicro(cachedTeams);
+          setObjectives(cachedObjectives);
+          setActivities(cachedActivities);
+          setIsDataLoading(false);
+
+          // Atualizar seleção baseado no cache
+          if (cachedObjectives.length > 0) {
+            const nextObjectiveId = cachedObjectives.some(o => o.id === selectedObjective)
+              ? selectedObjective
+              : cachedObjectives[0].id;
+            if (nextObjectiveId !== selectedObjective) {
+              setSelectedObjective(nextObjectiveId);
+            }
+            const nextObjectiveActivities = cachedActivities[nextObjectiveId] || [];
+            if (nextObjectiveActivities.length > 0 && !nextObjectiveActivities.some(a => a.id === selectedActivity)) {
+              setSelectedActivity(nextObjectiveActivities[0].id);
+            }
+          }
+        }
+
+        // Carregar todos os dados em paralelo (mesmo que tenha cache, atualiza em background)
         const [actionsData, teamsData, objectivesData, activitiesData] = await Promise.all([
           dataService.loadActions(microId),
           dataService.loadTeams(microId),
@@ -429,16 +458,16 @@ function AppContent() {
           dataService.loadActivities(microId),
         ]);
 
-        // ✅ CORREÇÃO DE INCONSISTÊNCIA: Filtrar ações órfãs (sem atividade válida)
-        // Isso garante que a contagem seja consistente entre Dashboard, Objetivos e Agenda
+        // Filtrar ações órfãs
         const validActions = filterOrphanedActions(actionsData, activitiesData);
 
-        // Log de diagnóstico se houver ações órfãs
-        const orphanedCount = actionsData.length - validActions.length;
-        if (orphanedCount > 0) {
-          log('App', `Removidas ${orphanedCount} ações órfãs (sem atividade válida)`);
-        }
+        // ✅ Salvar no cache para próximo reload
+        setCache(CACHE_KEYS.ACTIONS, validActions, cacheKey);
+        setCache(CACHE_KEYS.TEAMS, teamsData, cacheKey);
+        setCache(CACHE_KEYS.OBJECTIVES, objectivesData, cacheKey);
+        setCache(CACHE_KEYS.ACTIVITIES, activitiesData, cacheKey);
 
+        // Atualizar estado com dados frescos
         setActions(validActions);
         setTeamsByMicro(teamsData);
         setObjectives(objectivesData);
