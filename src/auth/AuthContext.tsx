@@ -87,9 +87,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setTimeout(() => reject(new Error('Timeout ao carregar perfil (10s)')), 10000);
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8afd84e8-d153-49a1-9c91-ad59684a8341', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'AuthContext.tsx:84', message: 'QUERY SUPABASE INICIADA', data: { userId, timestamp: Date.now() }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H2' }) }).catch(() => { });
-      // #endregion
+      console.log('[AuthContext] 🚀 Iniciando query ao Supabase...');
+      const startTime = Date.now();
 
       const queryPromise = supabase
         .from('profiles')
@@ -98,6 +97,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single();
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      console.log('[AuthContext] ⏱️ Query completou em', Date.now() - startTime, 'ms');
 
       if (error) {
         console.error('[AuthContext] ❌ Erro ao carregar perfil:', error.message);
