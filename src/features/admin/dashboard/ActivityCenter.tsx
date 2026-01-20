@@ -8,7 +8,7 @@ import { MICROREGIOES } from '../../../data/microregioes';
 import { loggingService } from '../../../services/loggingService';
 import { ActivityType, ActivityLog } from '../../../types/activity.types';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { logError } from '../../../lib/logger';
 
 export type ActivityItem = {

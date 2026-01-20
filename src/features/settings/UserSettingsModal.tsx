@@ -4,7 +4,7 @@ import {
     X, Check, User as UserIcon, Save, Send, Bell, Moon, Sun, Shield,
     Palette, KeyRound, Monitor, Laptop, Smartphone, LogOut,
     Clock, RotateCcw, MessageSquare, AtSign, XCircle, LifeBuoy,
-    MapPin, Building, Layers
+    MapPin, Building, Layers, ArrowUp, Lightbulb, Plus, ShieldCheck, ChevronLeft
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -99,17 +99,70 @@ export function getAvatarUrl(avatarId: string): string {
 interface UserSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    initialTab?: 'profile' | 'appearance' | 'notifications' | 'security';
+    initialTab?: 'profile' | 'appearance' | 'notifications' | 'security' | 'roadmap';
     mode?: 'settings' | 'avatar';
 }
 
-type Tab = 'profile' | 'appearance' | 'notifications' | 'security';
+type Tab = 'profile' | 'appearance' | 'notifications' | 'security' | 'roadmap';
+
+// --- Suggestion Types & Mock Data (Ported from NewsFeed) ---
+interface Suggestion {
+    id: string;
+    authorMunicipality: string;
+    title: string;
+    description: string;
+    votes: number;
+    status: 'voting' | 'under_review' | 'planned' | 'completed';
+    category: 'feature' | 'usability' | 'content';
+    hasVoted?: boolean;
+}
+
+const MOCK_SUGGESTIONS: Suggestion[] = [
+    {
+        id: 's1',
+        authorMunicipality: 'Itabirito',
+        title: 'Botão de "Duplicar Ação"',
+        description: 'Seria útil poder duplicar uma ação existente para ganhar tempo entre unidades diferentes.',
+        votes: 42,
+        status: 'voting',
+        category: 'usability',
+        hasVoted: false
+    },
+    {
+        id: 's2',
+        authorMunicipality: 'Ouro Preto',
+        title: 'Relatório PDF por UBS',
+        description: 'Precisamos filtrar por unidade para levar nas reuniões locais.',
+        votes: 38,
+        status: 'under_review',
+        category: 'feature',
+        hasVoted: true
+    },
+    {
+        id: 's3',
+        authorMunicipality: 'Mariana',
+        title: 'Incluir curso de Rondon',
+        description: 'O curso feito ano passado não está aparecendo no histórico.',
+        votes: 12,
+        status: 'voting',
+        category: 'content',
+        hasVoted: false
+    }
+];
 
 export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'settings' }: UserSettingsModalProps) {
     const { user, refreshUser } = useAuth();
     const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState<Tab>('profile');
     const isAvatarMode = mode === 'avatar';
+
+    // Roadmap State
+    const [suggestions, setSuggestions] = useState(MOCK_SUGGESTIONS);
+    const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
+
+    const handleVote = (id: string) => {
+        setSuggestions(prev => prev.map(s => s.id === id ? { ...s, votes: s.votes + 1, hasVoted: true } : s));
+    };
 
     // Profile State
     const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarId || 'zg10');
@@ -295,15 +348,33 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
             // 1. Se initialTab foi passado explicitamente, usar ele
             // 2. Se mode=avatar, mostrar 'profile' (seletor de avatar)
             // 3. Se mode=settings, mostrar 'security' (suporte)
+            // Priority 1: initialTab
             if (initialTab) {
                 setActiveTab(initialTab);
-            } else if (isAvatarMode) {
+            }
+            // Priority 2: Avatar Mode
+            else if (isAvatarMode) {
                 setActiveTab('profile');
-            } else {
-                setActiveTab('security');
+            }
+            // Priority 3: Default for Settings Mode (Profile is better than Security)
+            else {
+                setActiveTab('profile');
             }
         }
     }, [isOpen, user, initialTab, isAvatarMode]);
+
+    // Force update when initialTab changes while open (edge case)
+    // Force update when initialTab changes while open (edge case) with DELAY
+    useEffect(() => {
+        if (isOpen && initialTab) {
+            console.log('[SettingsModal] Force update tab with delay:', initialTab);
+            // Slight delay to ensure modal is fully ready/rendered
+            const timer = setTimeout(() => {
+                setActiveTab(initialTab);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [initialTab, isOpen]);
 
     if (!isOpen || !user) return null;
 
@@ -671,6 +742,16 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
                                         <LifeBuoy className="w-4 h-4" />
                                         Suporte
                                     </button>
+                                    <button
+                                        onClick={() => setActiveTab('roadmap')}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'roadmap'
+                                            ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700'
+                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                                            }`}
+                                    >
+                                        <Lightbulb className="w-4 h-4" />
+                                        Roadmap
+                                    </button>
                                 </nav>
                                 <button
                                     onClick={onClose}
@@ -787,6 +868,71 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
 
 
                                         {/* Request Data Change moved to Security Tab */}
+                                    </div>
+                                )}
+
+                                {/* TAB: ROADMAP (New) */}
+                                {activeTab === 'roadmap' && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        {/* Header Roadmap */}
+                                        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-white rounded-2xl relative overflow-hidden shadow-lg">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                                <Lightbulb size={120} />
+                                            </div>
+                                            <div className="relative z-10">
+                                                <h3 className="font-bold text-2xl mb-2 flex items-center gap-2">
+                                                    Roadmap Colaborativo <span className="text-xs bg-white/20 px-2 py-0.5 rounded text-white/90">BETA</span>
+                                                </h3>
+                                                <p className="text-indigo-100 leading-relaxed mb-6 max-w-lg">
+                                                    Você sugere, a rede vota, a gente constrói. Participe da evolução do Radar.
+                                                </p>
+                                                <button
+                                                    onClick={() => setIsSuggestionModalOpen(true)}
+                                                    className="px-6 py-3 bg-white text-indigo-700 rounded-xl text-sm font-bold hover:bg-indigo-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+                                                >
+                                                    <Plus size={18} /> Sugerir Melhoria
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-4">
+                                            <div className="flex items-center justify-between px-1">
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Top Sugestões</span>
+                                            </div>
+
+                                            {suggestions.sort((a, b) => b.votes - a.votes).map((suggestion, idx) => (
+                                                <div key={suggestion.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 flex gap-4 border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:shadow-md">
+                                                    <div className="flex flex-col items-center justify-center gap-1 min-w-[40px]">
+                                                        <button
+                                                            onClick={() => handleVote(suggestion.id)}
+                                                            disabled={suggestion.hasVoted}
+                                                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${suggestion.hasVoted
+                                                                ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
+                                                                : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500 border border-slate-200 dark:border-slate-600'
+                                                                }`}
+                                                        >
+                                                            <ArrowUp size={20} strokeWidth={3} />
+                                                        </button>
+                                                        <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{suggestion.votes}</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 py-1">
+                                                        <div className="flex items-center gap-2 mb-1.5">
+                                                            <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400 flex items-center justify-center text-xs font-bold">
+                                                                {idx + 1}
+                                                            </div>
+                                                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full">
+                                                                {suggestion.category}
+                                                            </span>
+                                                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                                <MapPin size={10} /> {suggestion.authorMunicipality}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="text-base font-bold text-slate-800 dark:text-white mb-1">{suggestion.title}</h4>
+                                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{suggestion.description}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 
@@ -1030,6 +1176,52 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
                 </div>
             )
             }
+            {isSuggestionModalOpen && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+                    >
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/50">
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <Lightbulb className="text-amber-500" size={24} />
+                                Sugerir Melhoria
+                            </h2>
+                            <button onClick={() => setIsSuggestionModalOpen(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                                <ChevronLeft className="rotate-180" size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-sm text-blue-900 dark:text-blue-200 flex gap-3 border border-blue-100 dark:border-blue-900/30">
+                                <ShieldCheck className="shrink-0 text-blue-600 dark:text-blue-400" size={20} />
+                                <p className="leading-snug">Para manter a qualidade, sua sugestão será revisada por nossa equipe antes de ir para votação.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Título da Sugestão</label>
+                                    <input type="text" className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white" placeholder="Ex: Exportar relatório em Excel..." />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Descrição Detalhada</label>
+                                    <textarea className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white h-24 resize-none" placeholder="Explique por que isso seria útil..." />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 bg-slate-50 dark:bg-slate-950/50 flex justify-end gap-3 rounded-b-2xl border-t border-slate-100 dark:border-slate-800">
+                            <button onClick={() => setIsSuggestionModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium transition-colors">Cancelar</button>
+                            <button onClick={() => {
+                                showToast('Sugestão enviada para análise!', 'success');
+                                setIsSuggestionModalOpen(false);
+                            }} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all">Enviar Sugestão</button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </AnimatePresence >
     );
 }

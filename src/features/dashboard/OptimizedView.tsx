@@ -10,8 +10,7 @@ import {
   Calendar,
   Search,
   Edit3,
-  MessageCircle,
-  MapPin
+  MessageCircle
 } from 'lucide-react';
 import { Action, Activity, Objective, TeamMember, Status, RaciRole } from '../../types';
 import { formatDateBr, parseDateLocal, getTodayStr } from '../../lib/date';
@@ -31,6 +30,7 @@ interface OptimizedViewProps {
   onAddComment?: (uid: string, content: string) => void;
   onEditComment?: (actionUid: string, commentId: string, content: string) => void;
   onDeleteComment?: (actionUid: string, commentId: string) => void;
+  onViewDetails?: (uid: string) => void;
   readOnly?: boolean;
 }
 
@@ -115,9 +115,28 @@ const ActionCard: React.FC<{
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 mb-3 leading-snug group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors">
+      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 mb-2 leading-snug group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors">
         {action.title}
       </h4>
+
+      {/* Áreas Envolvidas */}
+      {action.tags && action.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {action.tags.slice(0, 2).map(tag => (
+            <span
+              key={tag.id}
+              style={{ backgroundColor: tag.color }}
+              className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white truncate max-w-[60px] shadow-sm"
+              title={tag.name}
+            >
+              {tag.name}
+            </span>
+          ))}
+          {action.tags.length > 2 && (
+            <span className="text-[9px] text-slate-400 font-medium" title={action.tags.slice(2).map(t => t.name).join(', ')}>+{action.tags.length - 2}</span>
+          )}
+        </div>
+      )}
 
       {/* Progress */}
       <div className="mb-3">
@@ -208,7 +227,7 @@ const ActionRow: React.FC<{
       </span>
 
       {/* Progress */}
-      <div className="w-28 shrink-0">
+      <div className="w-24 shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <MiniProgress value={action.progress} />
@@ -219,6 +238,23 @@ const ActionRow: React.FC<{
           </span>
         </div>
       </div>
+
+      {/* Áreas Envolvidas */}
+      <span className="w-24 shrink-0 flex flex-wrap gap-1">
+        {action.tags?.slice(0, 2).map(tag => (
+          <span
+            key={tag.id}
+            style={{ backgroundColor: tag.color }}
+            className="px-1.5 py-0.5 rounded-full text-[8px] font-bold text-white truncate max-w-[50px]"
+            title={tag.name}
+          >
+            {tag.name}
+          </span>
+        ))}
+        {(action.tags?.length || 0) > 2 && (
+          <span className="text-[8px] text-slate-400">+{action.tags!.length - 2}</span>
+        )}
+      </span>
 
       {/* Comments */}
       <span className="w-10 shrink-0">
@@ -270,6 +306,7 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   onAddRaci,
   onRemoveRaci,
   onAddComment,
+  onViewDetails,
   readOnly = false,
 }) => {
 
@@ -359,6 +396,9 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   const handleSelectAction = (uid: string) => {
     setSelectedUid(uid);
     setIsModalOpen(true);
+    if (onViewDetails) {
+      onViewDetails(uid);
+    }
   };
 
   const handleCloseModal = () => {

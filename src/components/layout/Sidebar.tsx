@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronLeft, ChevronRight, Home, Target, Settings, LogOut, Shield, Trash2, Plus, Edit2, LayoutDashboard, Activity as ActivityIcon, Users, Trophy, Triangle, Calendar, ClipboardList, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Target, Settings, LogOut, Shield, Trash2, Plus, Edit2, LayoutDashboard, Activity as ActivityIcon, Users, Trophy, Triangle, Calendar, ClipboardList, MapPin, Newspaper, BarChart3 } from 'lucide-react';
 
 import { slideInLeft, staggerContainer, staggerItem, buttonTap } from '../../lib/motion';
 import { Objective, Activity as _ActivityType } from '../../types';
@@ -64,8 +64,8 @@ const SidebarActivityItem = React.memo<SidebarActivityItemProps>(({ id, title, i
     <button
       onClick={onSelect}
       className={`flex-1 text-left py-1.5 px-2 text-[10px] rounded-md transition-colors truncate ${isActive
-          ? (isEditMode ? "text-white font-bold bg-white/10" : "bg-emerald-500/10 text-white font-bold border border-emerald-500/20")
-          : "text-white/50 hover:bg-white/5 hover:text-white"
+        ? (isEditMode ? "text-white font-bold bg-white/10" : "bg-emerald-500/10 text-white font-bold border border-emerald-500/20")
+        : "text-white/50 hover:bg-white/5 hover:text-white"
         }`}
     >
       Atv {getActivityDisplayId(id)} - {title}
@@ -134,8 +134,8 @@ const SidebarObjectiveItem = React.memo<SidebarObjectiveItemProps>(({
       <button
         onClick={onToggle}
         className={`flex-1 text-left py-2 px-2.5 text-[11px] rounded-lg transition-all truncate leading-snug ${isActive
-            ? "bg-emerald-500/20 font-bold text-white shadow-sm ring-1 ring-emerald-500/30"
-            : "text-white/70 hover:text-white"
+          ? "bg-emerald-500/20 font-bold text-white shadow-sm ring-1 ring-emerald-500/30"
+          : "text-white/70 hover:text-white"
           }`}
       >
         <div className="flex items-center gap-2">
@@ -596,8 +596,11 @@ const SidebarContent: React.FC<SidebarProps> = ({
                   )}
                 </div>
 
-                {/* 1. Painel (Home) - Moved inside Planning */}
-                <SidebarItem icon={Home} label="Painel" isActive={currentNav === 'home'} onClick={() => setCurrentNav('home')} collapsed={!isOpen} />
+                {/* 1. Mural da Rede (News - Novo Home) */}
+                <SidebarItem icon={Newspaper} label="Mural da Rede" isActive={currentNav === 'news' || currentNav === 'home'} onClick={() => setCurrentNav('news')} collapsed={!isOpen} />
+
+                {/* 1.5 Indicadores (Dashboard Antigo) */}
+                <SidebarItem icon={BarChart3} label="Indicadores" isActive={currentNav === 'dashboard'} onClick={() => setCurrentNav('dashboard')} collapsed={!isOpen} />
 
                 {/* 2. Objetivos (Objectives) */}
                 <div className="relative group mt-1">

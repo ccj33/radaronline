@@ -43,39 +43,47 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 
 // Mobile Components
-import { MobileBottomNav, MobileFab, MobileDrawer } from './components/mobile';
+import { MobileBottomNav } from './components/mobile/MobileBottomNav';
+import { MobileFab } from './components/mobile/MobileActionCard';
+import { MobileDrawer } from './components/mobile/MobileDrawer';
 
 // Onboarding
 import { OnboardingTour } from './components/onboarding';
 
 // Common Components
-import {
-  // ExpandableDescription removido
-  ToastProvider,
-  useToast,
-  ConfirmModal,
-  EditNameModal, // Added import
-  ErrorBoundary,
-  DemoBanner,
-} from './components/common';
+import { ToastProvider, useToast } from './components/common/Toast';
+import { ConfirmModal } from './components/common/ConfirmModal';
+import { EditNameModal } from './components/common/EditNameModal';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { DemoBanner } from './components/common/DemoBanner';
 
-// Feature Components - Lazy loaded para reduzir bundle inicial
-import { TeamView } from './features/team/TeamView';
-import { ActivityTabs } from './features/actions/ActivityTabs';
-import { ActionTable } from './features/actions/ActionTable';
-import { ActionDetailModal } from './features/actions/ActionDetailModal';
-import { LoginPage, LgpdConsent, LandingOnboarding } from './features/login';
-import { UserSettingsModal } from './features/settings/UserSettingsModal';
+// Feature Components - Mantidos síncronos (leves ou essenciais para primeiro render)
 import { MunicipalityOnboardingModal } from './components/auth/MunicipalityOnboardingModal';
 
 // Lazy loaded components - Carregados sob demanda para melhor performance inicial
 import { lazy } from 'react';
 
+// Login - lazy porque usuário autenticado não precisa
+const LoginPage = lazy(() => import('./features/login/LoginPage').then(m => ({ default: m.LoginPage })));
+const LgpdConsent = lazy(() => import('./features/login/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
+const LandingOnboarding = lazy(() => import('./features/login/LandingOnboarding').then(m => ({ default: m.LandingOnboarding })));
+
+// Dashboard e Admin - lazy carregados após auth
 const Dashboard = lazy(() => import('./features/dashboard').then(m => ({ default: m.Dashboard })));
 const OptimizedView = lazy(() => import('./features/dashboard').then(m => ({ default: m.OptimizedView })));
 const GanttChart = lazy(() => import('./features/gantt/GanttChart').then(m => ({ default: m.GanttChart })));
 const AdminPanel = lazy(() => import('./features/admin').then(m => ({ default: m.AdminPanel })));
 const LinearCalendar = lazy(() => import('./features/admin/dashboard/LinearCalendar').then(m => ({ default: m.LinearCalendar })));
+
+// Componentes de ações - lazy porque dependem de dados carregados
+const TeamView = lazy(() => import('./features/team/TeamView').then(m => ({ default: m.TeamView })));
+const ActivityTabs = lazy(() => import('./features/actions/ActivityTabs').then(m => ({ default: m.ActivityTabs })));
+const ActionTable = lazy(() => import('./features/actions/ActionTable').then(m => ({ default: m.ActionTable })));
+const ActionDetailModal = lazy(() => import('./features/actions/ActionDetailModal').then(m => ({ default: m.ActionDetailModal })));
+
+// Settings e News - lazy carregados quando acessados
+const UserSettingsModal = lazy(() => import('./features/settings/UserSettingsModal').then(m => ({ default: m.UserSettingsModal })));
+const NewsFeed = lazy(() => import('./features/news/NewsFeed').then(m => ({ default: m.NewsFeed })));
 
 // Mock Data for Demo Mode
 import { DEMO_OBJECTIVES, DEMO_ACTIVITIES, DEMO_ACTIONS, DEMO_TEAM } from './data/mockData';
@@ -111,7 +119,7 @@ function AppContent() {
   const [ganttRange, setGanttRange] = useState<GanttRange>('all');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(!isMobile);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false); // Drawer mobile para hierarquia
-  const [currentNav, setCurrentNav] = useState<'strategy' | 'home' | 'settings'>('strategy');
+  const [currentNav, setCurrentNav] = useState<'strategy' | 'home' | 'settings' | 'dashboard' | 'news'>('news');
   // NOTA: showStickyActivity calculado mas não consumido na UI atual - mantido para uso futuro
   const [, setShowStickyActivity] = useState<boolean>(false);
 
@@ -163,6 +171,7 @@ function AppContent() {
   const [createActionMicroId, setCreateActionMicroId] = useState<string>('');
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [allowAvatarChange, setAllowAvatarChange] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'profile' | 'appearance' | 'notifications' | 'security' | 'roadmap' | undefined>(undefined);
   const [showMunicipalityModal, setShowMunicipalityModal] = useState(false);
 
   // --- ONBOARDING STATE ---
@@ -992,6 +1001,32 @@ function AppContent() {
     });
   }, [showToast, actions, checkCanManageTeam, currentMicroId, isViewingAllMicros, isAdmin]);
 
+  // Handler para expandir ação e carregar comentários sob demanda
+  const handleExpandAction = useCallback(async (uid: string | null) => {
+    if (!uid) {
+      setExpandedActionUid(null);
+      return;
+    }
+
+    setExpandedActionUid(uid);
+
+    // Encontrar a ação para verificar se precisa carregar comentários
+    // Usar actionsRef.current ou verificar no state atual se acessível
+    const action = actions.find(a => a.uid === uid);
+
+    // Se tem contagem > 0 mas 0 carregados, busca do servidor
+    if (action && (action.commentCount || 0) > 0 && action.comments.length === 0) {
+      try {
+        const comments = await dataService.loadActionComments(uid);
+        setActions(prev => prev.map(a =>
+          a.uid === uid ? { ...a, comments } : a
+        ));
+      } catch (error) {
+        logError('App', 'Erro ao carregar comentários on-demand', error);
+      }
+    }
+  }, [actions]);
+
   // Handler para adicionar comentários (com suporte a threads)
   const handleAddComment = useCallback(async (uid: string, content: string, parentId?: string | null) => {
     const action = findActionByUid(actions, uid);
@@ -1032,10 +1067,7 @@ function AppContent() {
     }
   }, [isAdmin]);
 
-  const handleOpenSettings = useCallback((mode: 'settings' | 'avatar' = 'settings') => {
-    setAllowAvatarChange(mode === 'avatar');
-    setIsSettingsModalOpen(true);
-  }, []);
+
 
   const handleLogout = useCallback(() => {
     logout();
@@ -1537,6 +1569,17 @@ function AppContent() {
     : '';
 
   // =====================================
+  // UI HANDLERS
+  // =====================================
+
+  const handleOpenSettings = (mode: 'settings' | 'avatar' = 'settings', initialTab?: 'profile' | 'appearance' | 'notifications' | 'security' | 'roadmap') => {
+    console.log('[App] Opening settings:', { mode, initialTab });
+    setAllowAvatarChange(mode === 'avatar');
+    setSettingsInitialTab(initialTab);
+    setIsSettingsModalOpen(true);
+  };
+
+  // =====================================
   // RENDERIZAÇÃO CONDICIONAL
   // =====================================
 
@@ -1743,7 +1786,7 @@ function AppContent() {
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
           currentNav={currentNav}
-          setCurrentNav={(nav: string) => setCurrentNav(nav as 'strategy' | 'home' | 'settings')}
+          setCurrentNav={(nav: string) => setCurrentNav(nav as 'strategy' | 'home' | 'settings' | 'dashboard' | 'news')}
           selectedObjective={selectedObjective}
           setSelectedObjective={setSelectedObjective}
           selectedActivity={selectedActivity}
@@ -1814,6 +1857,7 @@ function AppContent() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         mode={allowAvatarChange ? 'avatar' : 'settings'}
+        initialTab={settingsInitialTab}
       />
 
       {/* MAIN CONTENT */}
@@ -1876,8 +1920,8 @@ function AppContent() {
 
           <div className="p-4 sm:p-6" ref={chartContainerRef}>
 
-            {/* --- DASHBOARD VIEW --- */}
-            {currentNav === 'home' ? (
+            {/* --- DASHBOARD VIEW (OLD HOME) --- */}
+            {currentNav === 'dashboard' ? (
               <ErrorBoundary>
                 <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" /></div>}>
                   <Dashboard
@@ -1888,6 +1932,12 @@ function AppContent() {
                     onNavigate={handleDashboardNavigate}
                   />
                 </Suspense>
+              </ErrorBoundary>
+
+              /* --- NEWS FEED (NEW HOME) --- */
+            ) : currentNav === 'news' || currentNav === 'home' ? (
+              <ErrorBoundary>
+                <NewsFeed onOpenRoadmap={() => handleOpenSettings('settings', 'roadmap')} />
               </ErrorBoundary>
 
               /* --- GANTT VIEW --- */
@@ -1984,6 +2034,7 @@ function AppContent() {
                     onAddRaci={handleAddRaci}
                     onRemoveRaci={handleRemoveRaci}
                     onAddComment={handleAddComment}
+                    onViewDetails={handleExpandAction}
                     readOnly={isViewingAllMicros && !isAdmin}
                   />
                 </Suspense>
@@ -2021,7 +2072,7 @@ function AppContent() {
                     responsibleFilter={responsibleFilter}
                     setResponsibleFilter={setResponsibleFilter}
                     expandedActionId={expandedActionUid}
-                    setExpandedActionId={setExpandedActionUid}
+                    setExpandedActionId={handleExpandAction}
                     onUpdateAction={handleUpdateAction}
                     onSaveAction={handleSaveAction}
                     onCreateAction={handleCreateAction}

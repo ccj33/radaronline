@@ -5,7 +5,7 @@ import {
 import {
   Target, CheckCircle2, Clock, AlertTriangle, Calendar,
   ArrowUpRight, ArrowDownRight, Activity as ActivityIcon, Users,
-  BarChart2, PieChart as PieChartIcon, UserPlus
+  BarChart2, PieChart as PieChartIcon, UserPlus, FileText
 } from 'lucide-react';
 import { Action, TeamMember, Objective, Activity } from '../../types';
 import { parseDateLocal, getTodayStr } from '../../lib/date';
@@ -13,6 +13,7 @@ import { getActionDisplayId } from '../../lib/text';
 import { useAuth } from '../../auth';
 import { useResponsive } from '../../hooks/useMediaQuery';
 import { MobileStatusChart, MobileProgressChart, MobileKpiCard, MobileRingProgress } from '../../components/mobile';
+import { StrategicReportGenerator } from '../../components/reports/StrategicReportGenerator';
 
 interface DashboardProps {
   actions: Action[];
@@ -20,6 +21,8 @@ interface DashboardProps {
   objectives: Objective[];
   activities: Record<number, Activity[]>;
   onNavigate: (view: 'list' | 'team', filters?: { status?: string; objectiveId?: number }) => void;
+  status?: string;
+  objectiveId?: number;
 }
 const COLORS = {
   concluido: '#10b981', // emerald-500
@@ -30,6 +33,57 @@ const COLORS = {
   violet: '#8b5cf6', // violet-500
 };
 
+// Safe ResponsiveContainer to prevent width(-1) error
+import { useRef, useState, useEffect } from 'react';
+
+function SafeResponsiveContainer({ children, minHeight }: { children: React.ReactNode, minHeight?: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const checkDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        if (width > 0 && height > 0) {
+          setDimensions({ width: Math.floor(width), height: Math.floor(height) });
+        }
+      }
+    };
+
+    checkDimensions();
+
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(checkDimensions);
+    });
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: minHeight ? `${minHeight}px` : undefined }}>
+      {dimensions ? (
+        <ResponsiveContainer width={dimensions.width} height={dimensions.height}>
+          {children}
+        </ResponsiveContainer>
+      ) : (
+        <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+          Carregando gráfico...
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const Dashboard: React.FC<DashboardProps> = ({
   actions,
   team,
@@ -38,11 +92,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onNavigate
 }) => {
   const { user } = useAuth();
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile } = useResponsive();
 
   const handleCardClick = (status?: string) => {
     onNavigate('list', { status });
   };
+
+  // Estado do modal de relatório
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Calcular membros pendentes
   const pendingMembers = useMemo(() => {
@@ -175,9 +232,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
             Olá, <strong>{user?.nome || 'Gestor'}</strong>! Aqui está o resumo atualizado da sua microrregião.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">
-          <Calendar size={16} className="text-teal-600 dark:text-teal-400" />
-          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        <div className="flex items-center gap-2">
+          {/* Botão Exportar Relatório */}
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-colors"
+          >
+            <FileText size={16} />
+            Exportar Relatório
+          </button>
+          <div className="hidden sm:flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium">
+            <Calendar size={16} className="text-teal-600 dark:text-teal-400" />
+            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
         </div>
       </div>
 
@@ -318,7 +385,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h3>
             <div className="w-full h-[250px] relative">
               {metrics.statusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <SafeResponsiveContainer>
                   <PieChart>
                     <Pie
                       data={metrics.statusData}
@@ -339,7 +406,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <RechartsTooltip content={<CustomTooltip />} />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" />
                   </PieChart>
-                </ResponsiveContainer>
+                </SafeResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-slate-400 text-sm">
                   Sem dados para exibir
@@ -363,7 +430,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h3>
             <div className="w-full h-[250px]">
               {metrics.progressoPorObjetivo.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <SafeResponsiveContainer>
                   <BarChart
                     data={metrics.progressoPorObjetivo}
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -407,7 +474,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       ))}
                     </Bar>
                   </BarChart>
-                </ResponsiveContainer>
+                </SafeResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-slate-400 text-sm">
                   Sem dados para exibir
@@ -494,6 +561,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
       </div>
+
+      {/* Modal de Relatório Estratégico */}
+      <StrategicReportGenerator
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        actions={actions}
+        objectives={objectives}
+        activities={activities}
+        team={team}
+        microName={user?.microregiaoId || 'Microrregião'}
+        userName={user?.nome || 'Gestor'}
+      />
     </div>
   );
 };

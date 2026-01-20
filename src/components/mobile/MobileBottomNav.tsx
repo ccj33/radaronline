@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { Calendar, Users, LayoutDashboard, Zap, List, CalendarDays } from 'lucide-react';
 
 interface MobileBottomNavProps {
-  currentNav: 'strategy' | 'home' | 'settings';
+  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news';
   viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
-  onNavChange: (nav: 'strategy' | 'home' | 'settings') => void;
+  onNavChange: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news') => void;
   onViewModeChange: (mode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar') => void;
   showTeamOption?: boolean;
 }
@@ -24,8 +24,8 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, isActive, onClick, badge
     className={`
       relative flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5
       transition-all duration-200 min-h-[52px] max-w-[64px]
-      ${isActive 
-        ? 'text-teal-600 dark:text-teal-400' 
+      ${isActive
+        ? 'text-teal-600 dark:text-teal-400'
         : 'text-slate-400 dark:text-slate-500 active:text-slate-600 dark:active:text-slate-300'
       }
     `}
@@ -83,7 +83,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           isActive={currentNav === 'home'}
           onClick={() => onNavChange('home')}
         />
-        
+
         {/* Ações (Tabela) */}
         <NavItem
           icon={<List size={18} strokeWidth={2.2} />}
@@ -94,7 +94,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onViewModeChange('table');
           }}
         />
-        
+
         {/* Agenda/Calendário */}
         <NavItem
           icon={<CalendarDays size={18} strokeWidth={2.2} />}
@@ -105,7 +105,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onViewModeChange('calendar');
           }}
         />
-        
+
         {/* Cronograma (Gantt) */}
         <NavItem
           icon={<Calendar size={18} strokeWidth={2.2} />}
@@ -116,7 +116,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onViewModeChange('gantt');
           }}
         />
-        
+
         {/* Equipe - Condicional */}
         {showTeamOption && (
           <NavItem
@@ -129,7 +129,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             }}
           />
         )}
-        
+
         {/* Visão Rápida/Otimizada */}
         <NavItem
           icon={<Zap size={18} strokeWidth={2.2} />}
@@ -141,7 +141,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }}
         />
       </div>
-      
+
       {/* Home indicator safe area - altura dinâmica */}
       <div className="h-safe-area-inset-bottom bg-white/98 dark:bg-slate-800/98" />
     </motion.nav>

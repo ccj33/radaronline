@@ -40,7 +40,7 @@ export function LoginPage() {
     <div
       className="min-h-[100svh] w-full relative flex items-center justify-center p-4"
       style={{
-        backgroundImage: 'url(/fundo.png)',
+        backgroundImage: 'url(/fundo.webp), url(/fundo.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -209,7 +209,7 @@ export function LoginPage() {
 
           <div className="absolute bottom-24 z-10">
             <img
-              src="/loginlogo2.png"
+              src="/loginlogo2.webp"
               alt="Logos SUS Digital e SES"
               className="w-[40rem] h-auto object-contain opacity-40 hover:opacity-60 transition-opacity duration-500"
               style={{ filter: 'brightness(0) invert(1)' }}

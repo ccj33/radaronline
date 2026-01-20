@@ -54,6 +54,7 @@ export type Action = {
   tags: ActionTag[];        // Categorias/Tags da ação
   notes: string;            // Campo legado (manter compatibilidade)
   comments: ActionComment[]; // Comentários estilo Reddit
+  commentCount?: number;    // Total de comentários (para evitar carregar tudo na listagem)
 };
 
 // --- ESTRUTURAS AUXILIARES ---

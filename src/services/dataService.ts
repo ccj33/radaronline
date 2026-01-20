@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Action, ActionComment, TeamMember, RaciMember, ProfileDTO, ActionTag } from '../types';
+import type { Action, ActionComment, TeamMember, RaciMember, ActionTag } from '../types';
 import { generateActionUid } from '../types';
 import { loggingService } from './loggingService';
 import { log, logWarn, logError } from '../lib/logger';
@@ -71,12 +71,7 @@ interface ActionTagDTO {
     created_by: string | null;
 }
 
-interface ActionTagAssignmentDTO {
-    id: string;
-    action_uid: string;
-    tag_id: string;
-    created_at: string;
-}
+
 
 // =====================================
 // HELPERS DE CONVERSÃO
@@ -86,7 +81,8 @@ function mapActionDTOToAction(
     dto: ActionDTO,
     raci: ActionRaciDTO[],
     comments: ActionCommentDTO[],
-    tags: ActionTagDTO[] = []
+    tags: ActionTagDTO[] = [],
+    commentCount: number = 0
 ): Action {
     return {
         uid: dto.uid,
@@ -109,17 +105,21 @@ function mapActionDTOToAction(
             color: t.color,
         })),
         notes: dto.notes || '',
-        comments: comments.map(c => ({
-            id: c.id,
-            parentId: c.parent_id || null,
-            authorId: c.author_id,
-            authorName: c.author?.nome || 'Usuário',
-            authorMunicipio: c.author?.municipio || c.author?.microregiao_id || '',
-            authorAvatarId: c.author?.avatar_id || 'zg10',
-            authorRole: c.author?.role || undefined,
-            content: c.content,
-            createdAt: c.created_at,
-        })),
+        comments: comments.map(c => {
+            const author = Array.isArray(c.author) ? c.author[0] : c.author;
+            return {
+                id: c.id,
+                parentId: c.parent_id || null,
+                authorId: c.author_id,
+                authorName: author?.nome || 'Usuário',
+                authorMunicipio: author?.municipio || author?.microregiao_id || '',
+                authorAvatarId: author?.avatar_id || 'zg10',
+                authorRole: author?.role || undefined,
+                content: c.content,
+                createdAt: c.created_at,
+            };
+        }),
+        commentCount: commentCount || comments.length,
     };
 }
 
@@ -145,102 +145,104 @@ function mapTeamDTOToTeamMember(dto: TeamDTO): TeamMember {
  */
 export async function loadActions(microregiaoId?: string): Promise<Action[]> {
     try {
-        // Buscar ações
+        // Buscar ações com dados relacionados em UMA única query (JOINs)
         let query = supabase
             .from('actions')
-            .select('*')
+            .select(`
+                id, uid, action_id, activity_id, microregiao_id, title, status, start_date, planned_end_date, end_date, progress, notes,
+                raci:action_raci(id, created_at, action_id, member_name, role),
+                comments:action_comments(count),
+                tags:action_tag_assignments(
+                    action_uid,
+                    tag:action_tags (id, name, color)
+                )
+            `)
             .order('action_id', { ascending: true });
 
         if (microregiaoId && microregiaoId !== 'all') {
             query = query.eq('microregiao_id', microregiaoId);
         }
 
-        const { data: actionsData, error: actionsError } = await query;
+        const { data, error } = await query;
 
-        if (actionsError) {
-            logError('dataService', 'Erro ao carregar ações:', actionsError);
-            throw new Error(`Erro ao carregar ações: ${actionsError.message}`);
+        if (error) {
+            logError('dataService', 'Erro ao carregar ações:', error);
+            throw new Error(`Erro ao carregar ações: ${error.message}`);
         }
 
-        if (!actionsData || actionsData.length === 0) {
+        if (!data || data.length === 0) {
             return [];
         }
 
-        // Buscar RACI para todas as ações
-        const actionIds = actionsData.map(a => a.id);
-        const { data: raciData, error: raciError } = await supabase
-            .from('action_raci')
-            .select('*')
-            .in('action_id', actionIds);
-
-        if (raciError) {
-            logError('dataService', 'Erro ao carregar RACI:', raciError);
-        }
-
-        // Buscar comentários para todas as ações
-        const { data: commentsData, error: commentsError } = await supabase
-            .from('action_comments')
-            .select(`
-        *,
-        author:profiles(nome, microregiao_id, avatar_id, role, municipio)
-      `)
-            .in('action_id', actionIds)
-            .order('created_at', { ascending: true });
-
-        if (commentsError) {
-            logError('dataService', 'Erro ao carregar comentários:', commentsError);
-        }
-
-        // Buscar TAGS para todas as ações (usa action_uid, não action_id)
-        const actionUids = actionsData.map(a => a.uid);
-        const { data: tagsData, error: tagsError } = await supabase
-            .from('action_tag_assignments')
-            .select(`
-                action_uid,
-                tag:action_tags (id, name, color)
-            `)
-            .in('action_uid', actionUids);
-
-        if (tagsError) {
-            logError('dataService', 'Erro ao carregar tags:', tagsError);
-        }
-
         // Mapear para formato da aplicação
-        const raciByAction = new Map<string, ActionRaciDTO[]>();
-        (raciData || []).forEach(r => {
-            const existing = raciByAction.get(r.action_id) || [];
-            existing.push(r);
-            raciByAction.set(r.action_id, existing);
-        });
+        return data.map((item: any) => {
+            // Extrair tags do formato aninhado do join
+            const tags = item.tags?.map((t: any) => t.tag).filter(Boolean) || [];
 
-        const commentsByAction = new Map<string, ActionCommentDTO[]>();
-        (commentsData || []).forEach(c => {
-            const existing = commentsByAction.get(c.action_id) || [];
-            existing.push(c as ActionCommentDTO);
-            commentsByAction.set(c.action_id, existing);
-        });
+            // Extrair count de comentários (formato [{count: N}])
+            const commentCount = (item.comments && item.comments[0] && item.comments[0].count) || 0;
 
-        const tagsByAction = new Map<string, ActionTagDTO[]>();
-        (tagsData || []).forEach((t: any) => {
-            if (t.tag) {
-                const existing = tagsByAction.get(t.action_uid) || [];
-                existing.push(t.tag);
-                tagsByAction.set(t.action_uid, existing);
-            }
+            return mapActionDTOToAction(
+                item as ActionDTO,
+                (item.raci || []) as ActionRaciDTO[],
+                [], // Não carregamos comentários na lista inicial
+                tags as ActionTagDTO[],
+                commentCount
+            );
         });
-
-        // Combinar tudo
-        return actionsData.map(action =>
-            mapActionDTOToAction(
-                action as ActionDTO,
-                raciByAction.get(action.id) || [],
-                commentsByAction.get(action.id) || [],
-                tagsByAction.get(action.uid) || []
-            )
-        );
     } catch (error) {
         logError('dataService', 'Erro inesperado ao carregar ações:', error);
         throw error;
+    }
+}
+
+/**
+ * Carrega APENAS os comentários de uma ação específica
+ */
+export async function loadActionComments(actionUid: string): Promise<ActionComment[]> {
+    try {
+        // Encontrar o action_id (UUID) a partir do UID
+        const { data: actionData, error: actionError } = await supabase
+            .from('actions')
+            .select('id')
+            .eq('uid', actionUid)
+            .single();
+
+        if (actionError || !actionData) {
+            // Se falhar silenciosamente retorna vazio, ou loga erro
+            logWarn('dataService', 'Ação não encontrada ao carregar comentários:', actionUid);
+            return [];
+        }
+
+        const { data, error } = await supabase
+            .from('action_comments')
+            .select(`
+                id, action_id, author_id, parent_id, content, created_at,
+                author:profiles(nome, microregiao_id, avatar_id, role, municipio)
+            `)
+            .eq('action_id', actionData.id)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        return (data || []).map((c: any) => {
+            const author = Array.isArray(c.author) ? c.author[0] : c.author;
+            return {
+                id: c.id,
+                parentId: c.parent_id || null,
+                authorId: c.author_id,
+                authorName: author?.nome || 'Usuário',
+                authorMunicipio: author?.municipio || author?.microregiao_id || '',
+                authorAvatarId: author?.avatar_id || 'zg10',
+                authorRole: author?.role || undefined,
+                content: c.content,
+                createdAt: c.created_at,
+                replies: []
+            };
+        });
+    } catch (error) {
+        logError('dataService', 'Erro ao carregar comentários:', error);
+        return [];
     }
 }
 
@@ -512,11 +514,11 @@ export async function upsertAction(action: Action): Promise<Action> {
         // ============================================
         if (action.tags) {
             // 1. Buscar assignments atuais
-            // Usa action.uid (não actionDbId) pois a tabela usa action_uid
+            // Usa action.uid E action_id para garantir compatibilidade
             const { data: currentAssignments, error: fetchTagsError } = await supabase
                 .from('action_tag_assignments')
                 .select('id, tag_id')
-                .eq('action_uid', action.uid);
+                .eq('action_uid', action.uid); // Pode manter o filtro por UID ou mudar para açãoDbId se preferir
 
             if (fetchTagsError) {
                 logError('dataService', 'Erro ao buscar tags atuais:', fetchTagsError);
@@ -529,6 +531,7 @@ export async function upsertAction(action: Action): Promise<Action> {
                 if (toAdd.length > 0) {
                     const tagInserts = toAdd.map(t => ({
                         action_uid: action.uid,
+                        action_id: actionDbId, // Adicionando action_id (UUID)
                         tag_id: t.id
                     }));
                     const { error: insertError } = await supabase
@@ -795,7 +798,7 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
         // 1. Buscar Perfis (usuários já cadastrados na plataforma)
         let profilesQuery = supabase
             .from('profiles')
-            .select('*')
+            .select('id, nome, email, municipio, microregiao_id, role, avatar_id')
             .eq('ativo', true);
 
         if (microregiaoId && microregiaoId !== 'all') {
@@ -807,13 +810,10 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
         if (profilesError) {
             logError('dataService', 'Erro ao carregar perfis:', profilesError);
         }
-
-
-
         // 2. Buscar Times Manuais (adicionados pelo gestor)
         let teamQuery = supabase
             .from('teams')
-            .select('*')
+            .select('id, microregiao_id, name, cargo, email, municipio, profile_id, created_at, updated_at')
             .order('name', { ascending: true });
 
         if (microregiaoId && microregiaoId !== 'all') {
@@ -828,7 +828,7 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
         }
 
         // 3. Processar Perfis (Enriquecendo com dados de times se houver)
-        (profilesData || []).forEach((p: ProfileDTO) => {
+        (profilesData || []).forEach((p) => {
             const microId = p.microregiao_id || 'unassigned';
             if (!teamsByMicro[microId]) teamsByMicro[microId] = [];
 

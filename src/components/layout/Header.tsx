@@ -10,7 +10,7 @@ import { getObjectiveTitleWithoutNumber } from '../../lib/text';
 interface HeaderProps {
   macro: string;
   micro?: string;
-  currentNav: 'strategy' | 'home' | 'settings';
+  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news';
   selectedObjective: number;
   objectives: Objective[];
   viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';

@@ -43,10 +43,9 @@ function SafeResponsiveContainer({ children, minHeight = 150 }: { children: Reac
     const checkDimensions = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect();
-        if (width >= 50 && height >= 50) {
-          setDimensions({ width, height });
-        } else {
-          setDimensions(null);
+        // Ensure strictly positive dimensions and round them to avoid fractional pixel issues
+        if (width > 0 && height > 0) {
+          setDimensions({ width: Math.floor(width), height: Math.floor(height) });
         }
       }
     };
@@ -78,9 +77,9 @@ function SafeResponsiveContainer({ children, minHeight = 150 }: { children: Reac
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: `${minHeight}px` }}>
       {dimensions ? (
-        <div style={{ width: dimensions.width, height: dimensions.height }}>
+        <ResponsiveContainer width={dimensions.width} height={dimensions.height}>
           {children}
-        </div>
+        </ResponsiveContainer>
       ) : (
         <div style={{
           width: '100%',

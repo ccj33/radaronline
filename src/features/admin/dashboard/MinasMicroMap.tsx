@@ -6,6 +6,7 @@ import { macroregions } from '../../../data/mapamg/macroregions';
 import { useThemeSafe } from '../../../contexts/ThemeContext';
 import { Action } from '../../../types';
 import { MICROREGIOES, MACRORREGIOES } from '../../../data/microregioes';
+import { MapDataLoader } from '../../../lib/mapLoader';
 import {
     normalize,
     createGeoLookupMaps,
@@ -858,13 +859,10 @@ const MinasMicroMap: React.FC<MinasMicroMapProps> = ({
                 mapInstanceRef.current = map;
 
                 // Carregar dados pré-processados otimizados
-                const [microsRes, macrosRes] = await Promise.all([
-                    fetch('/data/minas-microregions-optimized.json'),
-                    fetch('/data/minas-macroregions-optimized.json')
-                ]);
-
-                const microsData = await microsRes.json();
-                const macrosData = await macrosRes.json();
+                // Carregar dados pré-processados otimizados via Loader com Cache
+                const mapData = await MapDataLoader.load();
+                const microsData = mapData.micros;
+                const macrosData = mapData.macros;
 
                 // Configurar caches de centros a partir dos features otimizados
                 const macroLabelAdjustments: Record<string, [number, number]> = {

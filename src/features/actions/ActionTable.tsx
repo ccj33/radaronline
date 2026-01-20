@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Calendar, Plus, Trash2, Lock, Eye, MessageCircle, Send, CheckCircle2 } from 'lucide-react';
 import { staggerContainerFast, staggerItem } from '../../lib/motion';
 import { Action, Status, RaciRole, TeamMember, ActionComment } from '../../types';
@@ -228,10 +228,11 @@ export const ActionTable: React.FC<ActionTableProps> = ({
               </span>
             )}
           </div>
-          <div className="col-span-4" role="columnheader">Ação</div>
-          <div className="col-span-3" role="columnheader">Cronograma</div>
+          <div className="col-span-3" role="columnheader">Ação</div>
+          <div className="col-span-2" role="columnheader">Cronograma</div>
+          <div className="col-span-2" role="columnheader">Equipe</div>
           <div className="col-span-2" role="columnheader">Status</div>
-          <div className="col-span-2 text-right" role="columnheader">Equipe</div>
+          <div className="col-span-2 text-right" role="columnheader">Áreas</div>
         </div>
 
         {/* Rows */}
@@ -285,7 +286,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                       </span>
                     </Tooltip>
                   </div>
-                  <div className="col-span-4 font-medium text-sm text-slate-700 dark:text-slate-200 flex items-center gap-2 truncate">
+                  <div className="col-span-3 font-medium text-sm text-slate-700 dark:text-slate-200 flex items-center gap-2 truncate">
                     <span className="truncate" title={action.title}>{action.title}</span>
                     {!userCanEdit && (
                       <Tooltip content={readOnly ? "Modo somente leitura" : "Você não tem permissão para editar"}>
@@ -295,7 +296,7 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                   </div>
 
                   {/* Coluna CRONOGRAMA Unificada */}
-                  <div className="col-span-3 flex flex-col justify-center text-xs">
+                  <div className="col-span-2 flex flex-col justify-center text-xs">
                     <div className="flex items-center gap-1.5 text-slate-500 mb-0.5">
                       <Calendar size={12} className="shrink-0" />
                       <span>
@@ -315,9 +316,42 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                     )}
                   </div>
 
-                  <div className="col-span-2"><StatusBadge status={action.status} /></div>
-                  <div className="col-span-2 flex justify-end gap-1">
-                    {[...action.raci].sort((a, b) => rolePriority[a.role] - rolePriority[b.role]).map((r, i) => <RaciCompactPill key={i} person={r} />)}
+                  {/* Coluna EQUIPE (Agora no meio - Overlapping) */}
+                  <div className="col-span-2 flex items-center -space-x-2 overflow-hidden hover:space-x-1 hover:overflow-visible transition-all duration-300 px-1">
+                    {[...action.raci].sort((a, b) => rolePriority[a.role] - rolePriority[b.role]).map((r, i) => (
+                      <div key={i} className="transition-transform hover:scale-110 hover:z-10 relative">
+                        <RaciCompactPill person={r} />
+                      </div>
+                    ))}
+                    {action.raci.length === 0 && (
+                      <span className="text-[10px] text-slate-300 italic pl-2">Sem equipe</span>
+                    )}
+                  </div>
+
+                  <div className="col-span-2 md:pl-2"><StatusBadge status={action.status} /></div>
+
+                  {/* Coluna ÁREAS ENVOLVIDAS (Agora no fim - Alinhada à direita) */}
+                  <div className="col-span-2 flex flex-wrap justify-end gap-1.5 items-center content-center">
+                    {action.tags?.slice(0, 2).map(tag => (
+                      <Tooltip key={tag.id} content={tag.name}>
+                        <span
+                          style={{ backgroundColor: tag.color }}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white truncate max-w-[110px] hover:max-w-none transition-all duration-300 shadow-sm cursor-help ring-1 ring-white/20"
+                        >
+                          {tag.name}
+                        </span>
+                      </Tooltip>
+                    ))}
+                    {(action.tags?.length || 0) > 2 && (
+                      <Tooltip content={action.tags!.slice(2).map(t => t.name).join(', ')}>
+                        <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-bold hover:bg-slate-200 cursor-pointer transition-colors">
+                          +{action.tags!.length - 2}
+                        </span>
+                      </Tooltip>
+                    )}
+                    {(!action.tags || action.tags.length === 0) && (
+                      <span className="text-[10px] text-slate-300 italic px-2">—</span>
+                    )}
                   </div>
                 </div>
 
@@ -377,10 +411,17 @@ export const ActionTable: React.FC<ActionTableProps> = ({
                           </div>
                           <div className="max-h-64 overflow-auto px-4 py-2">
                             {(action.comments || []).length === 0 ? (
-                              <div className="flex flex-col items-center justify-center text-slate-400 py-4">
-                                <MessageCircle size={32} className="mb-2 opacity-30" />
-                                <p className="font-medium text-xs">Nenhum comentário ainda</p>
-                              </div>
+                              (action.commentCount || 0) > 0 ? (
+                                <div className="flex flex-col items-center justify-center text-slate-400 py-4 gap-2">
+                                  <div className="w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                                  <p className="font-medium text-xs">Carregando comentários...</p>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center text-slate-400 py-4">
+                                  <MessageCircle size={32} className="mb-2 opacity-30" />
+                                  <p className="font-medium text-xs">Nenhum comentário ainda</p>
+                                </div>
+                              )
                             ) : (
                               <div>
                                 {(action.comments || []).map(c => <CommentItem key={c.id} comment={c} />)}

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { format, differenceInDays, isToday, isSameDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { Action, Activity, Objective } from '../../../types';
 import { MICROREGIOES } from '../../../data/microregioes';
 import { getActionDisplayId } from '../../../lib/text';

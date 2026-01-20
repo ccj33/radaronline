@@ -693,11 +693,12 @@ export async function completeFirstAccess(
       .maybeSingle();
 
     if (existingTeam) {
-      // Atualizar registro existente
+      // Atualizar registro existente + vincular profile_id
       const { error: updateTeamError } = await supabase
         .from('teams')
         .update({
           municipio: municipio,
+          profile_id: userId, // ✅ Vincular ao perfil para não aparecer como "pendente"
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingTeam.id);
@@ -713,7 +714,7 @@ export async function completeFirstAccess(
         .eq('id', userId)
         .single();
 
-      // Criar novo registro
+      // Criar novo registro com profile_id vinculado
       const { error: insertTeamError } = await supabase
         .from('teams')
         .insert({
@@ -722,6 +723,7 @@ export async function completeFirstAccess(
           microregiao_id: microregiaoId,
           municipio: municipio,
           cargo: 'Membro',
+          profile_id: userId, // ✅ Vincular ao perfil para não aparecer como "pendente"
         });
 
       if (insertTeamError) {

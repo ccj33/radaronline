@@ -73,6 +73,38 @@ function clearCachedProfile() {
   localStorage.removeItem(PROFILE_CACHE_KEY);
 }
 
+// Helper para extrair perfil rápido dos metadados (Custom Claims)
+function extractProfileFromMetadata(sessionUser: any): User | null {
+  const userMeta = sessionUser?.user_metadata || {};
+  const appMeta = sessionUser?.app_metadata || {};
+
+  // Dados de segurança (Role, Região, Status) DEVEM vir de app_metadata
+  const role = appMeta.role || userMeta.role;
+  const microId = appMeta.microregiao_id || userMeta.microregiao_id;
+  const ativo = appMeta.ativo !== undefined ? appMeta.ativo : (userMeta.ativo !== false);
+
+  // Dados de exibição podem vir de user_metadata
+  const nome = userMeta.nome || appMeta.nome;
+
+  if (!role || !nome) return null;
+
+  return {
+    id: sessionUser.id,
+    nome: nome,
+    email: sessionUser.email,
+    role: role,
+    microregiaoId: microId || 'all',
+    ativo: ativo,
+    lgpdConsentimento: true,
+    avatarId: userMeta.avatar_id || 'zg10',
+    municipio: userMeta.municipio,
+    firstAccess: false,
+    createdAt: sessionUser.created_at
+  };
+}
+
+
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,53 +116,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
 
-  // Refs para evitar re-subscrição e closures velhas
   const userIdRef = useRef<string | null>(null);
   const isDemoRef = useRef(false);
   useEffect(() => { userIdRef.current = user?.id ?? null; }, [user?.id]);
   useEffect(() => { isDemoRef.current = isDemoMode; }, [isDemoMode]);
 
-  // Lock real: dedupe por userId
   const inFlightProfileRef = useRef<Map<string, Promise<User | null>>>(new Map());
 
   const loadUserProfile = useCallback(async (userId: string): Promise<User | null> => {
     if (profileCache.has(userId)) return profileCache.get(userId)!;
-
     const existing = inFlightProfileRef.current.get(userId);
     if (existing) return existing;
 
-
-
     const promise = (async () => {
       try {
-        // Query com colunas explícitas (evita trazer dados desnecessários)
         const queryPromise = supabase
           .from('profiles')
           .select('id, nome, email, role, microregiao_id, ativo, lgpd_consentimento, lgpd_consentimento_data, avatar_id, created_by, municipio, first_access, created_at')
           .eq('id', userId)
           .single();
 
-        // Timeout com cleanup adequado do timer
         const { data, error } = await withTimeout(
           queryPromise,
           10000,
           'Timeout ao carregar perfil (10s). Verifique RLS policies ou conexão.'
         );
 
-        if (import.meta.env.DEV) {
-          console.log('[AuthDebug] loadUserProfile result:', { userId, data, error });
-        }
-
         if (error) {
           setProfileLoadError(error.message || 'Falha ao carregar perfil');
           return null;
         }
 
-        if (!data) {
-          setProfileLoadError('Perfil não encontrado');
-          return null;
-        }
-
+        if (!data) return null;
         if (!data.ativo) {
           setProfileLoadError('Usuário inativo');
           return null;
@@ -152,16 +169,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           createdAt: data.created_at,
         };
 
-        if (import.meta.env.DEV) {
-          console.log('[AuthDebug] Profile constructed successfully:', profile);
-        }
-
         setProfileLoadError(null);
         profileCache.set(userId, profile);
         return profile;
       } catch (err: any) {
-        const errorMsg = err?.message || 'Erro crítico ao carregar perfil';
-        setProfileLoadError(errorMsg);
+        setProfileLoadError(err?.message || 'Erro crítico ao carregar perfil');
         return null;
       } finally {
         inFlightProfileRef.current.delete(userId);
@@ -178,18 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       setProfileLoadError(null);
 
-      // ✅ INSTANT RELOAD: Usar perfil do cache imediatamente
+      // 1. Tentar cache local primeiro
       const cachedProfile = getCachedProfile();
       if (cachedProfile) {
         setUser(cachedProfile);
         setSessionUserId(cachedProfile.id);
         setViewingMicroregiaoId(cachedProfile.microregiaoId === 'all' ? null : cachedProfile.microregiaoId);
-
-        // MEMORY CACHE SYNC: Vital for loadUserProfile to not re-fetch immediately
         profileCache.set(cachedProfile.id, cachedProfile);
-
         setIsLoading(false);
-        // Atualiza em background para manter sincronizado
       } else {
         setIsLoading(true);
       }
@@ -202,47 +210,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionUserId(sid);
 
         if (sid) {
-          // Se o cache era de outro usuário, limpar
-          if (cachedProfile && cachedProfile.id !== sid) {
-            clearCachedProfile();
+          if (cachedProfile && cachedProfile.id !== sid) clearCachedProfile();
+
+          // 2. FAST PATH: Tentar usar Metadata do JWT (0-latency)
+          if (!cachedProfile && session?.user && mounted) {
+            const metaProfile = extractProfileFromMetadata(session.user);
+            if (metaProfile) {
+              console.log('[Auth] Fast path via Metadata!');
+              setUser(metaProfile);
+              setViewingMicroregiaoId(metaProfile.microregiaoId === 'all' ? null : metaProfile.microregiaoId);
+              // Não salvamos no cache persistente ainda, esperamos o full load confirmar
+              setIsLoading(false);
+            }
           }
 
-          if (import.meta.env.DEV) {
-            const session = (await supabase.auth.getSession()).data.session;
-            console.log('[AuthDebug] Session found on init:', {
-              sid,
-              expires_at: session?.expires_at,
-              role: session?.user?.role,
-              app_metadata: session?.user?.app_metadata
-            });
-          }
-
+          // 3. BACKGROUND: Garantir consistência loading do banco
           const profile = await loadUserProfile(sid);
 
           if (mounted && profile) {
             setUser(profile);
             setViewingMicroregiaoId(profile.microregiaoId === 'all' ? null : profile.microregiaoId);
-            setCachedProfile(profile); // Atualizar cache
+            setCachedProfile(profile);
           }
         } else {
           if (mounted) {
             setUser(null);
             setViewingMicroregiaoId(null);
-            profileCache.clear();
             clearCachedProfile();
           }
         }
       } catch (error: any) {
         const msg = String(error?.message || error || '');
-        // Se token está inválido, aí sim "zera" somente auth do Supabase
         if (msg.toLowerCase().includes('invalid') && msg.toLowerCase().includes('token')) {
           clearSupabaseAuthStorage();
           clearCachedProfile();
           await supabase.auth.signOut();
           setSessionUserId(null);
           setUser(null);
-          setViewingMicroregiaoId(null);
-          profileCache.clear();
         } else {
           setProfileLoadError(msg || 'Erro na inicialização de autenticação');
         }
@@ -259,7 +263,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sid = session?.user?.id ?? null;
       setSessionUserId(sid);
 
-      // Logout explícito
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setViewingMicroregiaoId(null);
@@ -271,25 +274,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!sid) {
-        // Garante que loading nao fique preso caso algum evento venha sem sessão
         setIsLoading(false);
         return;
       }
 
-      // Se mudou de usuário, limpa estado anterior antes de carregar o novo para evitar inconsistência
       if (userIdRef.current && userIdRef.current !== sid) {
         setUser(null);
-        setViewingMicroregiaoId(null);
         profileCache.clear();
       }
 
-      // Evita recarga redundante se for o mesmo usuário e não for refresh de token
       if (userIdRef.current === sid && event !== 'TOKEN_REFRESHED') return;
 
       setIsLoading(true);
 
-      if (event === 'TOKEN_REFRESHED') {
+      // FAST PATH no refresh também
+      if (event === 'TOKEN_REFRESHED' && session?.user) {
         profileCache.delete(sid);
+        const metaProfile = extractProfileFromMetadata(session.user);
+        if (metaProfile) {
+          setUser(metaProfile);
+          setIsLoading(false);
+        }
       }
 
       const profile = await loadUserProfile(sid);
@@ -298,14 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(profile);
         setViewingMicroregiaoId(profile.microregiaoId === 'all' ? null : profile.microregiaoId);
       } else {
-        // RESILIENCE: Se a sessão existe mas o perfil falhou (ex: erro de rede temporário),
-        // NÃO deslogamos o usuário se ele já tinha dados estale (stale-while-revalidate).
-        // Apenas 'zeramos' se realmente não tivermos nada para mostrar.
-        if (!user) {
-          setUser(null);
-          setViewingMicroregiaoId(null);
-        }
-        // Se user já existia, mantemos ele (cache) e o erro fica em 'profileLoadError' para a UI decidir se mostra aviso
+        if (!user) setUser(null);
       }
 
       setIsLoading(false);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { X, Target, AlertOctagon, MapPin, CheckCircle2, Clock, AlertTriangle, TrendingUp, Calendar, BarChart2, PieChart as PieChartIcon, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { X, Target, AlertOctagon, MapPin, CheckCircle2, Clock, AlertTriangle, TrendingUp, Calendar, BarChart2, PieChart as PieChartIcon, ChevronDown, ChevronUp, User, Printer } from 'lucide-react';
 import { getActionDisplayId } from '../../../lib/text';
+import { printReport, formatReportDate, formatReportPeriod } from '../../../lib/reportUtils';
 
 type KpiType = 'conclusao' | 'risco' | 'cobertura' | 'horizonte' | 'status';
 
@@ -86,6 +87,160 @@ export function KpiDetailModal({
     coverageRate = 0,
 }: KpiDetailModalProps) {
     const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+    // Função de impressão do relatório
+    const handlePrint = () => {
+        const reportHTML = generateKpiReportHTML();
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = reportHTML;
+        printReport(tempDiv, `Relatório - ${configs[type].title}`);
+    };
+
+    // Gera HTML do relatório para impressão
+    const generateKpiReportHTML = (): string => {
+        const now = new Date();
+        let metricsHTML = '';
+        let sectionsHTML = '';
+
+        if (type === 'conclusao') {
+            metricsHTML = `
+                <div class="metrics-grid">
+                    <div class="metric-card highlight"><div class="metric-value">${completionRate}%</div><div class="metric-label">Taxa de Conclusão</div></div>
+                    <div class="metric-card"><div class="metric-value">${completedActions}</div><div class="metric-label">Concluídas</div></div>
+                    <div class="metric-card"><div class="metric-value">${totalActions}</div><div class="metric-label">Total</div></div>
+                </div>
+            `;
+            sectionsHTML = objectiveProgress.length > 0 ? `
+                <div class="report-section">
+                    <h3 class="section-title">Progresso por Objetivo</h3>
+                    ${objectiveProgress.map(obj => `
+                        <div class="progress-item">
+                            <span class="progress-label">${obj.name}</span>
+                            <div class="progress-bar-container"><div class="progress-bar" style="width: ${obj.percentage}%"></div></div>
+                            <span class="progress-value">${obj.completed}/${obj.total} (${obj.percentage}%)</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+        } else if (type === 'risco') {
+            metricsHTML = `
+                <div class="metrics-grid">
+                    <div class="metric-card highlight" style="background: linear-gradient(135deg, #f43f5e, #e11d48);"><div class="metric-value">${overdueActions.length}</div><div class="metric-label">Ações Atrasadas</div></div>
+                </div>
+            `;
+            sectionsHTML = overdueActions.length > 0 ? `
+                <div class="report-section">
+                    <h3 class="section-title">Ações Atrasadas</h3>
+                    <table class="data-table">
+                        <thead><tr><th>ID</th><th>Título</th><th>Prazo</th><th>Dias Atraso</th></tr></thead>
+                        <tbody>
+                            ${overdueActions.slice(0, 15).map(a => `
+                                <tr>
+                                    <td>#${getActionDisplayId(a.id)}</td>
+                                    <td>${a.title}</td>
+                                    <td>${a.plannedEndDate}</td>
+                                    <td><span class="status-badge status-atrasado">${a.daysOverdue} dias</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            ` : '<p style="text-align: center; color: #10b981; padding: 24px;">✓ Nenhuma ação atrasada!</p>';
+        } else if (type === 'cobertura') {
+            const withActions = microCoverage.filter(m => m.hasActions).length;
+            metricsHTML = `
+                <div class="metrics-grid">
+                    <div class="metric-card highlight"><div class="metric-value">${coverageRate}%</div><div class="metric-label">Cobertura</div></div>
+                    <div class="metric-card"><div class="metric-value">${withActions}</div><div class="metric-label">Com Ações</div></div>
+                    <div class="metric-card"><div class="metric-value">${microCoverage.length - withActions}</div><div class="metric-label">Sem Ações</div></div>
+                </div>
+            `;
+            sectionsHTML = `
+                <div class="report-section">
+                    <h3 class="section-title">Status por Microrregião</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Microrregião</th><th>Macrorregião</th><th>Status</th><th>Ações</th></tr></thead>
+                        <tbody>
+                            ${microCoverage.map(m => `
+                                <tr>
+                                    <td>${m.nome}</td>
+                                    <td>${m.macrorregiao}</td>
+                                    <td><span class="status-badge ${m.hasActions ? 'status-concluido' : 'status-nao-iniciado'}">${m.hasActions ? 'Com Ações' : 'Sem Ações'}</span></td>
+                                    <td>${m.actionCount}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (type === 'horizonte') {
+            const total = deadlineHorizon.reduce((s, d) => s + d.value, 0);
+            metricsHTML = `
+                <div class="metrics-grid">
+                    <div class="metric-card highlight" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><div class="metric-value">${total}</div><div class="metric-label">Ações no Horizonte</div></div>
+                </div>
+            `;
+            sectionsHTML = `
+                <div class="report-section">
+                    <h3 class="section-title">Distribuição por Prazo</h3>
+                    ${deadlineHorizon.map(item => `
+                        <div class="progress-item">
+                            <span class="progress-label">${item.name}</span>
+                            <div class="progress-bar-container"><div class="progress-bar" style="width: ${total > 0 ? (item.value / total * 100) : 0}%; background: ${item.color}"></div></div>
+                            <span class="progress-value">${item.value} ações</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else if (type === 'status') {
+            const total = statusData.reduce((s, d) => s + d.value, 0);
+            metricsHTML = `
+                <div class="metrics-grid">
+                    ${statusData.map(s => `<div class="metric-card"><div class="metric-value" style="color: ${s.color}">${s.value}</div><div class="metric-label">${s.name}</div></div>`).join('')}
+                </div>
+            `;
+            sectionsHTML = `
+                <div class="report-section">
+                    <h3 class="section-title">Distribuição por Status</h3>
+                    ${statusData.map(item => `
+                        <div class="progress-item">
+                            <span class="progress-label">${item.name}</span>
+                            <div class="progress-bar-container"><div class="progress-bar" style="width: ${total > 0 ? (item.value / total * 100) : 0}%; background: ${item.color}"></div></div>
+                            <span class="progress-value">${item.value} (${total > 0 ? Math.round(item.value / total * 100) : 0}%)</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        return `
+            <div class="report-container">
+                <header class="report-header">
+                    <div class="report-logo">
+                        <div class="report-logo-icon">R</div>
+                        <div class="report-logo-text">
+                            <h1>RADAR</h1>
+                            <p>Painel de Gestão Regional</p>
+                        </div>
+                    </div>
+                    <div class="report-meta">
+                        <p><strong>Data:</strong> ${formatReportDate(now)}</p>
+                        <p><strong>Período:</strong> ${formatReportPeriod(now)}</p>
+                    </div>
+                </header>
+                <div class="report-title-section">
+                    <h2 class="report-title">${configs[type].title}</h2>
+                    <p class="report-subtitle">${configs[type].subtitle}</p>
+                </div>
+                ${metricsHTML}
+                ${sectionsHTML}
+                <footer class="report-footer">
+                    <span>Relatório gerado automaticamente pelo sistema RADAR</span>
+                    <span>Página 1 de 1</span>
+                </footer>
+            </div>
+        `;
+    };
 
     if (!isOpen) return null;
 
@@ -198,12 +353,21 @@ export function KpiDetailModal({
                                 <p className="text-white/80 text-sm mt-1">{config.subtitle}</p>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handlePrint}
+                                title="Imprimir relatório"
+                                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            >
+                                <Printer className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Métrica Principal */}

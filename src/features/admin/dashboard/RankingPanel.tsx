@@ -25,11 +25,9 @@ function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
     const checkDimensions = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect();
-        // Check for valid dimensions (minimum 100px to be safe)
-        if (width >= 100 && height >= 100) {
-          setDimensions({ width, height });
-        } else {
-          setDimensions(null);
+        // Must be strictly positive
+        if (width > 0 && height > 0) {
+          setDimensions({ width: Math.floor(width), height: Math.floor(height) });
         }
       }
     };
@@ -52,13 +50,11 @@ function SafeResponsiveContainer({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '300px', minHeight: '300px', position: 'relative' }}>
+    <div ref={containerRef} style={{ width: '100%', height: '300px', minHeight: '300px' }}>
       {dimensions ? (
-        <div style={{ width: dimensions.width, height: dimensions.height, position: 'absolute', top: 0, left: 0 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            {children}
-          </ResponsiveContainer>
-        </div>
+        <ResponsiveContainer width={dimensions.width} height={dimensions.height}>
+          {children}
+        </ResponsiveContainer>
       ) : (
         <div style={{
           width: '100%',
