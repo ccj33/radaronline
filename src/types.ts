@@ -62,12 +62,14 @@ export type Activity = {
   id: string;
   title: string;
   description: string;
+  microregiaoId?: string;
 };
 
 export type Objective = {
   id: number;
   title: string;
   status: 'on-track' | 'delayed';
+  microregiaoId?: string;
 };
 
 // TeamMember agora pertence a uma microrregião específica

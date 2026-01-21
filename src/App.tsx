@@ -7,6 +7,7 @@ import { useAppData } from './hooks/useAppData';
 import {
   Status,
   Action,
+  Activity,
   Objective,
   GanttRange,
   getNextActionNumber,
@@ -285,15 +286,34 @@ function AppContent() {
     return filterActionsByMicro(actions, currentMicroId);
   }, [actions, currentMicroId, isViewingAllMicros]);
 
+  // Objetivos filtrados por microrregião
+  const filteredObjectives = useMemo(() => {
+    if (isViewingAllMicros) return objectives;
+    return objectives.filter(o => !o.microregiaoId || o.microregiaoId === currentMicroId);
+  }, [objectives, currentMicroId, isViewingAllMicros]);
+
+  // Atividades filtradas (apenas das objectives filtradas)
+  const filteredActivities = useMemo(() => {
+    if (isViewingAllMicros) return activities;
+    const filteredObjIds = new Set(filteredObjectives.map(o => o.id));
+    const result: Record<number, Activity[]> = {};
+    for (const [objId, acts] of Object.entries(activities)) {
+      if (filteredObjIds.has(Number(objId))) {
+        result[Number(objId)] = acts;
+      }
+    }
+    return result;
+  }, [activities, filteredObjectives, isViewingAllMicros]);
+
   // Ações filtradas para o Gantt
   const ganttActions = useMemo(() => {
-    const objectiveActivityIds = activities[selectedObjective]?.map(a => a.id) || [];
+    const objectiveActivityIds = filteredActivities[selectedObjective]?.map(a => a.id) || [];
     return microActions
       .filter(a => objectiveActivityIds.includes(a.activityId))
       .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
-  }, [microActions, selectedObjective, activities]);
+  }, [microActions, selectedObjective, filteredActivities]);
 
-  const currentActivity = activities[selectedObjective]?.find(a => a.id === selectedActivity) || activities[selectedObjective]?.[0];
+  const currentActivity = filteredActivities[selectedObjective]?.find(a => a.id === selectedActivity) || filteredActivities[selectedObjective]?.[0];
 
 
   // =====================================
@@ -1331,8 +1351,8 @@ function AppContent() {
           setSelectedActivity={setSelectedActivity}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          objectives={objectives}
-          activities={activities}
+          objectives={filteredObjectives}
+          activities={filteredActivities}
           onProfileClick={handleProfileClick}
           isMobile={isMobile}
           userName={user?.nome}
@@ -1365,8 +1385,8 @@ function AppContent() {
         <MobileDrawer
           isOpen={isMobileDrawerOpen}
           onClose={() => setIsMobileDrawerOpen(false)}
-          objectives={objectives}
-          activities={activities}
+          objectives={filteredObjectives}
+          activities={filteredActivities}
           selectedObjective={selectedObjective}
           selectedActivity={selectedActivity}
           onSelectObjective={setSelectedObjective}
@@ -1406,7 +1426,7 @@ function AppContent() {
           micro={microregiaoNome}
           currentNav={currentNav}
           selectedObjective={selectedObjective}
-          objectives={objectives}
+          objectives={filteredObjectives}
           viewMode={viewMode}
           setViewMode={setViewMode}
           onMenuClick={() => {
@@ -1448,7 +1468,7 @@ function AppContent() {
           {currentNav === 'strategy' && viewMode === 'table' && (
             <div ref={activityTabsRef}>
               <ActivityTabs
-                activities={activities[selectedObjective] || []}
+                activities={filteredActivities[selectedObjective] || []}
                 selectedActivity={selectedActivity}
                 setSelectedActivity={setSelectedActivity}
                 isEditMode={isEditMode}

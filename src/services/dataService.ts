@@ -1292,6 +1292,7 @@ export async function loadObjectives(microregiaoId?: string): Promise<{ id: numb
             id: obj.id,
             title: obj.title,
             status: (obj.status === 'delayed' ? 'delayed' : 'on-track') as 'on-track' | 'delayed',
+            microregiaoId: obj.microregiao_id,
         }));
     } catch (error) {
         logError('dataService', 'Erro inesperado ao carregar objectives:', error);
@@ -1303,7 +1304,7 @@ export async function loadObjectives(microregiaoId?: string): Promise<{ id: numb
  * Carrega atividades do banco, agrupadas por objective_id
  * @param microregiaoId - ID da microrregião para filtrar
  */
-export async function loadActivities(microregiaoId?: string): Promise<Record<number, { id: string; title: string; description: string }[]>> {
+export async function loadActivities(microregiaoId?: string): Promise<Record<number, { id: string; title: string; description: string; microregiaoId?: string }[]>> {
     try {
         let query = supabase
             .from('activities')
@@ -1323,7 +1324,7 @@ export async function loadActivities(microregiaoId?: string): Promise<Record<num
         }
 
         // Agrupar por objective_id
-        const grouped: Record<number, { id: string; title: string; description: string }[]> = {};
+        const grouped: Record<number, { id: string; title: string; description: string; microregiaoId?: string }[]> = {};
 
         (data || []).forEach((act: ActivityDTO) => {
             if (!grouped[act.objective_id]) {
@@ -1333,6 +1334,7 @@ export async function loadActivities(microregiaoId?: string): Promise<Record<num
                 id: act.id,
                 title: act.title,
                 description: act.description || '',
+                microregiaoId: act.microregiao_id,
             });
         });
 

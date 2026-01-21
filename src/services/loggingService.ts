@@ -20,12 +20,27 @@ export const loggingService = {
                 return;
             }
 
+            // Buscar nome do usuário para incluir nos metadados (evita dependência do join)
+            let created_by_name = metadata.created_by_name;
+            if (!created_by_name) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('nome')
+                    .eq('id', user.id)
+                    .single();
+                created_by_name = profile?.nome || 'Usuário';
+            }
+
             const { error } = await supabase.from('activity_logs').insert({
                 user_id: user.id,
                 action_type: type,
                 entity_type: entityType,
                 entity_id: entityId,
-                metadata
+                metadata: {
+                    ...metadata,
+                    created_by_name,
+                    created_by_id: user.id
+                }
             });
 
             if (error) {
@@ -35,6 +50,7 @@ export const loggingService = {
             logError('loggingService', 'Erro inesperado ao registrar log', err);
         }
     },
+
 
     /**
      * Busca atividades recentes

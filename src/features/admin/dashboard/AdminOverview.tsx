@@ -363,13 +363,15 @@ export function AdminOverview({ actions, users, filters, children, onTabChange, 
       { id: 4, name: 'Objetivo 4 - Capacitação', total: 0, completed: 0, percentage: 0 },
     ];
     filteredActions.forEach(action => {
-      const actId = typeof action.activityId === 'number' ? action.activityId : parseInt(String(action.activityId || '1'), 10);
-      const objIndex = Math.floor(actId / 3);
+      // Extract objective number from activityId (format: "X.Y" where X is objective)
+      const objectiveNumber = parseInt(String(action.activityId || '1').split('.')[0], 10) || 1;
+      const objIndex = objectiveNumber - 1; // Convert to 0-based index
       if (objIndex >= 0 && objIndex < objectiveProgress.length) {
         objectiveProgress[objIndex].total++;
         if (action.status === 'Concluído') objectiveProgress[objIndex].completed++;
       }
     });
+
     objectiveProgress.forEach(obj => obj.percentage = obj.total > 0 ? Math.round((obj.completed / obj.total) * 100) : 0);
 
     // Overdue
