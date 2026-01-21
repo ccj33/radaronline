@@ -20,22 +20,9 @@ import { Button } from '../../ui/Button';
 import confetti from 'canvas-confetti';
 
 import { loadAnnouncements, loadAutomatedEvents } from '../../services/dataService';
+import type { AutomatedEvent } from '../../services/dataService';
 import { useAuth } from '../../auth/AuthContext';
 import { Announcement } from '../../types/announcement.types';
-
-type EventType = 'plan_completed' | 'goal_reached' | 'new_user' | 'system_milestone';
-
-interface AutomatedEvent {
-    id: string;
-    type: EventType;
-    municipality: string;
-    title: string;
-    timestamp: string;
-    details?: string;
-    imageGradient: string;
-    likes: number; // For interaction
-    footerContext?: string; // New field for "effort/context" msg
-}
 
 // Removendo MOCK_ANNOUNCEMENTS em favor da API real
 
@@ -49,7 +36,8 @@ const INITIAL_EVENTS: AutomatedEvent[] = [
         details: '14 UBSs finalizaram o diagnóstico, estruturando a base do Plano de Ação da Atenção Primária.',
         imageGradient: 'from-blue-600 to-cyan-500',
         likes: 24,
-        footerContext: 'Marco do Planejamento Local • Equipes municipais mobilizadas'
+        footerContext: 'Marco do Planejamento Local • Equipes municipais mobilizadas',
+        created_at: new Date().toISOString()
     },
     {
         id: 'e2',
@@ -60,7 +48,8 @@ const INITIAL_EVENTS: AutomatedEvent[] = [
         details: '80% dos profissionais cadastrados passaram a utilizar a plataforma, integrando a comunicação da rede.',
         imageGradient: 'from-emerald-600 to-teal-500',
         likes: 18,
-        footerContext: 'Resultado do engajamento das equipes locais'
+        footerContext: 'Resultado do engajamento das equipes locais',
+        created_at: new Date().toISOString()
     },
     {
         id: 'e3',
@@ -71,7 +60,8 @@ const INITIAL_EVENTS: AutomatedEvent[] = [
         details: 'Novo módulo liberado para apoiar gestores no acompanhamento das ações e resultados.',
         imageGradient: 'from-violet-600 to-purple-500',
         likes: 45,
-        footerContext: 'Etapa concluída no processo de transformação digital'
+        footerContext: 'Etapa concluída no processo de transformação digital',
+        created_at: new Date().toISOString()
     }
 ];
 

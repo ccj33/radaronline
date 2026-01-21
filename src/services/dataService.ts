@@ -1831,7 +1831,7 @@ export interface AutomatedEvent {
     imageGradient: string;
     likes: number;
     footerContext?: string;
-    timestamp?: string; // For display (calculated from created_at)
+    timestamp: string; // For display (calculated from created_at)
     created_at: string;
 }
 
