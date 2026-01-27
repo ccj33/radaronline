@@ -9,6 +9,7 @@ import { ActivityTabs } from '../../features/actions/ActivityTabs';
 import { LinearCalendar } from '../../features/admin/dashboard/LinearCalendar';
 // ExpandableDescription removido
 import { Action, TeamMember, Objective, Activity, GanttRange } from '../../types';
+import { ParsedAction } from '../../features/actions/SmartPasteModal';
 
 interface MainViewProps {
   currentNav: 'strategy' | 'home' | 'settings';
@@ -53,6 +54,7 @@ interface MainViewProps {
   onUpdateTeam?: (microId: string, updatedTeam: TeamMember[]) => void;
   setTeamsByMicro: React.Dispatch<React.SetStateAction<Record<string, TeamMember[]>>>;
   onNavigate: (view: 'list' | 'team', filters?: { status?: string; objectiveId?: number }) => void;
+  onBulkImport?: (actions: ParsedAction[]) => void;
 }
 
 export function MainView({
@@ -98,6 +100,7 @@ export function MainView({
   onUpdateTeam,
   setTeamsByMicro,
   onNavigate,
+  onBulkImport,
 }: MainViewProps) {
   // Encontrar a ação selecionada para o modal
   const selectedAction = expandedActionUid
@@ -228,6 +231,7 @@ export function MainView({
                 canEdit={checkCanEdit}
                 canDelete={checkCanDelete}
                 readOnly={isViewingAllMicros && !isAdmin}
+                onBulkImport={onBulkImport}
               />
             </div>
           </ErrorBoundary>

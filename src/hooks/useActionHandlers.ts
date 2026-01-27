@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { Action, RaciRole, ActionComment, Status, findActionByUid, getNextActionNumber } from '../types';
+import { Action, RaciRole, ActionComment, Status, findActionByUid, getNextActionNumber, ActionTag } from '../types';
 import * as dataService from '../services/dataService';
 import { useToast } from '../components/common/Toast';
 import { useLatest } from './useLatest';
@@ -416,6 +416,135 @@ export function useActionHandlers({
     }
   }, [setActions, showToast]);
 
+  // 7. BULK CREATE (Smart Paste Import)
+  const handleBulkCreateActions = useCallback(async (parsedActions: Array<{
+    title: string;
+    area: string;
+    status: Status;
+    startDate: string;
+    plannedEndDate: string;
+  }>) => {
+    if (isDemoMode) {
+      showToast('Modo Visualização: Não é possível criar ações.', 'warning');
+      return;
+    }
+
+    if (!currentMicroId || currentMicroId === 'all') {
+      showToast('Selecione uma microrregião para importar ações', 'error');
+      return;
+    }
+
+    if (!checkCanCreate()) {
+      showToast('Você não tem permissão para criar ações', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // 1. Carregar tags existentes para evitar duplicatas e minimizar calls
+      const existingTags = await dataService.loadTags();
+      // Mapa para busca rápida: NAME_UPPER -> Tag
+      const tagMap = new Map<string, ActionTag>();
+      existingTags.forEach(t => tagMap.set(t.name.toUpperCase(), t));
+
+      // 2. Calcular número inicial
+      let nextNum = getNextActionNumber(actionsRef.current, selectedActivity, currentMicroId);
+
+      for (const parsed of parsedActions) {
+        try {
+          // Cria a ação
+          const savedAction = await dataService.createAction({
+            microregiaoId: currentMicroId,
+            activityId: selectedActivity,
+            actionNumber: nextNum,
+            title: parsed.title,
+          });
+
+          // Incrementa para próxima iteração
+          nextNum++;
+
+          // Atualiza com datas e status se fornecidos
+          const updates: any = {};
+          if (parsed.status !== 'Não Iniciado') updates.status = parsed.status;
+          if (parsed.startDate) updates.startDate = parsed.startDate;
+          if (parsed.plannedEndDate) updates.plannedEndDate = parsed.plannedEndDate;
+          // NOTA: 'parsed.area' agora é convertida em TAGS, não mais em notes.
+
+          if (Object.keys(updates).length > 0) {
+            await dataService.updateAction(savedAction.uid, updates);
+          }
+
+          // Processamento de TAGS (Áreas Envolvidas)
+          const actionTags: ActionTag[] = [];
+          if (parsed.area && parsed.area.trim()) {
+            // Separa por vírgula ou ponto e vírgula e remove espaços extras
+            const areaNames = parsed.area.split(/[;,]+/).map(s => s.trim()).filter(Boolean);
+
+            for (const areaName of areaNames) {
+              const upperName = areaName.toUpperCase();
+              let tag = tagMap.get(upperName);
+
+              if (!tag) {
+                // Cria nova tag se não existir
+                try {
+                  tag = await dataService.createTag(areaName);
+                  tagMap.set(upperName, tag); // Atualiza cache local
+                } catch (e) {
+                  console.error(`Erro ao criar tag '${areaName}':`, e);
+                  continue; // Pula essa tag se falhar
+                }
+              }
+
+              // Associa tag à ação
+              if (tag) {
+                try {
+                  await dataService.addTagToAction(savedAction.uid, tag.id);
+                  // Verifica duplicidade no array local
+                  if (!actionTags.some(t => t.id === tag!.id)) {
+                    actionTags.push(tag);
+                  }
+                } catch (e) {
+                  console.error(`Erro ao associar tag '${areaName}' à ação:`, e);
+                }
+              }
+            }
+          }
+
+          // Adiciona ao state local
+          const fullAction: Action = {
+            ...savedAction,
+            status: parsed.status,
+            startDate: parsed.startDate,
+            plannedEndDate: parsed.plannedEndDate,
+            notes: '', // Limpo, pois movemos para tags
+            tags: actionTags, // Tags adicionadas agora aparecem na UI
+          };
+
+          setActions(prev => [...prev, fullAction]);
+          successCount++;
+        } catch (err) {
+          logError('useActionHandlers', 'Erro ao criar ação em lote', err);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        showToast(`${successCount} ${successCount === 1 ? 'ação criada' : 'ações criadas'} com sucesso!`, 'success');
+      }
+      if (errorCount > 0) {
+        showToast(`${errorCount} ${errorCount === 1 ? 'ação falhou' : 'ações falharam'}`, 'error');
+      }
+    } catch (err) {
+      logError('useActionHandlers', 'Erro fatal no processo em lote', err);
+      showToast('Erro ao processar importação', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isDemoMode, currentMicroId, checkCanCreate, setIsSaving, actionsRef, selectedActivity, showToast, setActions]);
+
   return {
     handleUpdateAction,
     handleSaveAction,
@@ -424,5 +553,6 @@ export function useActionHandlers({
     handleAddRaci,
     handleRemoveRaci,
     handleAddComment,
+    handleBulkCreateActions,
   };
 }

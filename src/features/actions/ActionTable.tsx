@@ -1,6 +1,6 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Plus, Trash2, Lock, Eye, MessageCircle, Send, CheckCircle2 } from 'lucide-react';
+import { Calendar, Plus, Trash2, Lock, Eye, MessageCircle, Send, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import { staggerContainerFast, staggerItem } from '../../lib/motion';
 import { Action, Status, RaciRole, TeamMember, ActionComment } from '../../types';
 import { formatDateBr, getTodayStr } from '../../lib/date';
@@ -20,6 +20,7 @@ import { Tooltip } from '../../components/common/Tooltip';
 import { Select } from '../../ui/Select';
 import { useAuth } from '../../auth/AuthContext';
 import { getAvatarUrl } from '../settings/UserSettingsModal';
+import { SmartPasteModal, ParsedAction } from './SmartPasteModal';
 
 // =====================================
 // PROPS DO COMPONENTE
@@ -56,6 +57,8 @@ interface ActionTableProps {
   readOnly?: boolean;
   // Se true, não expande inline - apenas define expandedActionId para modal externo
   useModal?: boolean;
+  // Handler para importação em massa
+  onBulkImport?: (actions: ParsedAction[]) => void;
 }
 
 const rolePriority: Record<RaciRole, number> = { R: 0, A: 1, I: 2 };
@@ -145,11 +148,13 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
   canDelete = () => true,
   readOnly = false,
   useModal = true, // Por padrão, usa o modal (não expande inline)
+  onBulkImport,
 }) => {
   const { user } = useAuth();
   const [selectedRaciMemberId, setSelectedRaciMemberId] = React.useState<string>("");
   const [newRaciRole, setNewRaciRole] = React.useState<RaciRole>("R");
   const [commentDrafts, setCommentDrafts] = React.useState<Record<string, string>>({});
+  const [isSmartPasteOpen, setIsSmartPasteOpen] = useState(false);
 
   const todayLabel = useMemo(() => formatDateBr(getTodayStr()), []);
 
@@ -647,9 +652,17 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
         </motion.div>
       </div>
 
-      {/* Botão Nova Ação */}
+      {/* Botão Nova Ação e Importar */}
       {canCreate && !readOnly && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-3">
+          {onBulkImport && (
+            <button
+              onClick={() => setIsSmartPasteOpen(true)}
+              className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-600"
+            >
+              <FileSpreadsheet size={18} /> Importar
+            </button>
+          )}
           <button
             onClick={onCreateAction}
             className="flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-teal-700 transition-colors shadow-sm"
@@ -657,6 +670,15 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
             <Plus size={18} /> Nova Ação
           </button>
         </div>
+      )}
+
+      {/* Smart Paste Modal */}
+      {onBulkImport && (
+        <SmartPasteModal
+          isOpen={isSmartPasteOpen}
+          onClose={() => setIsSmartPasteOpen(false)}
+          onImport={onBulkImport}
+        />
       )}
     </div>
   );

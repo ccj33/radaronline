@@ -270,7 +270,7 @@ export async function createAction(input: {
                 action_id: actionId,
                 activity_id: input.activityId,
                 microregiao_id: input.microregiaoId,
-                title: input.title || 'Nova Ação',
+                title: input.title || '',
                 status: 'Não Iniciado',
                 progress: 0,
                 notes: '',
