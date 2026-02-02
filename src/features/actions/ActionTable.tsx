@@ -46,6 +46,8 @@ interface ActionTableProps {
   setResponsibleFilter: (responsible: string) => void;
   expandedActionId: string | null; // Agora é UID
   setExpandedActionId: (uid: string | null) => void;
+  involvedAreaFilter?: string;
+  setInvolvedAreaFilter?: (area: string) => void;
   // Handlers recebem UID ao invés de ID simples
   onUpdateAction: (uid: string, field: string, value: string | number) => void;
   onSaveAction: (uid?: string) => void;
@@ -146,6 +148,8 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
   setResponsibleFilter,
   expandedActionId,
   setExpandedActionId,
+  involvedAreaFilter,
+  setInvolvedAreaFilter,
   onUpdateAction,
   onSaveAction,
   onCreateAction,
@@ -202,14 +206,31 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
     return getCorrectActivityPrefix(action.activityId, objectiveId, objectives, activities);
   }, [objectives, activities]);
 
+  // Extract unique areas (tags) from actions
+  const availableAreas = useMemo(() => {
+    const areas = new Set<string>();
+    actions.forEach(action => {
+      action.tags?.forEach(tag => areas.add(tag.name));
+    });
+    return Array.from(areas).sort();
+  }, [actions]);
+
   // Ações filtradas
   const filteredActions = useMemo(() => {
     return actions
       .filter(a => a.activityId === selectedActivity)
       .filter(a => {
-        if (searchTerm && !a.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        if (searchTerm) {
+          const lowerSearch = searchTerm.toLowerCase();
+          const matchesTitle = a.title.toLowerCase().includes(lowerSearch);
+          const matchesTags = a.tags?.some(t => t.name.toLowerCase().includes(lowerSearch));
+          const matchesRaci = a.raci.some(r => r.name.toLowerCase().includes(lowerSearch));
+
+          if (!matchesTitle && !matchesTags && !matchesRaci) return false;
+        }
         if (statusFilter !== 'all' && a.status !== statusFilter) return false;
         if (responsibleFilter && !a.raci.some(r => r.name === responsibleFilter && r.role === 'R')) return false;
+        if (involvedAreaFilter && !a.tags?.some(t => t.name === involvedAreaFilter)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -218,7 +239,7 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
         const idB = getCorrectId(b);
         return naturalSortComparator(idA, idB);
       });
-  }, [actions, selectedActivity, searchTerm, statusFilter, responsibleFilter, getCorrectId]);
+  }, [actions, selectedActivity, searchTerm, statusFilter, responsibleFilter, involvedAreaFilter, getCorrectId]);
 
   // Toggle usando UID
   const toggleRow = useCallback((uid: string) => {
@@ -293,6 +314,9 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
         onStatusFilterChange={setStatusFilter}
         responsibleFilter={responsibleFilter}
         onResponsibleFilterChange={setResponsibleFilter}
+        involvedAreaFilter={involvedAreaFilter}
+        onInvolvedAreaFilterChange={setInvolvedAreaFilter}
+        availableAreas={availableAreas}
         teamMembers={team}
       />
 
@@ -335,9 +359,14 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
           {filteredActions.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               <p className="text-sm">Nenhuma ação encontrada</p>
-              {(searchTerm || statusFilter !== 'all' || responsibleFilter) && (
+              {(searchTerm || statusFilter !== 'all' || responsibleFilter || involvedAreaFilter) && (
                 <button
-                  onClick={() => { setSearchTerm(''); setStatusFilter('all'); setResponsibleFilter(''); }}
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('all');
+                    setResponsibleFilter('');
+                    if (setInvolvedAreaFilter) setInvolvedAreaFilter('');
+                  }}
                   className="mt-2 text-teal-600 hover:underline text-sm"
                 >
                   Limpar filtros

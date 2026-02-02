@@ -30,6 +30,8 @@ interface MainViewProps {
   setResponsibleFilter: (responsible: string) => void;
   expandedActionUid: string | null;
   setExpandedActionUid: (uid: string | null) => void;
+  involvedAreaFilter: string;
+  setInvolvedAreaFilter: (area: string) => void;
   ganttRange: GanttRange;
   setGanttRange: (range: GanttRange) => void;
   containerWidth: number;
@@ -78,6 +80,8 @@ export function MainView({
   setResponsibleFilter,
   expandedActionUid,
   setExpandedActionUid,
+  involvedAreaFilter = '',
+  setInvolvedAreaFilter = () => { },
   ganttRange,
   setGanttRange,
   containerWidth,
@@ -225,6 +229,8 @@ export function MainView({
                 setResponsibleFilter={setResponsibleFilter}
                 expandedActionId={expandedActionUid}
                 setExpandedActionId={setExpandedActionUid}
+                involvedAreaFilter={involvedAreaFilter}
+                setInvolvedAreaFilter={setInvolvedAreaFilter}
                 onUpdateAction={onUpdateAction}
                 onSaveAction={onSaveAction}
                 onCreateAction={onCreateAction}

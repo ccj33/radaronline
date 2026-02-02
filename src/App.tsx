@@ -157,6 +157,7 @@ function AppContent() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
   const [responsibleFilter, setResponsibleFilter] = useState<string>("");
+  const [involvedAreaFilter, setInvolvedAreaFilter] = useState<string>("");
 
   // --- UI STATE ---
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -664,10 +665,19 @@ function AppContent() {
       // Cast to match the expected specific string literals
       setStatusFilter(filters.status as any);
     }
+    setViewMode('table');
+    if (filters?.status) {
+      // Cast to match the expected specific string literals
+      setStatusFilter(filters.status as any);
+    }
     if (filters?.objectiveId) {
       setSelectedObjective(filters.objectiveId);
     }
   }, [setSelectedObjective]);
+
+  // Reset all filters when changing views or major context if needed
+  // For now, only reset logic is manual via UI
+
 
   // =====================================
   // OBJECTIVES & ACTIVITIES CRUD HANDLERS
@@ -1844,6 +1854,8 @@ function AppContent() {
                     setStatusFilter={setStatusFilter}
                     responsibleFilter={responsibleFilter}
                     setResponsibleFilter={setResponsibleFilter}
+                    involvedAreaFilter={involvedAreaFilter}
+                    setInvolvedAreaFilter={setInvolvedAreaFilter}
                     expandedActionId={expandedActionUid}
                     setExpandedActionId={handleExpandAction}
                     onUpdateAction={handleUpdateAction}

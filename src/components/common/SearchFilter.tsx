@@ -9,6 +9,9 @@ interface SearchFilterProps {
   onStatusFilterChange: (value: Status | 'all') => void;
   responsibleFilter: string;
   onResponsibleFilterChange: (value: string) => void;
+  involvedAreaFilter?: string;
+  onInvolvedAreaFilterChange?: (value: string) => void;
+  availableAreas?: string[];
   teamMembers: { id: string; name: string }[];
 }
 
@@ -19,14 +22,18 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
   onStatusFilterChange,
   responsibleFilter,
   onResponsibleFilterChange,
+  involvedAreaFilter,
+  onInvolvedAreaFilterChange,
+  availableAreas = [],
   teamMembers,
 }) => {
-  const hasFilters = searchTerm || statusFilter !== 'all' || responsibleFilter;
+  const hasFilters = searchTerm || statusFilter !== 'all' || responsibleFilter || involvedAreaFilter;
 
   const clearFilters = () => {
     onSearchChange('');
     onStatusFilterChange('all');
     onResponsibleFilterChange('');
+    if (onInvolvedAreaFilterChange) onInvolvedAreaFilterChange('');
   };
 
   return (
@@ -72,6 +79,20 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
           ))}
         </select>
 
+        {/* Involved Area Filter */}
+        {onInvolvedAreaFilterChange && (
+          <select
+            value={involvedAreaFilter || ''}
+            onChange={e => onInvolvedAreaFilterChange(e.target.value)}
+            className="px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 max-w-[200px]"
+          >
+            <option value="">Todas as áreas</option>
+            {availableAreas.map(area => (
+              <option key={area} value={area}>{area}</option>
+            ))}
+          </select>
+        )}
+
         {/* Clear Filters */}
         {hasFilters && (
           <button
@@ -103,6 +124,12 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full">
               Responsável: {responsibleFilter}
               <button onClick={() => onResponsibleFilterChange('')} className="hover:text-purple-900 dark:hover:text-purple-100"><X size={12} /></button>
+            </span>
+          )}
+          {involvedAreaFilter && onInvolvedAreaFilterChange && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs rounded-full">
+              Área: {involvedAreaFilter}
+              <button onClick={() => onInvolvedAreaFilterChange('')} className="hover:text-orange-900 dark:hover:text-orange-100"><X size={12} /></button>
             </span>
           )}
         </div>

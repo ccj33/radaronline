@@ -1,0 +1,4 @@
+name: radarnsdi
+command: npm run build && npm run preview
+environment:
+  - NODE_ENV=production

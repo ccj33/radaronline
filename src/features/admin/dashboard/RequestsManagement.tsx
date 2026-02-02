@@ -65,7 +65,8 @@ export function RequestsManagement() {
             // First get count
             let countQuery = supabase
                 .from('user_requests')
-                .select('*', { count: 'exact', head: true });
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id); // FILTER: Only my requests
 
             if (statusFilter !== 'all') {
                 countQuery = countQuery.eq('status', statusFilter);
@@ -81,6 +82,7 @@ export function RequestsManagement() {
             let query = supabase
                 .from('user_requests')
                 .select('*')
+                .eq('user_id', user.id) // FILTER: Only my requests
                 .order('created_at', { ascending: false })
                 .range((page - 1) * pageSize, page * pageSize - 1);
 
@@ -164,7 +166,7 @@ export function RequestsManagement() {
             .channel('requests_management_changes')
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'user_requests' },
+                { event: '*', schema: 'public', table: 'user_requests', filter: `user_id=eq.${user.id}` },
                 () => {
                     if (loadRequestsRef.current) {
                         loadRequestsRef.current();

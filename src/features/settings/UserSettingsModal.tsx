@@ -414,7 +414,7 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
                 .from('user_requests')
                 .insert({
                     user_id: user.id,
-                    request_type: 'profile_change',
+                    request_type: 'support', // Changed from 'profile_change' - must match DB constraint
                     content: changeRequest.trim(),
                     status: 'pending'
                 })
@@ -1102,7 +1102,7 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
                                             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30 dark:bg-slate-950/30 scroll-smooth">
                                                 {loadingNotifications ? (
                                                     <div className="flex items-center justify-center h-full text-slate-400 text-sm">Carregando...</div>
-                                                ) : requests.filter(r => r.user_id === user.id).length === 0 ? (
+                                                ) : requests.filter(r => r.user_id === user.id && r.request_type !== 'announcement').length === 0 ? (
                                                     <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm gap-2">
                                                         <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                                             <MessageSquare className="w-6 h-6 text-slate-300" />
@@ -1111,7 +1111,7 @@ export function UserSettingsModal({ isOpen, onClose, initialTab, mode = 'setting
                                                     </div>
                                                 ) : (
                                                     requests
-                                                        .filter(r => r.user_id === user.id)
+                                                        .filter(r => r.user_id === user.id && r.request_type !== 'announcement')
                                                         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) // Sort Oldest -> Newest
                                                         .map(request => (
                                                             <div key={request.id} className="space-y-2 animate-in fade-in slide-in-from-bottom-2">

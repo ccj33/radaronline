@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, X, Check, Clock, XCircle, RotateCcw, AtSign, Shield, ChevronRight, CheckCheck, Megaphone } from 'lucide-react';
+import { Bell, X, Check, Clock, XCircle, RotateCcw, AtSign, Shield, ChevronRight, ChevronLeft, CheckCheck, Megaphone } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../auth/AuthContext';
 import { getMicroregiaoById } from '../../data/microregioes';
@@ -55,7 +55,7 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [requests, setRequests] = useState<UserRequest[]>([]);
-    const [pendingCount, setPendingCount] = useState<number | null>(null);
+    // const [pendingCount, setPendingCount] = useState<number | null>(null); // Removed unused
     const [loading, setLoading] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
     const [adminNote, setAdminNote] = useState('');
@@ -88,42 +88,47 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
 
 
     // Verificar se uma notificação é "não lida"
+    // Usa 'id-status' para detectar mudanças de status
     const isUnread = (request: UserRequest): boolean => {
-        if (readIds.has(request.id)) return false;
+        // Chave composta: quando status muda, a notificação fica "não lida" novamente
+        const readKey = `${request.id}-${request.status}`;
+        if (readIds.has(readKey)) return false;
 
         if (isAdmin) {
-            // Para admins: não lida se está pendente (e não é menção)
-            return request.status === 'pending' && request.request_type !== 'mention';
+            // Para admins: não lida se está PENDENTE (precisa de resposta)
+            return request.status === 'pending';
         } else {
-            // Para usuários: não lida se é menção/anúncio pendente OU tem resposta do admin
-            if (request.request_type === 'mention' || request.request_type === 'announcement') {
-                return request.status === 'pending';
+            // Para usuários: não lida se é menção/anúncio pendente OU recebeu resposta (status mudou)
+            if (request.status === 'pending') {
+                return request.request_type === 'mention' || request.request_type === 'announcement';
             }
-            return !!(request.admin_notes && request.status !== 'pending');
+            // Se mudou de status (resolveu/rejeitou), é unread (a chave será diferente)
+            return true;
         }
     };
 
-    // Marcar como lida
-    const markAsRead = (requestId: string) => {
+    // Marcar como lida (usa chave composta id-status)
+    const markAsRead = (request: UserRequest) => {
+        const readKey = `${request.id}-${request.status}`;
         const newReadIds = new Set(readIds);
-        newReadIds.add(requestId);
+        newReadIds.add(readKey);
         setReadIds(newReadIds);
         saveReadNotifications(newReadIds);
     };
 
     // Marcar todas como lidas
     const markAllAsRead = () => {
-        const unreadRequests = requests.filter(r => isUnread(r));
+        const unreadReqs = requests.filter(r => isUnread(r));
         const newReadIds = new Set(readIds);
-        unreadRequests.forEach(r => newReadIds.add(r.id));
+        unreadReqs.forEach(r => newReadIds.add(`${r.id}-${r.status}`));
         setReadIds(newReadIds);
         saveReadNotifications(newReadIds);
     };
 
     // Contagem de não lidas
     const unreadRequests = requests.filter(r => isUnread(r));
-    // Para admins, preferimos usar a contagem exata de pendentes do servidor (pode haver mais de 20)
-    const notificationCount = isAdmin ? (pendingCount ?? unreadRequests.length) : unreadRequests.length;
+    // Agora usamos apenas a contagem local de não lidas, pois "Pending" não conta mais como badge
+    const notificationCount = unreadRequests.length;
 
     // Lista filtrada baseada na aba ativa
     const filteredRequests = activeTab === 'unread' ? unreadRequests : requests;
@@ -142,11 +147,12 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
                 .limit(20);
 
             if (isAdmin) {
-                // Admins veem solicitações que precisam de atenção (NÃO announcements)
-                // Announcements são criados pelos admins para os usuários
-                query = query.in('request_type', ['request', 'feedback', 'support', 'mention']);
+                // Admins veem:
+                // 1. Solicitações de TODOS os usuários (suporte, requests, feedback, menções)
+                // 2. Announcements APENAS os seus próprios (evita duplicatas)
+                query = query.or(`request_type.in.(request,feedback,support,mention),and(request_type.eq.announcement,user_id.eq.${user.id})`);
             } else {
-                // Usuários veem suas próprias notificações (incluindo announcements)
+                // Usuários veem apenas suas próprias notificações (incluindo announcements e menções)
                 query = query.eq('user_id', user.id);
             }
 
@@ -203,30 +209,8 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
     }, [user, isAdmin]);
 
     // Fetch pending count (accurate) for admins (or for user-specific pending)
-    const loadPendingCount = useCallback(async () => {
-        if (!user) return;
-        try {
-            let countQuery = supabase
-                .from('user_requests')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'pending');
+    // Removed unused loadPendingCount function
 
-            if (isAdmin) {
-                // Admins: contam apenas solicitações que precisam atenção (sem announcements)
-                countQuery = countQuery.in('request_type', ['request', 'feedback', 'support', 'mention']);
-            } else {
-                // Usuários: contam suas próprias notificações
-                countQuery = countQuery.eq('user_id', user.id);
-            }
-
-            const { count, error } = await countQuery;
-            if (!error) {
-                setPendingCount(count || 0);
-            }
-        } catch {
-            // ignore silently
-        }
-    }, [user, isAdmin]);
 
     // Atualizar solicitação com resposta
     const handleUpdate = async (requestId: string, status: 'pending' | 'resolved' | 'rejected', note?: string) => {
@@ -277,8 +261,8 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
     const openDetails = (request: UserRequest) => {
         setSelectedRequest(request);
         setAdminNote(request.admin_notes || '');
-        // Marca como lida ao abrir
-        markAsRead(request.id);
+        // Marca como lida ao abrir (usa chave composta id-status)
+        markAsRead(request);
     };
 
     // Carregar ao abrir (para todos os usuários)
@@ -288,23 +272,22 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
         }
     }, [isOpen, user, loadRequests]);
 
-    // Carregar ao montar (para badge) - para todos os usuários
     useEffect(() => {
         if (user) {
             loadRequests();
-            loadPendingCount();
+            // loadPendingCount();
         }
-    }, [user, loadRequests, loadPendingCount]);
+    }, [user, loadRequests]);
 
     // ✅ REALTIME: Atualiza automaticamente quando novas solicitações chegam
     // Usando Ref para evitar re-subscrição desnecessária quando loadRequests mudar
     const loadRequestsRef = useRef(loadRequests);
-    const loadPendingCountRef = useRef(loadPendingCount);
+    // const loadPendingCountRef = useRef(loadPendingCount);
 
     useEffect(() => {
         loadRequestsRef.current = loadRequests;
-        loadPendingCountRef.current = loadPendingCount;
-    }, [loadRequests, loadPendingCount]);
+        // loadPendingCountRef.current = loadPendingCount;
+    }, [loadRequests]);
 
     useEffect(() => {
         if (!user?.id) return;
@@ -325,17 +308,19 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
 
                     // Se for usuário comum, verificar se a notificação é para ele
                     // O payload.new tem os dados da nova linha
-                    if (!isAdmin && payload.new && 'user_id' in payload.new) {
+                    // Verificar se a notificação é para este usuário
+                    // O payload.new tem os dados da nova linha
+                    if (payload.new && 'user_id' in payload.new) {
                         const newRecord = payload.new as { user_id: string };
                         if (newRecord.user_id !== user.id) {
-                            // Ignorar notificações de outros usuários (embora RLS deva filtrar)
+                            // Ignorar notificações de outros usuários
                             return;
                         }
                     }
 
                     // Chama as funções mais recentes via ref
                     loadRequestsRef.current();
-                    loadPendingCountRef.current();
+                    // loadPendingCountRef.current();
                 }
             )
             .subscribe((status) => {
@@ -491,11 +476,9 @@ export function NotificationBell({ className = '', collapsed = false, onViewAllR
                                 <div className="animate-fade-in">
                                     <button
                                         onClick={() => setSelectedRequest(null)}
-                                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 mb-4 transition-colors font-medium group"
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl mb-4 transition-all shadow-sm group"
                                     >
-                                        <div className="p-1 rounded-full bg-slate-200 dark:bg-slate-800 group-hover:bg-slate-300 dark:group-hover:bg-slate-700 transition-colors">
-                                            <X size={12} />
-                                        </div>
+                                        <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
                                         Voltar para lista
                                     </button>
 
