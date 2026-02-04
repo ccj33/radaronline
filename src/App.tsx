@@ -140,6 +140,11 @@ function AppContent() {
     }
   }, [user]);
 
+  // ✅ FIX: Sincronizar sidebar quando isMobile muda
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
+
   // =====================================
   // NOTIFICATION STATE
   // =====================================
@@ -1418,7 +1423,7 @@ function AppContent() {
   // RENDER PRINCIPAL
   // =====================================
   return (
-    <div className="flex h-screen w-full bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#f8fafc] dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-200">
       {/* Global Styles */}
       <style>{`
         .pattern-diagonal-lines {
