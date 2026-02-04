@@ -1194,8 +1194,7 @@ function AppContent() {
       inputType: config.inputType,
       label: config.label,
       onSave: (newValue) => {
-        const finalValue = field === 'eixo' ? parseInt(newValue, 10) : newValue;
-        handleUpdateObjectiveField(id, field, finalValue);
+        handleUpdateObjectiveField(id, field, newValue);
       }
     });
   };
@@ -1641,8 +1640,6 @@ function AppContent() {
           onToggleEditMode={isAdmin ? () => setIsEditMode(!isEditMode) : undefined}
           onUpdateObjective={handleEditObjectiveField}
           onNavigate={(nav) => setCurrentNav(nav)}
-          selectedActivity={selectedActivity}
-          activities={filteredActivities}
         />
 
         {currentNav === 'strategy' && (
@@ -1701,8 +1698,6 @@ function AppContent() {
                   setSelectedActivity={setSelectedActivity}
                   isEditMode={isEditMode}
                   onUpdateActivity={(id, field, value) => handleEditActivity(id, field, value)}
-                  objective={filteredObjectives.find(o => o.id === selectedObjective)}
-                  onUpdateObjective={handleEditObjectiveField}
                 />
               )}
             </div>
