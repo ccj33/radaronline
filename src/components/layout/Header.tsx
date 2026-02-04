@@ -1,11 +1,13 @@
-import React from 'react';
-import { List, BarChart2, Menu, Shield, MapPin, Zap, Pencil } from 'lucide-react';
+import React, { useState } from 'react';
+import { List, BarChart2, Menu, Shield, MapPin, Zap, Pencil, Info } from 'lucide-react';
 import { Objective } from '../../types';
 import { UserRole } from '../../types/auth.types';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { ZoomControl } from '../common/ZoomControl';
 import { NotificationBell } from '../common/NotificationBell';
 import { getObjectiveTitleWithoutNumber } from '../../lib/text';
+import { EixoSelectorModal } from '../modals/EixoSelectorModal';
+import { EixoConfig, EIXOS_PREDEFINIDOS } from '../../lib/eixosConfig';
 
 interface HeaderProps {
   macro: string;
@@ -22,7 +24,7 @@ interface HeaderProps {
   onAdminClick?: () => void;
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
-  onUpdateObjective?: (id: number, newTitle: string) => void;
+  onUpdateObjective?: (id: number, field: 'eixo' | 'eixoLabel' | 'eixoColor' | 'description', value: string | number) => void;
   onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news') => void;
 }
 
@@ -52,8 +54,24 @@ export const Header: React.FC<HeaderProps> = ({
     ? `Obj. ${objectiveIndex + 1}. ${getObjectiveTitleWithoutNumber(rawTitle)}`
     : rawTitle;
 
-  // Título limpo (sem prefixo) para passar ao modal de edição
-  const cleanTitleForEdit = getObjectiveTitleWithoutNumber(rawTitle);
+  // State para modal de seleção de Eixo
+  const [isEixoModalOpen, setIsEixoModalOpen] = useState(false);
+
+  // Handler para salvar eixo selecionado
+  const handleSaveEixo = (eixo: EixoConfig) => {
+    if (!objective || !onUpdateObjective) return;
+    onUpdateObjective(objective.id, 'eixo', eixo.numero);
+    onUpdateObjective(objective.id, 'eixoLabel', eixo.nome);
+    onUpdateObjective(objective.id, 'eixoColor', eixo.cor);
+    // A descrição do eixo é buscada automaticamente de EIXOS_PREDEFINIDOS
+    // baseado no número do eixo, então não precisa salvar separadamente
+  };
+
+  // Busca a descrição do eixo atual
+  const eixoAtual = EIXOS_PREDEFINIDOS.find(e => e.numero === objective?.eixo);
+  const eixoDescricao = eixoAtual?.descricao || objective?.description || 'Sem descrição detalhada para este eixo.';
+
+
 
   // =============================================
   // HEADER MOBILE - Layout simplificado e limpo
@@ -136,56 +154,78 @@ export const Header: React.FC<HeaderProps> = ({
   }
 
   // =============================================
-  // HEADER DESKTOP - Layout completo
+  // HEADER DESKTOP - Layout completo com hierarquia visual
+  // Estrutura: Esquerda (Contexto) | Centro (Navegação) | Direita (Ações + Utilitários)
   // =============================================
   return (
-    <header data-tour="header" className="bg-white/95 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 h-16 flex justify-between items-center shrink-0 z-30 sticky top-0 transition-all duration-200 shadow-sm">
-      <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
-        <div className="flex-1 min-w-0">
-          {/* Badge de Localização */}
-          <div className="flex items-center gap-2 mb-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 dark:bg-slate-700 border border-slate-200/60 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 hover:shadow-sm transition-all group cursor-default">
-              <div className="p-0.5 rounded-full bg-teal-100 dark:bg-teal-900 text-teal-600 dark:text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-colors">
-                <MapPin size={10} />
+    <header data-tour="header" className="bg-white/95 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-3 lg:px-6 h-14 lg:h-16 flex items-center justify-between gap-2 lg:gap-4 shrink-0 z-30 sticky top-0 transition-all duration-200 shadow-sm">
+
+      {/* ====== ESQUERDA: Contexto (Badge Eixo + Nome + Info) ====== */}
+      <div className="flex items-center gap-2 lg:gap-3 min-w-0 shrink-0">
+        {currentNav !== 'strategy' && (
+          <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
+            {currentNav === 'home' ? 'Visão Geral' :
+              currentNav === 'news' ? 'Mural da Rede' :
+                currentNav === 'dashboard' ? 'Relatórios' :
+                  'Configurações'}
+          </h1>
+        )}
+
+        {currentNav === 'strategy' && objective && (
+          <div className="flex items-center gap-2 lg:gap-3 animate-fade-in">
+            {/* Badge Eixo - abre modal em modo edição */}
+            <div
+              className={`
+                flex items-center justify-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm
+                ${objective.eixoColor === 'blue' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800' :
+                  objective.eixoColor === 'emerald' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-800' :
+                    objective.eixoColor === 'rose' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-800' :
+                      'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-700'}
+                ${isEditMode && onUpdateObjective ? 'cursor-pointer hover:brightness-95' : ''}
+              `}
+              onClick={() => isEditMode && setIsEixoModalOpen(true)}
+              title={isEditMode ? "Clique para selecionar outro Eixo" : ""}
+            >
+              Eixo {objective.eixo}
+            </div>
+
+            {/* Nome do Eixo - abre modal em modo edição */}
+            <h2
+              className={`hidden lg:block text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[100px] xl:max-w-[180px] ${isEditMode && onUpdateObjective ? 'cursor-pointer hover:underline decoration-dashed decoration-slate-300 underline-offset-4 transition-all' : ''}`}
+              onClick={() => isEditMode && setIsEixoModalOpen(true)}
+              title={isEditMode ? "Clique para selecionar outro Eixo" : objective.eixoLabel}
+            >
+              {objective.eixoLabel}
+            </h2>
+
+            {/* Info com Tooltip - mostra descrição do eixo */}
+            <div className="group relative flex items-center cursor-help">
+              <Info size={14} className="text-slate-400 hover:text-teal-500 transition-colors" />
+
+              {/* Tooltip Content */}
+              <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-100 dark:border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <span className="font-bold block mb-1 text-slate-800 dark:text-slate-100">Sobre o Eixo:</span>
+                  <span className="whitespace-pre-line">{eixoDescricao}</span>
+                </div>
+                {/* Seta do Tooltip */}
+                <div className="absolute -top-1 left-3 w-2 h-2 bg-white dark:bg-slate-800 transform rotate-45 border-t border-l border-slate-100 dark:border-slate-700"></div>
               </div>
-              <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wide text-[10px]">{macro}</span>
-              {micro && (
-                <>
-                  <span className="text-slate-300 dark:text-slate-500 mx-0.5">›</span>
-                  <span className="text-slate-800 dark:text-slate-100 font-bold">{micro}</span>
-                </>
-              )}
             </div>
           </div>
+        )}
 
-          {currentNav === 'strategy' ? (
-            isEditMode ? (
-              <h1
-                className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight truncate cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-1 rounded -ml-2 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all flex items-center gap-2"
-                title="Clique para editar"
-                onClick={() => onUpdateObjective?.(objective?.id || 0, cleanTitleForEdit)}
-              >
-                {objectiveTitle}
-                <Pencil size={12} className="text-slate-400" />
-              </h1>
-            ) : (
-              <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight truncate" title={objectiveTitle}>
-                {objectiveTitle}
-              </h1>
-            )
-          ) : (
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              {currentNav === 'home' ? 'Visão Geral' :
-                currentNav === 'news' ? 'Mural da Rede' :
-                  currentNav === 'dashboard' ? 'Relatórios' :
-                    'Configurações'}
-            </h1>
-          )}
-        </div>
+        {/* Modal de Seleção de Eixo */}
+        <EixoSelectorModal
+          isOpen={isEixoModalOpen}
+          onClose={() => setIsEixoModalOpen(false)}
+          onSave={handleSaveEixo}
+          currentEixo={objective?.eixo || 1}
+        />
       </div>
 
-      <div className="flex items-center gap-6 shrink-0">
-        {/* Navigation Tabs - Desktop */}
+      {/* ====== CENTRO: Navegação (Tabs de Visualização) ====== */}
+      <div className="flex-1 flex justify-center min-w-0">
         {currentNav === 'strategy' && (
           <div data-tour="view-mode" className="flex bg-slate-100/80 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
             <TabButton
@@ -208,65 +248,71 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
         )}
+      </div>
 
-        <div className="flex items-center gap-3">
-          {/* Notification Bell */}
-          {micro && <NotificationBell onNavigate={onNavigate} />}
+      {/* ====== DIREITA: Ações Primárias + Separador + Utilitários ====== */}
+      <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
 
-          {/* Edit Mode Toggle */}
+        {/* Grupo de Ações Primárias (EDITAR + ADMIN) */}
+        <div className="flex items-center gap-1.5 lg:gap-2">
+          {/* Edit Mode Toggle - FUNDO ROXO SÓLIDO */}
           {(isAdmin || userRole === 'superadmin') && currentNav === 'strategy' && onToggleEditMode && viewMode === 'table' && (
             <button
               onClick={onToggleEditMode}
               className={`
-                flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold tracking-tight transition-all
+                flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 rounded-md lg:rounded-lg text-[10px] lg:text-[11px] font-bold tracking-tight transition-all
                 ${isEditMode
-                  ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-500/30'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'}
+                  ? 'bg-amber-500 text-white shadow-md hover:bg-amber-600 ring-2 ring-amber-300/50'
+                  : 'bg-purple-600 text-white shadow-md hover:bg-purple-700'}
               `}
               title={isEditMode ? "Modo de edição ativo" : "Ativar modo de edição"}
             >
-              <div className={`w-1.5 h-1.5 rounded-full ${isEditMode ? 'bg-amber-500' : 'bg-slate-400'}`} />
-              <span>{isEditMode ? 'EDITANDO' : 'EDITAR'}</span>
+              <Pencil size={12} />
+              <span className="hidden sm:inline">{isEditMode ? 'EDITANDO' : 'EDITAR'}</span>
             </button>
           )}
 
-          {/* Botão Admin */}
+          {/* Botão Admin - OUTLINE ROXO */}
           {isAdmin && onAdminClick && (
             <button
               onClick={onAdminClick}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-50 dark:bg-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded-lg text-[10px] font-bold transition-colors border border-purple-100/50 dark:border-purple-800/50"
+              className="flex items-center gap-1 lg:gap-1.5 px-2 lg:px-3 py-1 lg:py-1.5 bg-transparent hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-md lg:rounded-lg text-[10px] lg:text-[11px] font-bold transition-all border-2 border-purple-600 dark:border-purple-500"
             >
               <Shield size={12} />
-              <span>ADMIN</span>
+              <span className="hidden sm:inline">ADMIN</span>
             </button>
           )}
+        </div>
 
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+        {/* Separador Visual */}
+        <div className="h-5 lg:h-6 w-px bg-slate-200 dark:bg-slate-600 mx-1 lg:mx-2" />
 
-          {/* Utility Group */}
-          <div className="flex items-center gap-1">
-            <ZoomControl />
-            <ThemeToggle size="sm" />
-          </div>
+        {/* Grupo de Utilitários (Sino, Zoom, Tema) - DESTAQUE MÍNIMO */}
+        <div className="flex items-center gap-0.5 lg:gap-1">
+          {/* Notification Bell */}
+          {micro && <NotificationBell onNavigate={onNavigate} />}
+          <ZoomControl />
+          <ThemeToggle size="sm" />
         </div>
       </div>
     </header>
   );
 };
 
-// Componente auxiliar para abas limpas
+// Componente auxiliar para abas limpas - responsivo
 const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
   <button
     onClick={onClick}
     className={`
-      flex items-center gap-2 px-3 py-1.5 transition-all rounded-lg font-bold text-[11px] tracking-tight
+      flex items-center gap-1.5 px-2 lg:px-3 py-1 lg:py-1.5 transition-all rounded-md lg:rounded-lg font-bold text-[10px] lg:text-[11px] tracking-tight
       ${active
         ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-600/50'
         : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40'
       }
     `}
+    title={label}
   >
     <span className={active ? 'text-teal-500' : 'text-slate-400 dark:text-slate-500'}>{icon}</span>
-    <span>{label}</span>
+    <span className="hidden xl:inline">{label}</span>
   </button>
 );

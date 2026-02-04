@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Activity, Objective } from '../../types';
-import { Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Activity } from '../../types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { getActivityDisplayId } from '../../lib/text';
 
@@ -10,8 +10,6 @@ interface ActivityTabsProps {
   setSelectedActivity: (id: string) => void;
   isEditMode?: boolean;
   onUpdateActivity?: (id: string, field: 'title' | 'description', value: string) => void;
-  objective?: Objective;
-  onUpdateObjective?: (id: number, field: 'eixo' | 'description' | 'eixoLabel' | 'eixoColor', value: string | number) => void;
 }
 
 export const ActivityTabs: React.FC<ActivityTabsProps> = ({
@@ -20,8 +18,6 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
   setSelectedActivity,
   isEditMode = false,
   onUpdateActivity,
-  objective,
-  onUpdateObjective,
 }) => {
   const { isMobile } = useResponsive();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -67,14 +63,14 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
   const stickyTop = isMobile ? 'top-[90px]' : 'top-16';
 
   return (
-    <div className={`bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky ${stickyTop} z-20 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.08)] flex flex-col`}>
-      {/* Barra de Abas */}
-      <div className="relative flex items-center">
+    <div className={`sticky ${stickyTop} z-20 flex flex-col transition-all duration-300`}>
+      {/* Barra de Abas - Glassmorphism */}
+      <div className="relative flex items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm">
         {/* Left scroll indicator/button */}
         {showLeftArrow && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 z-10 h-full px-1 sm:px-2 bg-gradient-to-r from-white via-white dark:from-slate-800 dark:via-slate-800 to-transparent flex items-center"
+            className="absolute left-0 z-10 h-full px-1 sm:px-2 bg-gradient-to-r from-white/90 via-white/80 dark:from-slate-900/90 dark:via-slate-900/80 to-transparent flex items-center"
             aria-label="Scroll left"
           >
             <ChevronLeft size={isMobile ? 16 : 20} className="text-slate-400 dark:text-slate-500" />
@@ -84,7 +80,7 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
         <div
           ref={scrollRef}
           onScroll={checkScroll}
-          className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto px-4 sm:px-6 py-2 scrollbar-hide scroll-smooth snap-x snap-mandatory"
+          className="flex items-center gap-2 overflow-x-auto px-4 sm:px-8 py-2 scrollbar-hide scroll-smooth snap-x snap-mandatory"
           style={{ scrollPaddingInline: '1rem' }}
         >
           {activities?.map(act => {
@@ -95,38 +91,32 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
                 data-activity-id={act.id}
                 onClick={() => setSelectedActivity(act.id)}
                 className={`
-                group flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-lg text-left transition-all duration-200 shrink-0 border snap-center touch-target
+                group flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-left transition-all duration-200 shrink-0 border snap-center touch-target
                 ${isActive
-                    ? "bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-700 text-teal-800 dark:text-teal-200 shadow-sm"
-                    : "bg-white dark:bg-slate-700 border-transparent hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                    ? "bg-teal-600 border-teal-600 text-white shadow-md"
+                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                   }
               `}
               >
-                <div className={`
-                flex items-center justify-center h-5 sm:h-6 px-1 sm:px-1.5 rounded-md text-[9px] sm:text-[10px] font-bold shrink-0 transition-colors
-                ${isActive ? 'bg-teal-200 dark:bg-teal-800 text-teal-800 dark:text-teal-200' : 'bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-500'}
-              `}>
-                  {isMobile ? getActivityDisplayId(act.id) : `Atv ${getActivityDisplayId(act.id)}`}
-                </div>
+                <span className={`
+                  text-[10px] uppercase font-bold tracking-wider
+                  ${isActive ? 'text-teal-100' : 'text-slate-400 group-hover:text-slate-500'}
+                `}>
+                  {getActivityDisplayId(act.id)}
+                </span>
 
-                <div className="flex flex-col flex-1 pl-0.5 sm:pl-1">
-                  <span
-                    className={`text-[11px] sm:text-xs font-semibold whitespace-nowrap max-w-[120px] sm:max-w-[200px] truncate ${isActive ? 'text-teal-900 dark:text-teal-100' : 'text-slate-700 dark:text-slate-200'} ${isEditMode ? 'cursor-pointer hover:underline decoration-dashed' : ''}`}
-                    onClick={(e) => {
-                      if (isEditMode) {
-                        e.stopPropagation();
-                        onUpdateActivity?.(act.id, 'title', act.title);
-                      }
-                    }}
-                    title={act.title} // Sempre mostrar o título completo no tooltip
-                  >
-                    {act.title}
-                  </span>
-                </div>
-
-                {isActive && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 ml-0.5 sm:ml-1 animate-pulse shrink-0" />
-                )}
+                <span
+                  className={`text-xs sm:text-sm font-semibold whitespace-nowrap max-w-[140px] sm:max-w-[240px] truncate ${isActive ? 'text-white' : 'text-slate-700 dark:text-slate-200'} ${isEditMode ? 'cursor-pointer hover:underline decoration-white/50' : ''}`}
+                  onClick={(e) => {
+                    if (isEditMode) {
+                      e.stopPropagation();
+                      onUpdateActivity?.(act.id, 'title', act.title);
+                    }
+                  }}
+                  title={act.title}
+                >
+                  {act.title}
+                </span>
               </button>
             );
           })}
@@ -136,34 +126,13 @@ export const ActivityTabs: React.FC<ActivityTabsProps> = ({
         {showRightArrow && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 z-10 h-full px-1 sm:px-2 bg-gradient-to-l from-white via-white dark:from-slate-800 dark:via-slate-800 to-transparent flex items-center"
+            className="absolute right-0 z-10 h-full px-1 sm:px-2 bg-gradient-to-l from-white/90 via-white/80 dark:from-slate-900/90 dark:via-slate-900/80 to-transparent flex items-center"
             aria-label="Scroll right"
           >
             <ChevronRight size={isMobile ? 16 : 20} className="text-slate-400 dark:text-slate-500" />
           </button>
         )}
       </div>
-
-      {/* Descrição do Objetivo (Exibida no Topo) */}
-      {(objective?.description || isEditMode) && (
-        <div className="px-4 sm:px-6 py-2 bg-slate-50/50 dark:bg-slate-700/50 border-t border-slate-100 dark:border-slate-600 flex items-start gap-2 animate-fade-in">
-          <Info size={14} className="text-teal-500 mt-0.5 shrink-0" />
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-4xl">
-            <span className="font-semibold text-slate-700 dark:text-slate-200 mr-1">Sobre este objetivo:</span>
-            {isEditMode && objective ? (
-              <span
-                className={`cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 px-1 rounded transition-colors border border-dashed border-slate-300 dark:border-slate-500`}
-                onClick={() => onUpdateObjective?.(objective.id, 'description', objective.description || '')}
-                title="Clique para editar descrição do objetivo"
-              >
-                {objective.description || "Clique para adicionar descrição..."}
-              </span>
-            ) : (
-              objective?.description || <span className="opacity-50 italic">Sem descrição definida para o objetivo.</span>
-            )}
-          </p>
-        </div>
-      )}
     </div>
   );
 };

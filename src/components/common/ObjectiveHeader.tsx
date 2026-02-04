@@ -7,20 +7,22 @@ interface ObjectiveHeaderProps {
     objectiveIndex: number;
     isEditMode?: boolean;
     onEdit?: (field: 'eixo' | 'description' | 'eixoLabel' | 'eixoColor', currentValue: string | number) => void;
+    // Overrides for displaying Activity info instead of Axis info
+    customBadgeText?: string;
+    customTitle?: string;
+    hideTitle?: boolean;
 }
 
-const COLOR_OPTIONS = ['blue', 'amber', 'emerald', 'purple', 'rose', 'cyan', 'slate'];
+// ... imports remain ...
 
-/**
- * Header que exibe informações do Eixo e Descrição do Objetivo
- * Suporta customização de cor, número e descrição. 
- * Permite expandir descrições longas.
- */
 export const ObjectiveHeader: React.FC<ObjectiveHeaderProps> = ({
     objective,
     objectiveIndex,
     isEditMode = false,
     onEdit,
+    customBadgeText,
+    customTitle,
+    hideTitle = false,
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -32,7 +34,8 @@ export const ObjectiveHeader: React.FC<ObjectiveHeaderProps> = ({
         2: 'Soluções',
         3: 'Dados',
     };
-    const eixoLabel = objective.eixoLabel || eixoLabels[eixoNumber] || `Eixo ${eixoNumber}`;
+    // Prioritize customTitle, then objective.eixoLabel, then mapped label
+    const combinedLabel = customTitle || objective.eixoLabel || eixoLabels[eixoNumber] || `Eixo ${eixoNumber}`;
 
     // Cor ativa: do banco ou default baseado no número
     const defaultColor = eixoNumber === 1 ? 'blue' : eixoNumber === 2 ? 'amber' : eixoNumber === 3 ? 'emerald' : 'slate';
@@ -53,6 +56,7 @@ export const ObjectiveHeader: React.FC<ObjectiveHeaderProps> = ({
     const handleCycleColor = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isEditMode || !onEdit) return;
+        const COLOR_OPTIONS = ['blue', 'amber', 'emerald', 'purple', 'rose', 'cyan', 'slate'];
         const currentIndex = COLOR_OPTIONS.indexOf(activeColor);
         const nextIndex = (currentIndex + 1) % COLOR_OPTIONS.length;
         onEdit('eixoColor', COLOR_OPTIONS[nextIndex]);
@@ -83,21 +87,23 @@ export const ObjectiveHeader: React.FC<ObjectiveHeaderProps> = ({
                             </div>
                         )}
                         <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colors.badge} ${isEditMode && onEdit ? 'cursor-pointer hover:brightness-95' : ''}`}
-                            onClick={() => isEditMode && onEdit?.('eixo', eixoNumber)}
-                            title={isEditMode ? "Clique para editar número" : ""}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colors.badge} ${isEditMode && onEdit && !customBadgeText ? 'cursor-pointer hover:brightness-95' : ''}`}
+                            onClick={() => !customBadgeText && isEditMode && onEdit?.('eixo', eixoNumber)}
+                            title={isEditMode && !customBadgeText ? "Clique para editar número" : ""}
                         >
-                            EIXO {eixoNumber}
+                            {customBadgeText || `EIXO ${eixoNumber}`}
                         </span>
                     </div>
 
-                    <h2
-                        className={`text-base font-bold ${colors.text} tracking-tight ${isEditMode && onEdit ? 'cursor-pointer hover:underline decoration-dashed decoration-slate-300 underline-offset-4 transition-all' : ''}`}
-                        onClick={() => isEditMode && onEdit?.('eixoLabel', eixoLabel)}
-                        title={isEditMode ? "Clique para editar nome" : ""}
-                    >
-                        {eixoLabel}
-                    </h2>
+                    {!hideTitle && (
+                        <h2
+                            className={`text-base font-bold ${colors.text} tracking-tight ${isEditMode && onEdit && !customTitle ? 'cursor-pointer hover:underline decoration-dashed decoration-slate-300 underline-offset-4 transition-all' : ''}`}
+                            onClick={() => !customTitle && isEditMode && onEdit?.('eixoLabel', combinedLabel)}
+                            title={isEditMode && !customTitle ? "Clique para editar nome" : ""}
+                        >
+                            {combinedLabel}
+                        </h2>
+                    )}
                 </div>
 
                 {/* Separador (Desktop) */}

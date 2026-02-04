@@ -37,6 +37,7 @@ import { useActionHandlers } from './hooks/useActionHandlers';
 // Layout Components
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { StrategyPageHeader } from './components/layout/StrategyPageHeader';
 
 // Mobile Components
 import { MobileBottomNav } from './components/mobile/MobileBottomNav';
@@ -1171,17 +1172,15 @@ function AppContent() {
     }
   }, [user?.role, setObjectives, showToast]);
 
-  // Abre o modal para editar um campo específico do objetivo, ou salva direto se for cor
+  // Abre o modal para editar um campo específico do objetivo, ou salva direto se for cor/eixo/eixoLabel
   const handleEditObjectiveField = (id: number, field: 'eixo' | 'description' | 'eixoLabel' | 'eixoColor', value: string | number) => {
-    // Se for alteração de cor, salva direto (o componente já mandou o novo valor)
-    if (field === 'eixoColor') {
+    // Se for alteração de cor, eixo ou eixoLabel, salva direto (o componente já mandou o novo valor)
+    if (field === 'eixoColor' || field === 'eixo' || field === 'eixoLabel') {
       handleUpdateObjectiveField(id, field, value);
       return;
     }
 
     const fieldConfigs: Record<string, { title: string; label: string; inputType: 'text' | 'textarea' | 'number' }> = {
-      eixo: { title: 'Editar Número do Eixo', label: 'Número do Eixo (1, 2, 3...)', inputType: 'number' },
-      eixoLabel: { title: 'Editar Nome do Eixo', label: 'Nome do Eixo (ex: Formação)', inputType: 'text' },
       description: { title: 'Editar Descrição do Objetivo', label: 'Descrição', inputType: 'textarea' },
     };
 
@@ -1640,9 +1639,23 @@ function AppContent() {
           isEditMode={isEditMode}
           // Admins e superadmins podem editar objetivos/atividades em qualquer momento
           onToggleEditMode={isAdmin ? () => setIsEditMode(!isEditMode) : undefined}
-          onUpdateObjective={(id, newTitle) => handleEditObjective(id, newTitle)}
+          onUpdateObjective={handleEditObjectiveField}
           onNavigate={(nav) => setCurrentNav(nav)}
+          selectedActivity={selectedActivity}
+          activities={filteredActivities}
         />
+
+        {currentNav === 'strategy' && (
+          <StrategyPageHeader
+            macro={macrorregiaoNome}
+            micro={microregiaoNome}
+            selectedObjective={selectedObjective}
+            objectives={filteredObjectives}
+            isEditMode={isEditMode}
+            onUpdateObjective={(id, newTitle) => handleEditObjective(id, newTitle)}
+            onUpdateObjectiveField={handleEditObjectiveField}
+          />
+        )}
 
         {/* SCROLLABLE AREA */}
         {/* Padding extra quando FAB está visível (mobile + strategy + table + canCreate) */}

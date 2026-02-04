@@ -6,6 +6,7 @@ import { Action, Status, RaciRole, TeamMember, ActionComment } from '../../types
 import { formatDateBr, getTodayStr } from '../../lib/date';
 import {
   getActionDisplayId,
+  getActivityDisplayId,
   getCorrectActivityPrefix,
   getCorrectActionDisplayId,
   findObjectiveIdByActivityId,
@@ -280,7 +281,7 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
         </div>
       )}
 
-      {/* Objetivo Header - Eixo e Descrição (AGORA MOSTRA DESCRIÇÃO DA ATIVIDADE) */}
+      {/* Objetivo Header - Exibe info da Atividade selecionada */}
       {selectedObjective && objectives.length > 0 && (
         <ObjectiveHeader
           objective={(() => {
@@ -292,6 +293,19 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
           })()}
           objectiveIndex={objectives.findIndex(o => o.id === selectedObjective)}
           isEditMode={isEditMode}
+          // Custom props para exibir Atividade ao invés de Eixo
+          customBadgeText={(() => {
+            const act = activities[selectedObjective]?.find(a => a.id === selectedActivity);
+            return act ? `At. ${getActivityDisplayId(act.id)}` : undefined;
+          })()}
+          customTitle={(() => {
+            const act = activities[selectedObjective]?.find(a => a.id === selectedActivity);
+            return act ? act.title : undefined;
+          })()}
+          hideTitle={(() => {
+            const act = activities[selectedObjective]?.find(a => a.id === selectedActivity);
+            return !!act;
+          })()}
           onEdit={(field, value) => {
             // Se for descrição, edita a ATIVIDADE. Se for eixo/cor, edita o OBJETIVO.
             if (field === 'description') {
