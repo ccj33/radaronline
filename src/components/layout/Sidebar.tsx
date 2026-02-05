@@ -817,6 +817,8 @@ const SidebarContent: React.FC<SidebarProps> = ({
                     <img
                       src={getAvatarUrl(userAvatarId || 'zg10')}
                       alt="User"
+                      width={40}
+                      height={40}
                       className="w-10 h-10 rounded-full bg-white border-2 border-white/30 group-hover:border-white shadow-md"
                       loading="lazy"
                     />
@@ -850,6 +852,8 @@ const SidebarContent: React.FC<SidebarProps> = ({
                   <img
                     src={getAvatarUrl(userAvatarId || 'zg10')}
                     alt="User"
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full bg-white border-2 border-white/30 group-hover:border-white shadow-md transition-all"
                     loading="lazy"
                   />

@@ -23,6 +23,8 @@ export default defineConfig({
         manualChunks: {
           // Core React - carregado sempre
           'vendor-react': ['react', 'react-dom'],
+          // Router - separado para não bloquear render inicial
+          'vendor-router': ['react-router-dom'],
           // Charts - lazy loaded com dashboard
           'vendor-charts': ['recharts'],
           // Maps - lazy loaded com mapa
@@ -33,7 +35,10 @@ export default defineConfig({
           'vendor-supabase': ['@supabase/supabase-js'],
           // Date utilities
           'vendor-date': ['date-fns'],
+          // Icons - separado pois é grande (~50KB)
+          'vendor-icons': ['lucide-react'],
         }
+
       }
     },
     // Aumentar limite de warning para chunks grandes durante transição

@@ -87,14 +87,24 @@ export const AVATAR_LIST = [
     { id: 'x2', seed: 'Beta', label: 'Beta', category: 'abstrato', style: 'rings' },
 ];
 
-export function getAvatarUrl(avatarId: string): string {
+export function getAvatarUrl(avatarId: string, size: 'thumb' | 'full' = 'thumb'): string {
     const avatar = AVATAR_LIST.find(a => a.id === avatarId);
-    if ((avatar as any)?.local) return (avatar as any).local;
+    if ((avatar as any)?.local) {
+        const localPath = (avatar as any).local as string;
+        // Use optimized WebP thumbnails for normal display (1KB vs 1MB)
+        if (size === 'thumb' && localPath.includes('/ze-gotinha/')) {
+            return localPath
+                .replace('/avatars/ze-gotinha/', '/avatars/ze-gotinha/thumb/')
+                .replace('.png', '.webp');
+        }
+        return localPath;
+    }
     const seed = (avatar as any)?.seed || 'User';
     const style = (avatar as any)?.style || 'personas';
     const colors = 'b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf';
     return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=${colors}`;
 }
+
 
 interface UserSettingsModalProps {
     isOpen: boolean;

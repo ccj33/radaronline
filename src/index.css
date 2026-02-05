@@ -240,6 +240,22 @@ code {
   }
 }
 
+/* Performance: content-visibility for off-screen sections */
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* Performance: contain layout for images to prevent reflow */
+.contain-layout {
+  contain: layout;
+}
+
+/* Performance: hint browser about animated elements */
+.will-animate {
+  will-change: transform, opacity;
+}
+
 /* Loading skeleton */
 .skeleton {
   background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
