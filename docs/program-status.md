@@ -34,6 +34,15 @@ Data de referencia: 2026-03-23
 - cards do `Mural da Rede` deixam de esticar a mesma linha do grid ao expandir um comunicado, eliminando o efeito visual de "abrir dois" ao usar `Ler mais`
 - `NewsFeed` agora respeita `viewingMicroregiaoId` quando houver contexto de microrregiao selecionado, alinhando o mural ao mesmo escopo de navegacao do planejamento
 - teste de regressao adicionado para garantir que a `Visao Rapida` receba apenas objetivos e atividades filtrados em `src/components/main/MainViewContentSwitch.test.tsx`
+- workspace `community` agora abre em uma Home propria do `Hub`, em vez de cair direto em `forums`, dando ao produto uma entrada unica para comunidade, mentoria, educacao e biblioteca
+- `SidebarCommunityNavigation`, `MobileBottomNav` e `Header` passaram a reconhecer o `Hub` como fluxo proprio, corrigindo a navegacao comunitaria no desktop e no mobile e removendo o tratamento indevido das telas do Hub como "configuracoes"
+- `src/features/hub/home/HubHomePage.tsx` consolida um primeiro redesign aplicado do Hub com linguagem editorial, cards de capacidade, jornadas prioritarias e leitura integrada de foruns, mentorias, educacao e repositorio
+- teste de regressao adicionado para garantir que `MainViewContentSwitch` carregue a Home do Hub e preserve a navegacao comunitaria por callback
+- `HubHomePage` foi simplificada para uma entrada mais minimalista e funcional, trocando o excesso de hero, metricas e blocos narrativos por lista de entradas, continuidade e destaques mais silenciosos
+- a entrada de `ForumsPage` foi simplificada para um fluxo mais direto: menos explicacao visual, selecao de escopo em chips e lista principal aparecendo antes de cards e blocos de contexto
+- `MentorshipPage` saiu do formato de dashboard com tabs e KPI grid e passou a priorizar continuidade, busca direta de mentores e um espaco mais enxuto para atuacao como mentor
+- `EducationPage` passou a abrir por continuidade de aprendizado, com catalogo direto e trilhas em seco, removendo o excesso de tabs e cards numericos antes do conteudo
+- `RepositoryPage` foi redesenhada como biblioteca minimalista de busca e lista, removendo o bloco de estatisticas pesadas e deixando a descoberta de materiais mais proxima de um catalogo real
 
 ### Documentacao
 
@@ -159,6 +168,9 @@ Data de referencia: 2026-03-23
 - validar em banco real a integridade entre `actions.activity_id` e `activities.id` e promover qualquer correcao remanescente para `supabase/migrations/`, sem depender de scripts legados fora da trilha autoritativa
 - revisar outros flyouts e overlays do admin para garantir o mesmo padrao de tolerancia de hover e evitar regressao visual no merge
 - revisar outras telas que ainda consumam colecoes globais no `MainViewContentSwitch` para garantir que qualquer modo contextualizado por microrregiao receba sempre datasets ja escopados
+- aprofundar o redesign do Hub nos modulos internos (`forums`, `mentorship`, `education` e `repository`) usando a nova Home como shell de referencia e fechar contratos de dominio antes da modelagem definitiva do banco
+- aplicar o mesmo corte de minimalismo nos interiores de `mentorship`, `education` e `repository`, removendo KPIs redundantes, tabs excessivas e chrome de dashboard para aproximar a experiencia de feed, lista e continuidade
+- revisar os detalhes internos do Hub (ex.: perfil de mentor, modal de biblioteca e possiveis telas de detalhe futuras) com a mesma regua de simplicidade para evitar regressao visual apos a modelagem de backend
 
 ## Proximo corte obrigatorio
 

@@ -12,7 +12,7 @@ import { EixoConfig, EIXOS_PREDEFINIDOS } from '../../lib/eixosConfig';
 interface HeaderProps {
   macro: string;
   micro?: string;
-  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
   selectedObjective: number;
   objectives: Objective[];
   viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
@@ -25,7 +25,7 @@ interface HeaderProps {
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
   onUpdateObjective?: (id: number, field: 'eixo' | 'eixoLabel' | 'eixoColor' | 'description', value: string | number) => void;
-  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
+  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -70,6 +70,23 @@ export const Header: React.FC<HeaderProps> = ({
   // Busca a descrição do eixo atual
   const eixoAtual = EIXOS_PREDEFINIDOS.find(e => e.numero === objective?.eixo);
   const eixoDescricao = eixoAtual?.descricao || objective?.description || 'Sem descrição detalhada para este eixo.';
+  const pageTitle = currentNav === 'home'
+    ? 'Dashboard'
+    : currentNav === 'news'
+      ? 'Mural da Rede'
+      : currentNav === 'dashboard'
+        ? 'Relatorios'
+        : currentNav === 'hub'
+          ? 'Hub da Rede'
+          : currentNav === 'forums'
+            ? 'Foruns'
+            : currentNav === 'mentorship'
+              ? 'Mentorias'
+              : currentNav === 'education'
+                ? 'Educacao'
+                : currentNav === 'repository'
+                  ? 'Biblioteca'
+                  : 'Configuracoes';
 
 
 
@@ -142,10 +159,10 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         {/* Título para outras páginas */}
-        {currentNav === 'home' && (
+        {currentNav !== 'strategy' && (
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
             <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              Dashboard
+              {pageTitle}
             </h1>
           </div>
         )}
@@ -164,10 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2 lg:gap-3 min-w-0 shrink-0">
         {currentNav !== 'strategy' && (
           <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
-            {currentNav === 'home' ? 'Visão Geral' :
-              currentNav === 'news' ? 'Mural da Rede' :
-                currentNav === 'dashboard' ? 'Relatórios' :
-                  'Configurações'}
+            {pageTitle}
           </h1>
         )}
 

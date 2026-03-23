@@ -10,6 +10,7 @@ const LinearCalendar = lazy(() => import('../../features/admin/dashboard/LinearC
 const TeamView = lazy(() => import('../../features/team/TeamView').then(m => ({ default: m.TeamView })));
 const ActionTable = lazy(() => import('../../features/actions/ActionTable').then(m => ({ default: m.ActionTable })));
 const NewsFeed = lazy(() => import('../../features/news/NewsFeed').then(m => ({ default: m.NewsFeed })));
+const HubHomePage = lazy(() => import('../../features/hub/home/HubHomePage').then(m => ({ default: m.HubHomePage })));
 const ForumsPage = lazy(() => import('../../features/hub/forums/ForumsPage').then(m => ({ default: m.ForumsPage })));
 const MentorshipPage = lazy(() => import('../../features/hub/mentorship/MentorshipPage').then(m => ({ default: m.MentorshipPage })));
 const EducationPage = lazy(() => import('../../features/hub/education/EducationPage').then(m => ({ default: m.EducationPage })));
@@ -25,7 +26,8 @@ interface MainViewContentSwitchProps {
   chartContainerRef: RefObject<HTMLDivElement>;
   containerWidth: number;
   currentMicroId: string;
-  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+  currentMicroLabel?: string;
+  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
   userId?: string;
   currentTeam: TeamMember[];
   expandedActionUid: string | null;
@@ -52,6 +54,7 @@ interface MainViewContentSwitchProps {
   checkCanCreate: () => boolean;
   checkCanDelete: (action: Action) => boolean;
   checkCanEdit: (action: Action) => boolean;
+  onCommunityNavigate: (nav: 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
   onAddComment: (uid: string, content: string, parentId?: string | null) => Promise<ActionComment | null>;
   onAddMember: (member: Omit<TeamMember, 'id'>) => Promise<TeamMember | null>;
   onBulkImport: (actions: ParsedAction[]) => Promise<void>;
@@ -82,6 +85,7 @@ export function MainViewContentSwitch({
   chartContainerRef,
   containerWidth,
   currentMicroId,
+  currentMicroLabel,
   currentNav,
   userId,
   currentTeam,
@@ -109,6 +113,7 @@ export function MainViewContentSwitch({
   checkCanCreate,
   checkCanDelete,
   checkCanEdit,
+  onCommunityNavigate,
   onAddComment,
   onAddMember,
   onBulkImport,
@@ -137,7 +142,17 @@ export function MainViewContentSwitch({
   return (
     <div className="p-4 sm:p-6" ref={chartContainerRef}>
       {/* Hub Community Pages */}
-      {currentNav === 'forums' ? (
+      {currentNav === 'hub' ? (
+        <ErrorBoundary>
+          <Suspense fallback={sectionFallback}>
+            <HubHomePage
+              userId={userId}
+              currentMicroLabel={currentMicroLabel}
+              onNavigate={onCommunityNavigate}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      ) : currentNav === 'forums' ? (
         <ErrorBoundary>
           <Suspense fallback={sectionFallback}>
             <ForumsPage userId={userId} />

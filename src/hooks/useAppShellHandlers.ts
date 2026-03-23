@@ -1,7 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 
 type CurrentPage = 'main' | 'admin' | 'lgpd';
-type CurrentNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+type CurrentNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
 type ViewMode = 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
 type SettingsTab = 'profile' | 'appearance' | 'notifications' | 'security' | 'roadmap';
 

@@ -1,296 +1,390 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  GraduationCap,
-  Clock,
-  Users,
   BookOpen,
-  Play,
-  Search,
-  ArrowRight,
-  CheckCircle2,
+  Clock,
+  GraduationCap,
   Layers,
+  Search,
+  Users,
 } from 'lucide-react';
 import { useEducacao } from '../../../hooks/useEducacao';
-import type { Course, Trail, CourseCategory, CourseLevel, CourseFormat } from '../../../types/education.types';
-import { LEVEL_CONFIG, FORMAT_CONFIG, CATEGORIES } from '../../../types/education.types';
+import type {
+  Course,
+  CourseCategory,
+  CourseLevel,
+  Trail,
+} from '../../../types/education.types';
+import { CATEGORIES, LEVEL_CONFIG } from '../../../types/education.types';
 
 const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
 const stagger = { animate: { transition: { staggerChildren: 0.06 } } };
-
-// =====================================================
-// Sub-components
-// =====================================================
+const surfaceClassName =
+  'rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900';
 
 const LevelBadge: React.FC<{ level: CourseLevel }> = ({ level }) => {
   const config = LEVEL_CONFIG[level];
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${config.bg} ${config.color}`}>{config.label}</span>;
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${config.bg} ${config.color}`}>
+      {config.label}
+    </span>
+  );
 };
 
-const FormatBadge: React.FC<{ format: CourseFormat }> = ({ format }) => {
-  const config = FORMAT_CONFIG[format];
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${config.bg} ${config.color}`}>{config.label}</span>;
-};
+const SummaryChip: React.FC<{ label: string }> = ({ label }) => (
+  <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+    {label}
+  </span>
+);
+
+const SectionHeader: React.FC<{ eyebrow: string; title: string; description?: string }> = ({
+  eyebrow,
+  title,
+  description,
+}) => (
+  <div>
+    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+      {eyebrow}
+    </p>
+    <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+    {description ? (
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+    ) : null}
+  </div>
+);
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
-  <div className="relative h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+  <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
     <div
-      className={`h-full rounded-full transition-all ${value >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-teal-500 to-emerald-500'}`}
+      className={`h-full rounded-full transition-all ${value >= 100 ? 'bg-emerald-500' : 'bg-slate-900 dark:bg-white'}`}
       style={{ width: `${Math.min(value, 100)}%` }}
     />
   </div>
 );
 
-const CourseCard: React.FC<{ course: Course; onEnroll: (id: string) => void }> = React.memo(({ course, onEnroll }) => (
-  <motion.div
-    variants={fadeIn}
-    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 hover:shadow-lg hover:border-teal-200 dark:hover:border-teal-700 transition-all group"
-  >
-    <div className="flex items-start gap-4">
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 flex items-center justify-center shrink-0">
-        <GraduationCap size={24} className="text-indigo-600 dark:text-indigo-400" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <LevelBadge level={course.level} />
-          <FormatBadge format={course.format} />
-          <span className="text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700">{course.category}</span>
-        </div>
-        <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors mb-1">
-          {course.title}
-        </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{course.description}</p>
+const EmptyState: React.FC<{
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}> = ({ title, description, actionLabel, onAction }) => (
+  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-8 text-center dark:border-slate-700 dark:bg-slate-800/60">
+    <p className="font-semibold text-slate-700 dark:text-slate-200">{title}</p>
+    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+    {actionLabel && onAction ? (
+      <button
+        type="button"
+        onClick={onAction}
+        className="mt-4 inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+      >
+        {actionLabel}
+      </button>
+    ) : null}
+  </div>
+);
 
-        {/* Meta */}
-        <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 mb-3">
-          <span className="flex items-center gap-1"><Clock size={12} /> {course.duration}</span>
-          <span className="flex items-center gap-1"><Users size={12} /> {course.enrolled} inscritos</span>
+const CourseRow: React.FC<{ course: Course; onEnroll: (courseId: string) => void }> = React.memo(
+  ({ course, onEnroll }) => (
+    <motion.div
+      variants={fadeIn}
+      className="border-b border-slate-100 last:border-0 px-4 py-4 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <GraduationCap size={20} />
         </div>
 
-        {/* Progress */}
-        {course.progress > 0 ? (
-          <div>
-            <ProgressBar value={course.progress} />
-            <div className="flex items-center justify-between mt-1.5">
-              <span className="text-[10px] text-slate-400">{course.progress}% concluído</span>
-              {course.progress >= 100 && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-semibold">
-                  <CheckCircle2 size={10} /> Concluído
-                </span>
-              )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <h3 className="font-bold text-slate-900 dark:text-white text-base hover:text-teal-600 transition-colors cursor-pointer">{course.title}</h3>
+            <LevelBadge level={course.level} />
+          </div>
+
+          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+            {course.description}
+          </p>
+
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400 dark:text-slate-500">
+            <span className="flex items-center gap-1">
+              <Clock size={12} />
+              {course.duration}
+            </span>
+            <span className="flex items-center gap-1">
+              <Users size={12} />
+              {course.enrolled}
+            </span>
+            <span>{course.format}</span>
+          </div>
+
+          {course.progress > 0 ? (
+            <div className="mt-3 space-y-2 max-w-xs">
+              <ProgressBar value={course.progress} />
+              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                {course.progress}% concluido
+              </p>
             </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => onEnroll(course.id)}
-            className="flex items-center gap-1.5 text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 transition-colors"
-          >
-            <Play size={12} /> Iniciar Curso <ArrowRight size={12} />
-          </button>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEnroll(course.id)}
+              className="mt-3 text-sm font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+            >
+              Iniciar curso &rarr;
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  </motion.div>
-));
+    </motion.div>
+  ),
+);
 
-const TrailCard: React.FC<{ trail: Trail }> = React.memo(({ trail }) => (
+const TrailRow: React.FC<{ trail: Trail }> = React.memo(({ trail }) => (
   <motion.div
     variants={fadeIn}
-    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-700 transition-all"
+    className="border-b border-slate-100 last:border-0 px-4 py-4 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
   >
     <div className="flex items-start gap-4">
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 flex items-center justify-center shrink-0">
-        <Layers size={24} className="text-purple-600 dark:text-purple-400" />
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
+        <Layers size={20} />
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-slate-900 dark:text-white mb-1">{trail.title}</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{trail.description}</p>
-        <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 mb-3">
-          <span className="flex items-center gap-1"><BookOpen size={12} /> {trail.coursesCount} cursos</span>
-          <span className="flex items-center gap-1"><Clock size={12} /> {trail.totalHours}h total</span>
-          <span className="flex items-center gap-1"><Users size={12} /> {trail.enrolled} inscritos</span>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+           <h3 className="font-bold text-slate-900 dark:text-white text-base">{trail.title}</h3>
+           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full dark:bg-amber-900/20 dark:text-amber-400">Trilha</span>
         </div>
-        {trail.progress > 0 && (
-          <div>
-            <ProgressBar value={trail.progress} />
-            <span className="text-[10px] text-slate-400 mt-1 block">{trail.progress}% da trilha</span>
-          </div>
-        )}
+        <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+          {trail.description}
+        </p>
+
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400 dark:text-slate-500">
+          <span className="flex items-center gap-1">
+            <BookOpen size={12} />
+            {trail.coursesCount} cursos
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock size={12} />
+            {trail.totalHours}h
+          </span>
+        </div>
       </div>
     </div>
   </motion.div>
 ));
-
-// =====================================================
-// Main Education Page
-// =====================================================
 
 interface EducationPageProps {
   userId?: string;
 }
 
 export const EducationPage: React.FC<EducationPageProps> = React.memo(({ userId: _userId }) => {
-  const [activeTab, setActiveTab] = useState<'cursos' | 'trilhas' | 'meus'>('cursos');
   const [categoryFilter, setCategoryFilter] = useState<CourseCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { courses, trails, enrolledCourses, loading, stats, enrollInCourse } = useEducacao();
+  const { courses, trails, enrolledCourses, loading, error, stats, enrollInCourse } = useEducacao();
 
   const filteredCourses = useMemo(() => {
-    return courses.filter(c => {
-      const matchesSearch = !searchTerm || c.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || c.category === categoryFilter;
+    return courses.filter((course) => {
+      const matchesSearch =
+        !searchTerm || course.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || course.category === categoryFilter;
+
       return matchesSearch && matchesCategory;
     });
   }, [courses, searchTerm, categoryFilter]);
 
-  const handleEnroll = useCallback(async (courseId: string) => {
-    await enrollInCourse(courseId);
-  }, [enrollInCourse]);
+  const continueCourses = useMemo(
+    () => enrolledCourses.filter((course) => course.progress > 0 && course.progress < 100),
+    [enrolledCourses],
+  );
+  const completedCourses = useMemo(
+    () => enrolledCourses.filter((course) => course.progress >= 100).slice(0, 2),
+    [enrolledCourses],
+  );
+  const highlightedTrails = useMemo(() => {
+    const inProgressTrails = trails.filter((trail) => trail.progress > 0);
+    return (inProgressTrails.length > 0 ? inProgressTrails : trails).slice(0, 2);
+  }, [trails]);
 
-  const tabs = [
-    { id: 'cursos' as const, label: 'Cursos', icon: GraduationCap },
-    { id: 'trilhas' as const, label: 'Trilhas', icon: Layers },
-    { id: 'meus' as const, label: 'Meus Cursos', icon: BookOpen },
-  ];
+  const handleEnroll = useCallback(
+    async (courseId: string) => {
+      await enrollInCourse(courseId);
+    },
+    [enrollInCourse],
+  );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-slate-900 dark:border-slate-700 dark:border-t-white" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <motion.div {...fadeIn} className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Educação Permanente</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Cursos, trilhas formativas e oficinas de qualificação</p>
-        </div>
+    <div className="mx-auto max-w-5xl space-y-5 p-6">
+      <motion.section {...fadeIn} className={`${surfaceClassName} px-6 py-6 sm:px-7`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+              Educacao
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Continuar aprendendo sem voltar para um dashboard.
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              A tela agora abre com continuidade, depois catalogo e trilhas. Menos blocos de
+              contagem, mais decisao util.
+            </p>
+          </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 dark:border-indigo-800 dark:bg-indigo-900/20 p-4">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cursos Disponíveis</p>
-            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.totalCourses}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Trilhas Formativas</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalTrails}</p>
-          </div>
-          <div className="rounded-xl border border-teal-200 bg-teal-50/50 dark:border-teal-800 dark:bg-teal-900/20 p-4">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Em Andamento</p>
-            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{stats.inProgress}</p>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/20 p-4">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Concluídos</p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.completed}</p>
+          <div className="flex flex-wrap gap-2">
+            <SummaryChip label={`${stats.inProgress} em andamento`} />
+            <SummaryChip label={`${stats.completed} concluidos`} />
+            <SummaryChip label={`${stats.totalTrails} trilhas`} />
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 flex-1 justify-center py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                <Icon size={16} /> {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+            O modulo de educacao ainda depende da consolidacao do backend atual e pode ter lacunas
+            de dados ate o Hub definitivo.
+          </div>
+        ) : null}
+      </motion.section>
 
-        {/* Filters (courses tab only) */}
-        {activeTab === 'cursos' && (
-          <div className="flex flex-col sm:flex-row gap-3">
+      <motion.section {...fadeIn} className={`${surfaceClassName} p-5 sm:p-6`}>
+        <SectionHeader
+          eyebrow="Continuar"
+          title="O que merece retorno"
+          description="A primeira dobra precisa mostrar progresso e proximos passos, nao um painel de numeros."
+        />
+
+        <div className="mt-4 space-y-3">
+          {continueCourses.length > 0 ? (
+            continueCourses.map((course) => (
+              <CourseRow key={course.id} course={course} onEnroll={handleEnroll} />
+            ))
+          ) : completedCourses.length > 0 ? (
+            completedCourses.map((course) => (
+              <CourseRow key={course.id} course={course} onEnroll={handleEnroll} />
+            ))
+          ) : highlightedTrails.length > 0 ? (
+            highlightedTrails.map((trail) => <TrailRow key={trail.id} trail={trail} />)
+          ) : (
+            <EmptyState
+              title="Nada em andamento ainda"
+              description="Quando a pessoa ainda nao comecou, o espaco deve sugerir um proximo passo curto e claro."
+            />
+          )}
+        </div>
+      </motion.section>
+
+      <motion.section {...fadeIn} className={`${surfaceClassName} overflow-hidden`}>
+        <div className="border-b border-slate-200/80 px-5 py-5 dark:border-slate-700/80 sm:px-6">
+          <SectionHeader
+            eyebrow="Cursos"
+            title="Catalogo direto"
+            description="Busca curta, filtros leves e lista limpa. O conteudo vem antes da moldura."
+          />
+
+          <div className="mt-4 flex flex-col gap-3 lg:flex-row">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Buscar cursos..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar curso"
+                className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
+
+            <div className="flex flex-wrap gap-2">
               <button
+                type="button"
                 onClick={() => setCategoryFilter('all')}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${categoryFilter === 'all' ? 'bg-teal-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}
+                className={`rounded-full border px-3 py-2 text-sm font-semibold transition-colors ${
+                  categoryFilter === 'all'
+                    ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
               >
                 Todos
               </button>
-              {CATEGORIES.map(cat => (
+              {CATEGORIES.map((category) => (
                 <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat)}
-                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${categoryFilter === cat ? 'bg-teal-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}
+                  key={category}
+                  type="button"
+                  onClick={() => setCategoryFilter(category)}
+                  className={`rounded-full border px-3 py-2 text-sm font-semibold transition-colors ${
+                    categoryFilter === category
+                      ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
                 >
-                  {cat}
+                  {category}
                 </button>
               ))}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Courses Tab */}
-        {activeTab === 'cursos' && (
-          filteredCourses.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-              <GraduationCap size={40} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Nenhum curso disponível</p>
-            </div>
+        <div className="p-5 sm:p-6">
+          {filteredCourses.length === 0 ? (
+            <EmptyState
+              title="Nenhum curso encontrado"
+              description="Se o filtro zerar a lista, o estado vazio precisa ser pequeno e util."
+              actionLabel="Limpar filtros"
+              onAction={() => {
+                setSearchTerm('');
+                setCategoryFilter('all');
+              }}
+            />
           ) : (
-            <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-4">
-              {filteredCourses.map(course => (
-                <CourseCard key={course.id} course={course} onEnroll={handleEnroll} />
+            <motion.div
+              variants={stagger}
+              initial="initial"
+              animate="animate"
+              className="space-y-3"
+            >
+              {filteredCourses.map((course) => (
+                <CourseRow key={course.id} course={course} onEnroll={handleEnroll} />
               ))}
             </motion.div>
-          )
-        )}
+          )}
+        </div>
+      </motion.section>
 
-        {/* Trails Tab */}
-        {activeTab === 'trilhas' && (
-          trails.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-              <Layers size={40} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Nenhuma trilha disponível</p>
-            </div>
-          ) : (
-            <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-4">
-              {trails.map(trail => <TrailCard key={trail.id} trail={trail} />)}
-            </motion.div>
-          )
-        )}
+      <motion.section {...fadeIn} className={`${surfaceClassName} p-5 sm:p-6`}>
+        <SectionHeader
+          eyebrow="Trilhas"
+          title="Percursos com mais contexto"
+          description="Trilhas entram como complemento natural, nao como aba concorrendo com cursos."
+        />
 
-        {/* My Courses Tab */}
-        {activeTab === 'meus' && (
-          enrolledCourses.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-              <BookOpen size={40} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Você ainda não está inscrito em nenhum curso</p>
-              <button onClick={() => setActiveTab('cursos')} className="mt-3 text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
-                Explorar Cursos
-              </button>
-            </div>
+        <div className="mt-4">
+          {trails.length === 0 ? (
+            <EmptyState
+              title="Nenhuma trilha disponivel"
+              description="A area de trilhas deve aparecer so quando houver conteudo real para sustentar a navegacao."
+            />
           ) : (
-            <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-4">
-              {enrolledCourses.map(course => (
-                <CourseCard key={course.id} course={course} onEnroll={handleEnroll} />
+            <motion.div
+              variants={stagger}
+              initial="initial"
+              animate="animate"
+              className="space-y-3"
+            >
+              {trails.map((trail) => (
+                <TrailRow key={trail.id} trail={trail} />
               ))}
             </motion.div>
-          )
-        )}
-      </motion.div>
+          )}
+        </div>
+      </motion.section>
     </div>
   );
 });

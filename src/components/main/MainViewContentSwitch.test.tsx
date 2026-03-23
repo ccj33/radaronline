@@ -1,15 +1,27 @@
 import { createRef } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Action, Activity, Objective, TeamMember } from '../../types';
 
 const optimizedViewSpy = vi.fn();
+const hubHomeSpy = vi.fn();
 
 vi.mock('../../features/dashboard', () => ({
   Dashboard: () => <div data-testid="dashboard-view" />,
   OptimizedView: (props: { objectives: Objective[]; activities: Record<number, Activity[]> }) => {
     optimizedViewSpy(props);
     return <div data-testid="optimized-view" />;
+  },
+}));
+
+vi.mock('../../features/hub/home/HubHomePage', () => ({
+  HubHomePage: (props: { onNavigate: (nav: 'forums' | 'mentorship' | 'education' | 'repository') => void }) => {
+    hubHomeSpy(props);
+    return (
+      <button type="button" data-testid="hub-home-view" onClick={() => props.onNavigate('forums')}>
+        Abrir Hub
+      </button>
+    );
   },
 }));
 
@@ -66,6 +78,7 @@ function createTeamMember(): TeamMember {
 describe('MainViewContentSwitch', () => {
   afterEach(() => {
     optimizedViewSpy.mockClear();
+    hubHomeSpy.mockClear();
   });
 
   it('passa apenas objetivos e atividades filtrados para a Visao Rapida', async () => {
@@ -107,6 +120,7 @@ describe('MainViewContentSwitch', () => {
         checkCanCreate={() => true}
         checkCanDelete={() => true}
         checkCanEdit={() => true}
+        onCommunityNavigate={vi.fn()}
         onAddComment={vi.fn(async () => null)}
         onAddMember={vi.fn(async () => null)}
         onBulkImport={vi.fn(async () => {})}
@@ -143,5 +157,75 @@ describe('MainViewContentSwitch', () => {
       objectives: filteredObjectives,
       activities: filteredActivities,
     });
+  });
+
+  it('abre a nova entrada do Hub e permite navegar para os modulos comunitarios', async () => {
+    const onCommunityNavigate = vi.fn();
+
+    render(
+      <MainViewContentSwitch
+        chartContainerRef={createRef<HTMLDivElement>()}
+        containerWidth={1280}
+        currentMicroId="MR001"
+        currentNav="hub"
+        userId="user-1"
+        currentTeam={[createTeamMember()]}
+        expandedActionUid={null}
+        filteredActivities={{}}
+        filteredObjectives={[]}
+        ganttActions={[createAction()]}
+        ganttRange="all"
+        ganttStatusFilter="all"
+        handleUpdateActionPatch={vi.fn()}
+        involvedAreaFilter=""
+        isEditMode={false}
+        isMobile={false}
+        isSaving={false}
+        microActions={[createAction()]}
+        objectives={[]}
+        activities={{}}
+        readOnly={false}
+        responsibleFilter=""
+        searchTerm=""
+        selectedActivity=""
+        selectedObjective={0}
+        statusFilter="all"
+        viewMode="table"
+        checkCanCreate={() => true}
+        checkCanDelete={() => true}
+        checkCanEdit={() => true}
+        onCommunityNavigate={onCommunityNavigate}
+        onAddComment={vi.fn(async () => null)}
+        onAddMember={vi.fn(async () => null)}
+        onBulkImport={vi.fn(async () => {})}
+        onCreateAction={vi.fn()}
+        onDashboardNavigate={vi.fn()}
+        onDeleteAction={vi.fn()}
+        onExpandAction={vi.fn()}
+        onGanttActionClick={vi.fn()}
+        onOpenRoadmapSettings={vi.fn()}
+        onRemoveMember={vi.fn(async () => false)}
+        onAddRaci={vi.fn()}
+        onRemoveRaci={vi.fn()}
+        onSaveAction={vi.fn(async () => {})}
+        onSetGanttRange={vi.fn()}
+        onSetGanttStatusFilter={vi.fn()}
+        onSetInvolvedAreaFilter={vi.fn()}
+        onSetResponsibleFilter={vi.fn()}
+        onSetSearchTerm={vi.fn()}
+        onSetStatusFilter={vi.fn()}
+        onShowToast={vi.fn()}
+        onUpdateAction={vi.fn()}
+        onUpdateActivity={vi.fn()}
+        onUpdateObjectiveField={vi.fn()}
+        onUpdateTeam={vi.fn()}
+      />
+    );
+
+    const hubButton = await screen.findByTestId('hub-home-view');
+    fireEvent.click(hubButton);
+
+    expect(hubHomeSpy).toHaveBeenCalled();
+    expect(onCommunityNavigate).toHaveBeenCalledWith('forums');
   });
 });

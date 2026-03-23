@@ -10,7 +10,7 @@ import type {
 } from './requestsService.types';
 
 const platformClient = getPlatformClient;
-const PROFILE_FIELDS = 'id, nome, email, role, cargo, municipio, microregiao_id';
+const PROFILE_FIELDS = 'id, nome, email, role, municipio, microregiao_id';
 
 function applyStatusAndTypeFilters<T>(
   query: T,

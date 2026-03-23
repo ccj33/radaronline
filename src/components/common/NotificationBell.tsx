@@ -8,7 +8,7 @@ export interface NotificationBellProps {
   className?: string;
   collapsed?: boolean;
   onViewAllRequests?: () => void;
-  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
+  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
 }
 
 export function NotificationBell({

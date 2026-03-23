@@ -13,7 +13,8 @@ interface MainViewProps {
   containerWidth: number;
   currentActivity?: Activity;
   currentMicroId: string;
-  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+  currentMicroLabel?: string;
+  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
   userId?: string;
   currentTeam: TeamMember[];
   expandedActionUid: string | null;
@@ -37,6 +38,7 @@ interface MainViewProps {
   statusFilter: Status | 'all';
   viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
   canCreateObjective: boolean;
+  onCommunityNavigate: (nav: 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
   onAddComment: (uid: string, content: string, parentId?: string | null) => Promise<ActionComment | null>;
   onAddMember: (member: Omit<TeamMember, 'id'>) => Promise<TeamMember | null>;
   onAddObjective: () => void;
@@ -77,6 +79,7 @@ export function MainView({
   containerWidth,
   currentActivity,
   currentMicroId,
+  currentMicroLabel,
   currentNav,
   userId,
   currentTeam,
@@ -101,6 +104,7 @@ export function MainView({
   statusFilter,
   viewMode,
   canCreateObjective,
+  onCommunityNavigate,
   onAddComment,
   onAddMember,
   onAddObjective,
@@ -172,6 +176,7 @@ export function MainView({
           chartContainerRef={chartContainerRef}
           containerWidth={containerWidth}
           currentMicroId={currentMicroId}
+          currentMicroLabel={currentMicroLabel}
           currentNav={currentNav}
           userId={userId}
           currentTeam={currentTeam}
@@ -199,6 +204,7 @@ export function MainView({
           checkCanCreate={checkCanCreate}
           checkCanDelete={checkCanDelete}
           checkCanEdit={checkCanEdit}
+          onCommunityNavigate={onCommunityNavigate}
           onAddComment={onAddComment}
           onAddMember={onAddMember}
           onBulkImport={onBulkImport}

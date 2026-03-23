@@ -68,7 +68,7 @@ function AppContent() {
   const [ganttRange, setGanttRange] = useState<GanttRange>('all');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(!isMobile);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
-  const [currentNav, setCurrentNav] = useState<'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository'>('news');
+  const [currentNav, setCurrentNav] = useState<'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository'>('news');
   const [, setShowStickyActivity] = useState<boolean>(false);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
 
@@ -349,7 +349,7 @@ function AppContent() {
     setCurrentWorkspace(ws);
     setCurrentPage('main');
     if (ws === 'community') {
-      setCurrentNav('forums');
+      setCurrentNav('hub');
     } else {
       setCurrentNav('strategy');
       setViewMode('table');
@@ -361,7 +361,7 @@ function AppContent() {
       const next = prev === 'community' ? 'planning' : 'community';
       setCurrentPage('main');
       if (next === 'community') {
-        setCurrentNav('forums');
+        setCurrentNav('hub');
       } else {
         setCurrentNav('strategy');
         setViewMode('table');
@@ -496,6 +496,7 @@ function AppContent() {
             containerWidth={containerWidth}
             currentActivity={currentActivity}
             currentMicroId={currentMicroId}
+            currentMicroLabel={microregiaoNome}
             currentNav={currentNav}
             userId={user?.id}
             currentTeam={currentTeam}
@@ -520,6 +521,7 @@ function AppContent() {
             statusFilter={statusFilter}
             viewMode={viewMode}
             canCreateObjective={isAdmin || user?.role === 'gestor'}
+            onCommunityNavigate={handleCurrentNavChange}
             onAddComment={handleAddComment}
             onAddMember={handleAddMember}
             onAddObjective={handleAddObjective}
@@ -563,6 +565,7 @@ function AppContent() {
           confirmModal={confirmModal}
           createActionMicroId={createActionMicroId}
           currentNav={currentNav}
+          currentWorkspace={currentWorkspace ?? 'planning'}
           editModalConfig={editModalConfig}
           isAdmin={isAdmin}
           isCreateActionModalOpen={isCreateActionModalOpen}

@@ -344,40 +344,26 @@ const ScopeBadge: React.FC<{ scope: ScopeOption }> = ({ scope }) => (
   </span>
 );
 
-const ScopeSelectorCard: React.FC<{
+const ScopeTabButton: React.FC<{
   option: ScopeOption;
   active: boolean;
+  forumCount: number;
   onClick: () => void;
-}> = ({ option, active, onClick }) => (
-  <motion.button
-    variants={fadeIn}
-    whileHover={{ y: -2 }}
-    whileTap={{ scale: 0.99 }}
+}> = ({ option, active, forumCount, onClick }) => (
+  <button
     onClick={onClick}
-    className={`w-full rounded-2xl border p-5 text-left transition-all ${
+    className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
       active
-        ? `${option.border} ${option.soft} shadow-md`
-        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800'
+        ? `${option.border} ${option.soft} text-slate-900 dark:text-white`
+        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700/70'
     }`}
   >
-    <div className="flex items-start gap-4">
-      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${option.accent} text-white shadow-md`}>
-        <option.icon size={20} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">{option.title}</h3>
-          {active ? (
-            <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-900/60 dark:text-slate-300">
-              Ativo
-            </span>
-          ) : null}
-        </div>
-        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">{option.audience}</p>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{option.description}</p>
-      </div>
-    </div>
-  </motion.button>
+    <option.icon size={15} />
+    <span>{option.title}</span>
+    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
+      {forumCount}
+    </span>
+  </button>
 );
 
 const QuickActionButton: React.FC<{
@@ -391,31 +377,25 @@ const QuickActionButton: React.FC<{
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`rounded-2xl border p-4 text-left shadow-sm transition-all ${
+    className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-colors ${
       disabled
-        ? 'cursor-not-allowed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60'
-        : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-teal-700'
+        ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-500'
+        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-700/70'
     }`}
+    title={description}
   >
-    <div className="flex items-start gap-3">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${disabled ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'}`}>
-        <Icon size={18} />
-      </div>
-      <div>
-        <p className="text-sm font-bold text-slate-900 dark:text-white">{title}</p>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{description}</p>
-      </div>
-    </div>
+    <Icon size={15} />
+    <span>{title}</span>
   </button>
 );
 
 const ScopeEmptyState: React.FC<{ scope: ScopeOption; showHubWarning: boolean }> = ({ scope, showHubWarning }) => (
-  <div className={`rounded-3xl border p-6 ${scope.border} ${scope.soft}`}>
+  <div className={`rounded-3xl border p-5 ${scope.border} ${scope.soft}`}>
     <ScopeBadge scope={scope} />
-    <h3 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{scope.emptyTitle}</h3>
-    <p className="mt-3 max-w-3xl text-sm text-slate-600 dark:text-slate-300">{scope.emptyDescription}</p>
+    <h3 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{scope.emptyTitle}</h3>
+    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{scope.emptyDescription}</p>
 
-    <div className="mt-6 grid gap-4 md:grid-cols-3">
+    <div className="mt-4 flex flex-wrap gap-2">
       {QUICK_ACTIONS.map((action) => (
         <QuickActionButton
           key={action.title}
@@ -1039,6 +1019,17 @@ const ForumDetailView: React.FC<{
             </div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{forum.name}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{forum.description}</p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                {openTopicsCount} abertos
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                {unansweredTopicsCount} sem resposta
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                {resolvedTopicsCount} resolvidos
+              </span>
+            </div>
           </div>
           {userId && (
             <button
@@ -1054,14 +1045,8 @@ const ForumDetailView: React.FC<{
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard label="Topicos abertos" value={openTopicsCount} accent />
-        <StatCard label="Sem resposta" value={unansweredTopicsCount} />
-        <StatCard label="Resolvidos" value={resolvedTopicsCount} />
-      </div>
-
       {userId && (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="flex flex-wrap gap-2">
           {QUICK_ACTIONS.map(action => (
             <QuickActionButton
               key={action.title}
@@ -1209,21 +1194,10 @@ export const ForumsPage: React.FC<ForumsPageProps> = React.memo(({ userId }) => 
   );
   const totalTopics = useMemo(() => forums.reduce((acc, f) => acc + f.topicsCount, 0), [forums]);
   const totalMembers = useMemo(() => forums.reduce((acc, f) => acc + f.membersCount, 0), [forums]);
-  const scopedTopics = useMemo(() => scopedForums.reduce((acc, forum) => acc + forum.topicsCount, 0), [scopedForums]);
-
   const openForum = useCallback((forum: Forum) => {
     setComposerIntent(null);
     setSelectedForum(forum);
   }, []);
-
-  const handleQuickAction = useCallback((topicType: ForumTopicType) => {
-    if (!scopedForums.length) {
-      return;
-    }
-
-    setComposerIntent(topicType);
-    setSelectedForum(scopedForums[0]);
-  }, [scopedForums]);
 
   // Topic detail view
   if (selectedTopicId && selectedForum) {
@@ -1262,60 +1236,17 @@ export const ForumsPage: React.FC<ForumsPageProps> = React.memo(({ userId }) => 
 
   if (useScopedLanding) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-6 max-w-5xl mx-auto">
         <motion.div {...fadeIn} className="space-y-6">
-          <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
-              <div className="p-6 sm:p-8">
-                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-700 dark:text-slate-200">
-                  <MessagesSquare size={14} />
-                  Comunidade de pratica
-                </div>
-                <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-                  Um forum mais simples para gestores trocarem ajuda, pratica e orientacao.
-                </h1>
-                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  A entrada agora e territorial. Primeiro voce escolhe o escopo da conversa: global, microrregiao ou municipio.
-                </p>
-                <div className="mt-6 grid gap-4 md:grid-cols-3">
-                  {QUICK_ACTIONS.map(action => (
-                    <QuickActionButton
-                      key={action.title}
-                      title={action.title}
-                      description={action.description}
-                      icon={action.icon}
-                      disabled={scopedForums.length === 0}
-                      onClick={() => handleQuickAction(action.topicType)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-slate-200 bg-slate-50/80 p-6 dark:border-slate-700 dark:bg-slate-900/50 lg:border-l lg:border-t-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Como organizar o forum</p>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">Global</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Comunicados amplos, duvidas transversais e referencias da rede.</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">Minha Micro</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Colaboracao regional entre municipios da mesma microrregiao.</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">Meu Municipio</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Canal curto para operacao local e alinhamentos internos.</p>
-                  </div>
-                </div>
-              </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Foruns
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Acompanhe as discussoes por territorio e area de interesse.
+              </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Foruns Ativos" value={forums.length} accent />
-            <StatCard label="Total de Topicos" value={totalTopics} />
-            <StatCard label="Participantes" value={totalMembers} />
-            <StatCard label="No Escopo" value={scopedTopics} />
           </div>
 
           {error ? (
@@ -1325,35 +1256,40 @@ export const ForumsPage: React.FC<ForumsPageProps> = React.memo(({ userId }) => 
             </div>
           ) : null}
 
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Escolha o territorio</p>
-              <h2 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Onde esta sua conversa?</h2>
-            </div>
-
-            <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 lg:grid-cols-3">
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700 pb-4">
               {scopeOptions.map(scope => (
-                <ScopeSelectorCard
+                <ScopeTabButton
                   key={scope.id}
                   option={scope}
                   active={scope.id === selectedScope}
+                  forumCount={forumsByScope[scope.id].length}
                   onClick={() => setSelectedScope(scope.id)}
                 />
               ))}
-            </motion.div>
+            </div>
+            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{activeScope.description}</p>
           </div>
 
-          <div className={`overflow-hidden rounded-[28px] border ${activeScope.border} bg-white shadow-sm dark:bg-slate-800`}>
-            <div className={`bg-gradient-to-r ${activeScope.accent} p-6 text-white`}>
-              <div className="flex flex-wrap items-center gap-2">
-                <ScopeBadge scope={activeScope} />
-                <span className="rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold">{activeScope.audience}</span>
+          <div className={`overflow-hidden rounded-[24px] border ${activeScope.border} bg-white shadow-sm dark:bg-slate-800`}>
+            <div className="border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ScopeBadge scope={activeScope} />
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+                      {activeScope.audience}
+                    </span>
+                  </div>
+                  <h2 className="mt-3 text-xl font-bold text-slate-900 dark:text-white">{activeScope.title}</h2>
+                </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  {scopedForums.length} espacos
+                </span>
               </div>
-              <h2 className="mt-4 text-3xl font-bold">{activeScope.title}</h2>
-              <p className="mt-3 max-w-3xl text-sm text-white/90">{activeScope.description}</p>
             </div>
 
-            <div className="p-6">
+            <div className="p-5">
               {loading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map(i => <div key={i} className="h-28 rounded-2xl bg-slate-100 dark:bg-slate-700 animate-pulse" />)}
@@ -1361,7 +1297,7 @@ export const ForumsPage: React.FC<ForumsPageProps> = React.memo(({ userId }) => 
               ) : scopedForums.length === 0 ? (
                 <ScopeEmptyState scope={activeScope} showHubWarning={Boolean(error) || forums.length === 0} />
               ) : (
-                <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 xl:grid-cols-2">
+                <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-3">
                   {scopedForums.map(forum => (
                     <ForumCardItem key={forum.id} forum={forum} scope={activeScope} onClick={openForum} />
                   ))}

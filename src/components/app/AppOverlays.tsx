@@ -10,7 +10,7 @@ import { OnboardingTour } from '../onboarding';
 import { CreateActionMicroModal } from './CreateActionMicroModal';
 import { FirstAccessModalFlow } from './FirstAccessModalFlow';
 
-type AppNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+type AppNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
 type AppViewMode = 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
 type SettingsTab = 'profile' | 'appearance' | 'notifications' | 'security' | 'roadmap';
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -37,6 +37,7 @@ interface AppOverlaysProps {
   confirmModal: ConfirmModalState;
   createActionMicroId: string;
   currentNav: AppNav;
+  currentWorkspace: 'planning' | 'community';
   editModalConfig: EditModalConfig;
   isAdmin: boolean;
   isCreateActionModalOpen: boolean;
@@ -73,6 +74,7 @@ export function AppOverlays({
   confirmModal,
   createActionMicroId,
   currentNav,
+  currentWorkspace,
   editModalConfig,
   isAdmin,
   isCreateActionModalOpen,
@@ -156,6 +158,7 @@ export function AppOverlays({
       {isMobile && (
         <MobileBottomNav
           currentNav={currentNav}
+          currentWorkspace={currentWorkspace}
           viewMode={viewMode}
           onNavChange={onCurrentNavChange}
           onViewModeChange={onViewModeChange}

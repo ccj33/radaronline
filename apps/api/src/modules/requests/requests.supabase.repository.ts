@@ -21,7 +21,7 @@ async function fetchProfilesMap(client: SupabaseClient, userIds: string[]): Prom
   if (userIds.length === 0) return new Map();
   const { data, error } = await client
     .from('profiles')
-    .select('id, nome, email, role, cargo, municipio, microregiao_id')
+    .select('id, nome, email, role, municipio, microregiao_id')
     .in('id', userIds);
   if (error || !data) return new Map();
   const rows = data as ProfileSummary[];

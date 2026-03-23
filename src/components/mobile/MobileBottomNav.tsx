@@ -1,11 +1,23 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Users, LayoutDashboard, Zap, List, CalendarDays } from 'lucide-react';
+import {
+  Calendar,
+  CalendarDays,
+  FolderOpen,
+  GraduationCap,
+  LayoutDashboard,
+  LayoutGrid,
+  List,
+  MessagesSquare,
+  Users,
+  Zap,
+} from 'lucide-react';
 
 interface MobileBottomNavProps {
-  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
+  currentWorkspace: 'planning' | 'community';
   viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
-  onNavChange: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
+  onNavChange: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
   onViewModeChange: (mode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar') => void;
   showTeamOption?: boolean;
 }
@@ -59,13 +71,104 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, isActive, onClick, badge
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   currentNav,
+  currentWorkspace,
   viewMode,
   onNavChange,
   onViewModeChange,
   showTeamOption = false,
 }) => {
-  // Navegação unificada com todas as opções principais
-  // Dashboard sempre visível + modos de visualização da estratégia
+  const planningNav = (
+    <>
+      <NavItem
+        icon={<LayoutDashboard size={18} strokeWidth={2.2} />}
+        label="Painel"
+        isActive={currentNav === 'home'}
+        onClick={() => onNavChange('home')}
+      />
+      <NavItem
+        icon={<List size={18} strokeWidth={2.2} />}
+        label="Acoes"
+        isActive={currentNav === 'strategy' && viewMode === 'table'}
+        onClick={() => {
+          onNavChange('strategy');
+          onViewModeChange('table');
+        }}
+      />
+      <NavItem
+        icon={<CalendarDays size={18} strokeWidth={2.2} />}
+        label="Agenda"
+        isActive={currentNav === 'strategy' && viewMode === 'calendar'}
+        onClick={() => {
+          onNavChange('strategy');
+          onViewModeChange('calendar');
+        }}
+      />
+      <NavItem
+        icon={<Calendar size={18} strokeWidth={2.2} />}
+        label="Gantt"
+        isActive={currentNav === 'strategy' && viewMode === 'gantt'}
+        onClick={() => {
+          onNavChange('strategy');
+          onViewModeChange('gantt');
+        }}
+      />
+      {showTeamOption && (
+        <NavItem
+          icon={<Users size={18} strokeWidth={2.2} />}
+          label="Equipe"
+          isActive={currentNav === 'strategy' && viewMode === 'team'}
+          onClick={() => {
+            onNavChange('strategy');
+            onViewModeChange('team');
+          }}
+        />
+      )}
+      <NavItem
+        icon={<Zap size={18} strokeWidth={2.2} />}
+        label="Rapida"
+        isActive={currentNav === 'strategy' && viewMode === 'optimized'}
+        onClick={() => {
+          onNavChange('strategy');
+          onViewModeChange('optimized');
+        }}
+      />
+    </>
+  );
+
+  const communityNav = (
+    <>
+      <NavItem
+        icon={<LayoutGrid size={18} strokeWidth={2.2} />}
+        label="Hub"
+        isActive={currentNav === 'hub'}
+        onClick={() => onNavChange('hub')}
+      />
+      <NavItem
+        icon={<MessagesSquare size={18} strokeWidth={2.2} />}
+        label="Foruns"
+        isActive={currentNav === 'forums'}
+        onClick={() => onNavChange('forums')}
+      />
+      <NavItem
+        icon={<Users size={18} strokeWidth={2.2} />}
+        label="Mentoria"
+        isActive={currentNav === 'mentorship'}
+        onClick={() => onNavChange('mentorship')}
+      />
+      <NavItem
+        icon={<GraduationCap size={18} strokeWidth={2.2} />}
+        label="Cursos"
+        isActive={currentNav === 'education'}
+        onClick={() => onNavChange('education')}
+      />
+      <NavItem
+        icon={<FolderOpen size={18} strokeWidth={2.2} />}
+        label="Acervo"
+        isActive={currentNav === 'repository'}
+        onClick={() => onNavChange('repository')}
+      />
+    </>
+  );
 
   return (
     <motion.nav
@@ -73,76 +176,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       animate={{ y: 0 }}
       className="fixed bottom-0 left-0 right-0 z-40 bg-white/98 dark:bg-slate-800/98 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-700/80 shadow-[0_-4px_30px_rgba(0,0,0,0.08)] safe-area-bottom"
       role="navigation"
-      aria-label="Navegação principal"
+      aria-label="Navegacao principal"
     >
       <div className="flex items-stretch justify-around max-w-lg mx-auto px-1">
-        {/* Dashboard - Sempre visível */}
-        <NavItem
-          icon={<LayoutDashboard size={18} strokeWidth={2.2} />}
-          label="Painel"
-          isActive={currentNav === 'home'}
-          onClick={() => onNavChange('home')}
-        />
-
-        {/* Ações (Tabela) */}
-        <NavItem
-          icon={<List size={18} strokeWidth={2.2} />}
-          label="Ações"
-          isActive={currentNav === 'strategy' && viewMode === 'table'}
-          onClick={() => {
-            onNavChange('strategy');
-            onViewModeChange('table');
-          }}
-        />
-
-        {/* Agenda/Calendário */}
-        <NavItem
-          icon={<CalendarDays size={18} strokeWidth={2.2} />}
-          label="Agenda"
-          isActive={currentNav === 'strategy' && viewMode === 'calendar'}
-          onClick={() => {
-            onNavChange('strategy');
-            onViewModeChange('calendar');
-          }}
-        />
-
-        {/* Cronograma (Gantt) */}
-        <NavItem
-          icon={<Calendar size={18} strokeWidth={2.2} />}
-          label="Gantt"
-          isActive={currentNav === 'strategy' && viewMode === 'gantt'}
-          onClick={() => {
-            onNavChange('strategy');
-            onViewModeChange('gantt');
-          }}
-        />
-
-        {/* Equipe - Condicional */}
-        {showTeamOption && (
-          <NavItem
-            icon={<Users size={18} strokeWidth={2.2} />}
-            label="Equipe"
-            isActive={currentNav === 'strategy' && viewMode === 'team'}
-            onClick={() => {
-              onNavChange('strategy');
-              onViewModeChange('team');
-            }}
-          />
-        )}
-
-        {/* Visão Rápida/Otimizada */}
-        <NavItem
-          icon={<Zap size={18} strokeWidth={2.2} />}
-          label="Rápida"
-          isActive={currentNav === 'strategy' && viewMode === 'optimized'}
-          onClick={() => {
-            onNavChange('strategy');
-            onViewModeChange('optimized');
-          }}
-        />
+        {currentWorkspace === 'community' ? communityNav : planningNav}
       </div>
 
-      {/* Home indicator safe area - altura dinâmica */}
       <div className="h-safe-area-inset-bottom bg-white/98 dark:bg-slate-800/98" />
     </motion.nav>
   );

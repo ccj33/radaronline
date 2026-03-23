@@ -18,7 +18,7 @@ interface NotificationBellDetailViewProps {
   isAdmin: boolean;
   onAdminNoteChange: (value: string) => void;
   onBack: () => void;
-  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
+  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
   onUpdate: (requestId: string, status: RequestStatus, note?: string) => void | Promise<void>;
   saving: boolean;
   selectedRequest: UserRequest;

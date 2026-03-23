@@ -2,7 +2,7 @@ import { RefObject, useEffect } from 'react';
 import { MICROREGIOES } from '../data/microregioes';
 import { GanttRange } from '../types';
 
-type AppNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository';
+type AppNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
 type AppViewMode = 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
 
 interface UseAppUiEffectsProps {

@@ -17,7 +17,7 @@ interface NotificationBellPanelProps {
   notificationCount: number;
   onAdminNoteChange: (value: string) => void;
   onClose: () => void;
-  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
+  onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
   onOpenDetails: (request: UserRequest) => void;
   onSelectTab: (tab: NotificationTab) => void;
   onUpdate: (requestId: string, status: RequestStatus, note?: string) => void | Promise<void>;
