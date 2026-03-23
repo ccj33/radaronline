@@ -43,6 +43,7 @@ Data de referencia: 2026-03-23
 - `MentorshipPage` saiu do formato de dashboard com tabs e KPI grid e passou a priorizar continuidade, busca direta de mentores e um espaco mais enxuto para atuacao como mentor
 - `EducationPage` passou a abrir por continuidade de aprendizado, com catalogo direto e trilhas em seco, removendo o excesso de tabs e cards numericos antes do conteudo
 - `RepositoryPage` foi redesenhada como biblioteca minimalista de busca e lista, removendo o bloco de estatisticas pesadas e deixando a descoberta de materiais mais proxima de um catalogo real
+- regressao de JSX residual no redesign do Hub foi saneada em `HubHomePage` e `EducationPage`, removendo blocos duplicados que quebravam o parser do Vite apos os refactors de simplificacao
 
 ### Documentacao
 
