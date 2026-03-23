@@ -2,12 +2,10 @@ import { logWarn } from '../../lib/logger';
 import type { ProfileDTO, UserRole } from '../../types/auth.types';
 import { getPlatformClient } from '../platformClient';
 import {
-  AUTH_PROFILE_AUDIT_SELECT,
   AUTH_PROFILE_RETRY_COUNT,
   AUTH_PROFILE_RETRY_DELAY_MS,
   AUTH_PROFILE_SELECT,
 } from './authService.constants';
-import type { AuthProfileAuditSnapshot } from './authService.audit';
 
 const platformClient = getPlatformClient;
 
@@ -72,22 +70,6 @@ export async function fetchProfileName(userId: string): Promise<string | null> {
   }
 
   return data?.nome || null;
-}
-
-export async function fetchProfileAuditSnapshot(
-  userId: string
-): Promise<AuthProfileAuditSnapshot | null> {
-  const { data, error } = await platformClient()
-    .from('profiles')
-    .select(AUTH_PROFILE_AUDIT_SELECT)
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message || 'Falha ao carregar snapshot de auditoria');
-  }
-
-  return (data as AuthProfileAuditSnapshot | null) ?? null;
 }
 
 export async function updateProfileRecord(

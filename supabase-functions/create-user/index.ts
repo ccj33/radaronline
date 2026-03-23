@@ -260,34 +260,6 @@ serve(async (req: Request) => {
       return errorResponse('Erro ao criar perfil de usuário', 500, origin);
     }
 
-    // ✅ AUDITORIA: Log de criação de usuário
-    // Buscar nome do admin que criou
-    const { data: adminProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('nome')
-      .eq('id', currentUser.id)
-      .single();
-
-    await supabaseAdmin.from('activity_logs').insert({
-      user_id: currentUser.id, // Quem fez a ação (admin)
-      action_type: 'user_created',
-      entity_type: 'user',
-      entity_id: authData.user.id,
-      metadata: {
-        created_by_id: currentUser.id,
-        created_by_name: adminProfile?.nome || 'Admin',
-        created_by_email: currentUser.email,
-        target_user_id: authData.user.id,
-        target_user_name: validated.nome,
-        target_user_email: validated.email,
-        target_user_role: validated.role,
-        target_user_microregiao: validated.microregiao_id,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-    console.log('[create-user] Log de auditoria registrado');
-
     // ✅ Resposta alinhada com app
     return successResponse({
       data: {

@@ -97,8 +97,8 @@ export function MainViewContentSwitch({
   isMobile,
   isSaving,
   microActions,
-  objectives,
-  activities,
+  objectives: _objectives,
+  activities: _activities,
   readOnly,
   responsibleFilter,
   searchTerm,
@@ -212,8 +212,8 @@ export function MainViewContentSwitch({
         <ErrorBoundary>
           <Suspense fallback={sectionFallback}>
             <OptimizedView
-              objectives={objectives}
-              activities={activities}
+              objectives={filteredObjectives}
+              activities={filteredActivities}
               actions={microActions}
               team={currentTeam}
               onUpdateAction={handleUpdateActionPatch}
@@ -233,8 +233,8 @@ export function MainViewContentSwitch({
             <div className="h-[calc(100vh-200px)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
               <LinearCalendar
                 actions={microActions}
-                activities={activities}
-                objectives={objectives}
+                activities={filteredActivities}
+                objectives={filteredObjectives}
                 microId={currentMicroId}
               />
             </div>

@@ -10,6 +10,8 @@
  */
 
 import { Action, Activity } from '../types';
+import { summarizeActionPortfolio } from './actionPortfolio';
+import { getComparableActivityId } from './text';
 
 /**
  * Conjunto de IDs de atividades válidas
@@ -52,6 +54,7 @@ export function extractValidActivityIds(
     activityList.forEach(activity => {
       if (activity.id) {
         validIds.add(activity.id);
+        validIds.add(getComparableActivityId(activity.id));
       }
     });
   });
@@ -83,7 +86,7 @@ export function isOrphanedAction(
   validActivityIds: ValidActivityIds
 ): boolean {
   if (!action.activityId) return true;
-  return !validActivityIds.has(action.activityId);
+  return !validActivityIds.has(action.activityId) && !validActivityIds.has(getComparableActivityId(action.activityId));
 }
 
 /**
@@ -171,6 +174,7 @@ export function createActivityToObjectiveMap(
   Object.entries(activities).forEach(([objId, acts]) => {
     acts.forEach(act => {
       map[act.id] = Number(objId);
+      map[getComparableActivityId(act.id)] = Number(objId);
     });
   });
   
@@ -222,26 +226,20 @@ export interface ActionStats {
  * @returns Estatísticas completas
  */
 export function calculateActionStats(actions: Action[]): ActionStats {
-  const total = actions.length;
-  const completed = actions.filter(a => a.status === 'Concluído').length;
-  const inProgress = actions.filter(a => a.status === 'Em Andamento').length;
-  const notStarted = actions.filter(a => a.status === 'Não Iniciado').length;
-  const late = actions.filter(a => a.status === 'Atrasado').length;
+  const summary = summarizeActionPortfolio(actions);
   
   const actionsWithDate = filterActionsForCalendar(actions);
   const scheduledCount = actionsWithDate.length;
-  const unscheduledCount = total - scheduledCount;
-  
-  const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const unscheduledCount = summary.total - scheduledCount;
   
   return {
-    total,
-    completed,
-    inProgress,
-    notStarted,
-    late,
+    total: summary.total,
+    completed: summary.completed,
+    inProgress: summary.inProgress,
+    notStarted: summary.notStarted,
+    late: summary.late,
     scheduledCount,
     unscheduledCount,
-    completionRate,
+    completionRate: summary.percentConcluido,
   };
 }

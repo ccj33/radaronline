@@ -2,7 +2,6 @@
 import { Action, TeamMember } from '../../../types';
 import { User } from '../../../types/auth.types';
 import {
-  ActivityLog,
   AdminOverview,
   ComparisonEngine,
   DashboardFilters,
@@ -11,7 +10,6 @@ import {
   RankingPanel,
   WorkforcePanel,
 } from '../dashboard';
-import { AnalyticsDashboard } from '../dashboard/AnalyticsDashboard';
 import { AdminPanelTab } from '../adminPanel.types';
 
 interface AdminDashboardTabProps {
@@ -80,18 +78,13 @@ export function AdminDashboardTab({
             />
           </AdminOverview>
 
-          <div id="analytics-section" className="pt-8 border-t border-slate-200 dark:border-slate-700 scroll-mt-24">
-            <AnalyticsDashboard />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="pt-8 border-t border-slate-200 dark:border-slate-700">
             <WorkforcePanel
               users={users}
               selectedMacroId={dashboardFilters.selectedMacroId}
               selectedMicroId={dashboardFilters.selectedMicroId}
               onViewMicrorregiao={onViewMicrorregiao}
             />
-            <ActivityLog maxItems={8} />
           </div>
 
           <div id="ranking-section" className="pt-8 border-t border-slate-200 dark:border-slate-700 scroll-mt-24">

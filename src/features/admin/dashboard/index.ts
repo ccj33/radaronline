@@ -3,7 +3,6 @@ export { MacroRegionMap } from './MacroRegionMap';
 export { default as MinasMicroMap } from './MinasMicroMap';
 export { AlertsPanel } from './AlertsPanel';
 export { RankingPanel } from './RankingPanel';
-export { ActivityLog } from './ActivityLog';
 export { ActivityCenter } from './ActivityCenter';
 export { DashboardFilters, defaultFiltersState } from './DashboardFilters';
 export type { DashboardFiltersState, CompareLevel } from './DashboardFilters';
@@ -14,5 +13,3 @@ export { KpiDetailModal } from './KpiDetailModal';
 export { WorkforcePanel } from './WorkforcePanel';
 export { LinearCalendar } from './LinearCalendar';
 export { RequestsManagement } from './RequestsManagement';
-
-

@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-Data de referencia: 2026-03-01
+Data de referencia: 2026-03-23
 
 ### Percentual real
 
@@ -21,6 +21,19 @@ Data de referencia: 2026-03-01
 - build verde
 - observabilidade basica no frontend
 - `apps/api` com build e testes verdes
+- monitoramento de uso do Radar removido do frontend admin
+- instrumentacao de sessao, tempo de uso e paginas mais acessadas removida do app
+- `activity_logs` mantido apenas para auditoria minima de acoes no frontend (`view`, `update`, `delete`)
+- aba `Atividades` do admin restaurada para exibir logins e historico de acoes com autor e avatar
+- gravacao geral de `activity_logs` removida de `apps/api` e `supabase-functions/*`
+- regra compartilhada de portfolio de acoes criada em `src/lib/actionPortfolio.ts` para unificar atraso, conclusao e agrupamento por atividade entre dashboard, visao rapida, overview admin e relatorios
+- comparacao de `activityId` endurecida para suportar formatos legados e normalizados em `src/lib/text.ts` e `src/lib/actionValidation.ts`, reduzindo drift antes do cutover Azure
+- flyout de `Microrregioes` na sidebar admin agora fecha com atraso curto e sem vao lateral, reduzindo perda de contexto na selecao por hover e preservando a usabilidade antes do handover
+- teste de regressao adicionado para o hover da sidebar em `src/components/layout/sidebar/SidebarAdminNavigation.test.tsx`
+- `MainViewContentSwitch` agora repassa `filteredObjectives` e `filteredActivities` para a `Visao Rapida` e o calendario, evitando vazamento de objetivos e atividades de outras microrregioes quando o admin entra no modo de contexto local
+- cards do `Mural da Rede` deixam de esticar a mesma linha do grid ao expandir um comunicado, eliminando o efeito visual de "abrir dois" ao usar `Ler mais`
+- `NewsFeed` agora respeita `viewingMicroregiaoId` quando houver contexto de microrregiao selecionado, alinhando o mural ao mesmo escopo de navegacao do planejamento
+- teste de regressao adicionado para garantir que a `Visao Rapida` receba apenas objetivos e atividades filtrados em `src/components/main/MainViewContentSwitch.test.tsx`
 
 ### Documentacao
 
@@ -139,6 +152,13 @@ Data de referencia: 2026-03-01
 4. `supabase-functions/*` ainda nao foram desativadas em producao, embora o caminho de bloqueio do legado ja exista
 5. `infra/bicep` e os workflows de deploy ainda nao foram validados em Azure real
 6. ainda existem scripts SQL legados fora da trilha autoritativa que precisam ser consolidados ou aposentados
+
+## Proximo corte recomendado
+
+- consolidar a decisao de produto removendo do schema autoritativo e da documentacao legado o que ainda sobrar de analytics de uso e `user_sessions`, mantendo `activity_logs` apenas enquanto suporte a auditoria minima de acoes
+- validar em banco real a integridade entre `actions.activity_id` e `activities.id` e promover qualquer correcao remanescente para `supabase/migrations/`, sem depender de scripts legados fora da trilha autoritativa
+- revisar outros flyouts e overlays do admin para garantir o mesmo padrao de tolerancia de hover e evitar regressao visual no merge
+- revisar outras telas que ainda consumam colecoes globais no `MainViewContentSwitch` para garantir que qualquer modo contextualizado por microrregiao receba sempre datasets ja escopados
 
 ## Proximo corte obrigatorio
 

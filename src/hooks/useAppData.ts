@@ -12,6 +12,7 @@ import { useToast } from '../components/common/Toast';
 import { log, logError } from '../lib/logger';
 import { CACHE_KEYS, getCache, setCache } from '../lib/sessionCache';
 import { isAdminLike } from '../lib/authHelpers';
+import { filterOrphanedActions as filterValidActionsByActivity } from '../lib/actionValidation';
 import {
     DEMO_ACTIONS,
     DEMO_TEAM,
@@ -21,7 +22,7 @@ import {
 import { loadTeams } from '../services/teamsService';
 
 // Helper para filtrar aÃ§Ãµes Ã³rfÃ£s
-const filterOrphanedActions = (actions: Action[], activitiesByObj: Record<number, Activity[]>) => {
+const _filterOrphanedActions = (actions: Action[], activitiesByObj: Record<number, Activity[]>) => {
     const allActivityIds = new Set<string>();
     Object.values(activitiesByObj).forEach(activities => {
         activities.forEach(a => allActivityIds.add(String(a.id)));
@@ -151,7 +152,7 @@ export function useAppData() {
                 loadActivities(microId),
             ]);
 
-            const validActions = filterOrphanedActions(actionsData, activitiesData);
+            const validActions = filterValidActionsByActivity(actionsData, activitiesData);
 
             // Save Cache
             setCache(CACHE_KEYS.ACTIONS, validActions, cacheMicroId);
@@ -214,7 +215,7 @@ export function useAppData() {
 
         const newActions = await actionsService.loadActions(microId);
         // We need activities to filter orphans, using current state
-        const valid = filterOrphanedActions(newActions, activities);
+        const valid = filterValidActionsByActivity(newActions, activities);
         setActions(valid);
         setCache(CACHE_KEYS.ACTIONS, valid, microId);
     };

@@ -3,11 +3,22 @@ import { Action, RaciRole, Status, findActionByUid, getNextActionNumber, ActionT
 import * as actionsService from '../services/actionsService';
 import * as tagsService from '../services/tagsService';
 import { addComment, loadActionComments, processMentions } from '../services/commentsService';
+import { recordActionAuditEvent } from '../services/actionAuditService';
 import { useToast } from '../components/common/Toast';
 import { useLatest } from './useLatest';
 import { formatISODate, parseDateLocal } from '../lib/date';
 import { clampProgress } from '../lib/validation';
 import { log, logWarn, logError } from '../lib/logger';
+
+function getActionAuditPayload(action: Pick<Action, 'uid' | 'id' | 'activityId' | 'microregiaoId' | 'title'>) {
+  return {
+    uid: action.uid,
+    id: action.id,
+    activityId: action.activityId,
+    microregiaoId: action.microregiaoId,
+    title: action.title,
+  };
+}
 
 interface UseActionHandlersProps {
   // State
@@ -209,6 +220,11 @@ export function useActionHandlers({
           progress: action.progress,
           notes: action.notes,
         });
+        void recordActionAuditEvent({
+          type: 'action_updated',
+          action: getActionAuditPayload(action),
+          metadata: { source: 'handleSaveAction' },
+        });
         showToast('Ação salva com sucesso!', 'success');
       }
 
@@ -316,6 +332,13 @@ export function useActionHandlers({
     setExpandedActionUid(uid);
 
     const action = findActionByUid(actionsRef.current, uid);
+    if (action && pendingNewActionUid !== uid) {
+      void recordActionAuditEvent({
+        type: 'action_viewed',
+        action: getActionAuditPayload(action),
+        metadata: { source: 'handleExpandAction' },
+      });
+    }
     if (action && (action.commentCount || 0) > 0 && action.comments.length === 0) {
       try {
         const comments = await loadActionComments(uid);
@@ -324,19 +347,27 @@ export function useActionHandlers({
         logError('useActionHandlers', 'Erro ao carregar comentários on-demand', error);
       }
     }
-  }, [actionsRef, setActions, setExpandedActionUid]);
+  }, [actionsRef, pendingNewActionUid, setActions, setExpandedActionUid]);
 
   // 6. OPEN ACTION FROM GANTT
   const handleGanttActionClick = useCallback((action: Action) => {
     setSelectedActivity(action.activityId);
-    setExpandedActionUid(action.uid);
-  }, [setExpandedActionUid, setSelectedActivity]);
+    void handleExpandAction(action.uid);
+  }, [handleExpandAction, setSelectedActivity]);
 
   // 7. SAVE FULL ACTION (Draft modal)
   const handleSaveFullAction = useCallback(async (updatedAction: Action) => {
     setIsSaving(true);
     try {
+      const isNewAction = pendingNewActionUid === updatedAction.uid;
       const saved = await actionsService.upsertAction(updatedAction);
+      if (!isNewAction) {
+        void recordActionAuditEvent({
+          type: 'action_updated',
+          action: getActionAuditPayload(saved),
+          metadata: { source: 'handleSaveFullAction' },
+        });
+      }
       upsertActionInState(saved);
       setPendingNewActionUid(null);
       setExpandedActionUid(null);
@@ -347,13 +378,21 @@ export function useActionHandlers({
     } finally {
       setIsSaving(false);
     }
-  }, [showToast, setExpandedActionUid, setIsSaving, setPendingNewActionUid, upsertActionInState]);
+  }, [pendingNewActionUid, showToast, setExpandedActionUid, setIsSaving, setPendingNewActionUid, upsertActionInState]);
 
   // 8. SAVE AND NEW (Draft modal)
   const handleSaveAndNewAction = useCallback(async (updatedAction: Action) => {
     setIsSaving(true);
     try {
+      const isNewAction = pendingNewActionUid === updatedAction.uid;
       const saved = await actionsService.upsertAction(updatedAction);
+      if (!isNewAction) {
+        void recordActionAuditEvent({
+          type: 'action_updated',
+          action: getActionAuditPayload(saved),
+          metadata: { source: 'handleSaveAndNewAction' },
+        });
+      }
       const actionsWithSaved = upsertActionList(actionsRef.current, saved);
       showToast('Ação salva! Criando próxima...', 'success');
 
@@ -389,7 +428,7 @@ export function useActionHandlers({
     } finally {
       setIsSaving(false);
     }
-  }, [actionsRef, selectedActivity, setActions, setExpandedActionUid, setIsSaving, setPendingNewActionUid, showToast, upsertActionList]);
+  }, [actionsRef, pendingNewActionUid, selectedActivity, setActions, setExpandedActionUid, setIsSaving, setPendingNewActionUid, showToast, upsertActionList]);
 
   // 9. CREATE START (UI)
   const handleCreateAction = useCallback(() => {
@@ -495,6 +534,11 @@ export function useActionHandlers({
           setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
           await actionsService.deleteAction(uid);
+          void recordActionAuditEvent({
+            type: 'action_deleted',
+            action: getActionAuditPayload(action),
+            metadata: { source: 'handleDeleteAction' },
+          });
           setActions(prev => prev.filter(a => a.uid !== uid));
           setExpandedActionUid(null);
           showToast('Ação excluída!', 'success');

@@ -182,20 +182,6 @@ serve(async (req: Request) => {
 
         console.log('[update-user-password] Senha atualizada com sucesso para:', userId);
 
-        // ✅ Registrar atividade (opcional - se activity_logs existe)
-        try {
-            await supabaseAdmin.from('activity_logs').insert({
-                user_id: currentUser.id,
-                action_type: 'user_password_updated',
-                entity_type: 'user',
-                entity_id: userId,
-                metadata: { updated_by: currentUser.id }
-            });
-        } catch (logError) {
-            // Não falhar a operação principal por erro de log
-            console.warn('[update-user-password] Erro ao registrar log (não crítico):', logError);
-        }
-
         return successResponse({
             success: true,
             message: 'Senha atualizada com sucesso'

@@ -103,10 +103,6 @@ export function LgpdConsent(props: LgpdConsentProps) {
                   <span className="text-teal-400">•</span>
                   <span>Reportar imediatamente qualquer <strong className="text-slate-300">uso indevido, falha de segurança</strong> ou comportamento suspeito identificado no sistema.</span>
                 </li>
-                <li className="flex gap-2">
-                  <span className="text-teal-400">•</span>
-                  <span>Estar ciente de que <strong className="text-slate-300">todas as ações são registradas</strong> (logs de auditoria) e podem ser analisadas para fins de segurança.</span>
-                </li>
               </ul>
             </div>
 

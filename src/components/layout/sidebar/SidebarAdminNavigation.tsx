@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Activity as ActivityIcon, ClipboardList, LayoutDashboard, MapPin, Megaphone, Search, Trophy, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, ClipboardList, LayoutDashboard, MapPin, Megaphone, Search, Trophy, Users } from 'lucide-react';
 import { getMacrorregioes, getMicroregioesByMacro } from '../../../data/microregioes';
 import { SidebarItem } from './SidebarItem';
 import { SidebarSectionTitle } from './SidebarSectionTitle';
@@ -10,6 +10,8 @@ interface SidebarAdminNavigationProps {
   onAdminTabChange: (tab: string) => void;
   onSelectMicroregiao?: (id: string) => void;
 }
+
+const FLYOUT_CLOSE_DELAY_MS = 220;
 
 function scrollToSection(sectionId: string) {
   setTimeout(() => {
@@ -25,6 +27,7 @@ export function SidebarAdminNavigation({
 }: SidebarAdminNavigationProps) {
   const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
   const [microSearchTerm, setMicroSearchTerm] = useState('');
+  const flyoutCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredMicrosByMacro = useMemo(() => {
     const search = microSearchTerm.toLowerCase();
@@ -38,6 +41,36 @@ export function SidebarAdminNavigation({
   }, [microSearchTerm]);
 
   const showEmptyState = microSearchTerm.length > 0 && filteredMicrosByMacro.length === 0;
+  const flyoutLeftClass = isOpen ? 'left-[264px]' : 'left-[64px]';
+
+  const clearFlyoutCloseTimer = useCallback(() => {
+    if (flyoutCloseTimerRef.current) {
+      clearTimeout(flyoutCloseTimerRef.current);
+      flyoutCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const openFlyout = useCallback(() => {
+    clearFlyoutCloseTimer();
+    setIsFlyoutOpen(true);
+  }, [clearFlyoutCloseTimer]);
+
+  const closeFlyout = useCallback(() => {
+    clearFlyoutCloseTimer();
+    setIsFlyoutOpen(false);
+  }, [clearFlyoutCloseTimer]);
+
+  const scheduleFlyoutClose = useCallback(() => {
+    clearFlyoutCloseTimer();
+    flyoutCloseTimerRef.current = setTimeout(() => {
+      setIsFlyoutOpen(false);
+      flyoutCloseTimerRef.current = null;
+    }, FLYOUT_CLOSE_DELAY_MS);
+  }, [clearFlyoutCloseTimer]);
+
+  useEffect(() => () => {
+    clearFlyoutCloseTimer();
+  }, [clearFlyoutCloseTimer]);
 
   return (
     <>
@@ -56,20 +89,6 @@ export function SidebarAdminNavigation({
           <div className="ml-4 pl-3 border-l-2 border-indigo-500/30 space-y-1 mt-1 mb-2 animate-fade-in">
             <button
               onClick={() => {
-                onAdminTabChange('dashboard');
-                scrollToSection('analytics-section');
-              }}
-              className={`flex items-center gap-2 w-full text-left py-2 px-3 text-xs rounded-lg transition-all ${adminActiveTab === 'dashboard'
-                ? 'bg-indigo-500/20 text-white font-bold ring-1 ring-indigo-500/30'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
-                }`}
-            >
-              <ActivityIcon size={14} />
-              <span>Analytics</span>
-            </button>
-
-            <button
-              onClick={() => {
                 onAdminTabChange('ranking');
                 scrollToSection('ranking-section');
               }}
@@ -86,19 +105,29 @@ export function SidebarAdminNavigation({
       </div>
 
       <div
+        data-testid="sidebar-admin-micro-trigger"
         className="relative group isolate"
-        onMouseEnter={() => setIsFlyoutOpen(true)}
-        onMouseLeave={() => setIsFlyoutOpen(false)}
+        onMouseEnter={openFlyout}
+        onMouseLeave={scheduleFlyoutClose}
       >
         <SidebarItem
           icon={MapPin}
           label="Microrregiões"
           isActive={adminActiveTab === 'microregioes'}
-          onClick={() => onAdminTabChange('microregioes')}
+          onClick={() => {
+            onAdminTabChange('microregioes');
+            openFlyout();
+          }}
           collapsed={!isOpen}
         />
 
-        <div className={`fixed ${isOpen ? 'left-[280px]' : 'left-[80px]'} top-1/2 -translate-y-1/2 w-72 h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-0 ${!isFlyoutOpen ? 'invisible opacity-0 translate-x-[-10px]' : 'visible opacity-100 translate-x-0'} transition-all duration-200 z-[9999] origin-left`}>
+        <div
+          data-testid="sidebar-admin-micro-flyout"
+          aria-hidden={!isFlyoutOpen}
+          onMouseEnter={openFlyout}
+          onMouseLeave={scheduleFlyoutClose}
+          className={`fixed ${flyoutLeftClass} top-1/2 -translate-y-1/2 w-72 h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-0 ${!isFlyoutOpen ? 'invisible opacity-0 translate-x-[-10px]' : 'visible opacity-100 translate-x-0'} transition-all duration-200 z-[9999] origin-left`}
+        >
           <div className="sticky top-0 bg-slate-50 dark:bg-slate-800 p-3 border-b border-slate-200 dark:border-slate-700 rounded-t-xl z-10 shadow-sm space-y-2">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
@@ -129,7 +158,7 @@ export function SidebarAdminNavigation({
                       key={micro.id}
                       onClick={() => {
                         onSelectMicroregiao?.(micro.id);
-                        setIsFlyoutOpen(false);
+                        closeFlyout();
                       }}
                       className="w-full text-left px-3 py-2 text-xs rounded-lg text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-700 dark:hover:text-teal-400 transition-colors flex items-center gap-2"
                     >
@@ -151,17 +180,17 @@ export function SidebarAdminNavigation({
       </div>
 
       <SidebarItem
+        icon={Activity}
+        label="Atividades"
+        isActive={adminActiveTab === 'atividades'}
+        onClick={() => onAdminTabChange('atividades')}
+        collapsed={!isOpen}
+      />
+      <SidebarItem
         icon={Users}
         label="Usuários"
         isActive={adminActiveTab === 'usuarios'}
         onClick={() => onAdminTabChange('usuarios')}
-        collapsed={!isOpen}
-      />
-      <SidebarItem
-        icon={ActivityIcon}
-        label="Atividades"
-        isActive={adminActiveTab === 'atividades'}
-        onClick={() => onAdminTabChange('atividades')}
         collapsed={!isOpen}
       />
       <SidebarItem

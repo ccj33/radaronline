@@ -7,7 +7,6 @@ import { AuthProvider } from './auth';
 import { useAuthSafe } from './auth/AuthContext';
 import { useResponsive } from './hooks/useMediaQuery';
 import { useAppAccessFlow } from './hooks/useAppAccessFlow';
-import { AnalyticsProvider } from './hooks/useAnalytics';
 import { useActionHandlers } from './hooks/useActionHandlers';
 import { useActionPermissions } from './hooks/useActionPermissions';
 import { useAppShellHandlers } from './hooks/useAppShellHandlers';
@@ -627,13 +626,11 @@ export default function App() {
       >
         <AuthProvider>
           <ObservabilityBootstrap />
-          <AnalyticsProvider>
-            <ToastProvider>
-              <Suspense fallback={<LoadingFallback />}>
-                <AppContent />
-              </Suspense>
-            </ToastProvider>
-          </AnalyticsProvider>
+          <ToastProvider>
+            <Suspense fallback={<LoadingFallback />}>
+              <AppContent />
+            </Suspense>
+          </ToastProvider>
         </AuthProvider>
       </ErrorBoundary>
     </ErrorBoundary>

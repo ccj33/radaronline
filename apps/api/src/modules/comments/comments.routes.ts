@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { assertAuthenticated } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { logCommentsAdminEvent } from './comments.audit.js';
 import { createCommentsService } from './comments.factory.js';
 
 const commentsService = createCommentsService();
@@ -56,11 +55,6 @@ export function registerCommentsRoutes(app: FastifyInstance) {
     try {
       const actionUid = (request.params as { actionUid: string }).actionUid;
       const item = await commentsService.addComment(actor, actionUid, parsed.data);
-      await logCommentsAdminEvent({
-        actor,
-        actionType: 'comment_created',
-        targetComment: item,
-      });
       return reply.code(201).send(item);
     } catch (error) {
       return mapCommentsError(reply, error);
@@ -79,11 +73,6 @@ export function registerCommentsRoutes(app: FastifyInstance) {
     try {
       const commentId = (request.params as { commentId: string }).commentId;
       const item = await commentsService.updateComment(actor, commentId, parsed.data.content);
-      await logCommentsAdminEvent({
-        actor,
-        actionType: 'comment_updated',
-        targetComment: item,
-      });
       return item;
     } catch (error) {
       return mapCommentsError(reply, error);
@@ -96,12 +85,7 @@ export function registerCommentsRoutes(app: FastifyInstance) {
 
     try {
       const commentId = (request.params as { commentId: string }).commentId;
-      const item = await commentsService.deleteComment(actor, commentId);
-      await logCommentsAdminEvent({
-        actor,
-        actionType: 'comment_deleted',
-        targetComment: item,
-      });
+      await commentsService.deleteComment(actor, commentId);
       return reply.code(204).send();
     } catch (error) {
       return mapCommentsError(reply, error);

@@ -103,17 +103,13 @@ export function AdminDesktopContent({
         />
       )}
 
-      {activeTab === 'atividades' && (
-        <div className="space-y-6">
-          <ActivityCenter />
-        </div>
-      )}
-
       {activeTab === 'requests' && (
         <div className="h-[calc(100vh-140px)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
           <RequestsManagement />
         </div>
       )}
+
+      {activeTab === 'atividades' && <ActivityCenter />}
 
       {activeTab === 'communication' && (
         <div className="h-[calc(100vh-140px)] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">

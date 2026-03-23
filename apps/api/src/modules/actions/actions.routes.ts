@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { assertAuthenticated, assertRole } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { logActionsAdminEvent } from './actions.audit.js';
 import { createActionsService } from './actions.factory.js';
 
 const actionsService = createActionsService();
@@ -83,11 +82,6 @@ export function registerActionRoutes(app: FastifyInstance) {
 
     try {
       const item = await actionsService.createAction(actor, parsed.data);
-      await logActionsAdminEvent({
-        actor,
-        actionType: 'action_created',
-        targetAction: item,
-      });
       return reply.code(201).send(item);
     } catch (error) {
       return mapActionsError(reply, error);
@@ -111,14 +105,6 @@ export function registerActionRoutes(app: FastifyInstance) {
         (request.params as { actionUid: string }).actionUid,
         parsed.data
       );
-      await logActionsAdminEvent({
-        actor,
-        actionType: 'action_updated',
-        targetAction: item,
-        metadata: {
-          changed_fields: Object.keys(parsed.data),
-        },
-      });
       return item;
     } catch (error) {
       return mapActionsError(reply, error);
@@ -132,15 +118,10 @@ export function registerActionRoutes(app: FastifyInstance) {
     }
 
     try {
-      const item = await actionsService.deleteAction(
+      await actionsService.deleteAction(
         actor,
         (request.params as { actionUid: string }).actionUid
       );
-      await logActionsAdminEvent({
-        actor,
-        actionType: 'action_deleted',
-        targetAction: item,
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapActionsError(reply, error);

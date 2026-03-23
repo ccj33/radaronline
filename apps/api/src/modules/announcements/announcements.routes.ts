@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { assertAuthenticated, assertRole } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { logAnnouncementsAdminEvent } from './announcements.audit.js';
 import { createAnnouncementsService } from './announcements.factory.js';
 
 const announcementsService = createAnnouncementsService();
@@ -81,12 +80,6 @@ export function registerAnnouncementsRoutes(app: FastifyInstance) {
 
     try {
       const item = await announcementsService.create(actor, parsed.data);
-      await logAnnouncementsAdminEvent({
-        actor,
-        actionType: 'announcement_created',
-        entityId: item.id,
-        targetAnnouncement: item,
-      });
       return reply.code(201).send(item);
     } catch (error) {
       return mapAnnouncementsError(reply, error);
@@ -105,14 +98,6 @@ export function registerAnnouncementsRoutes(app: FastifyInstance) {
     try {
       const announcementId = (request.params as { announcementId: string }).announcementId;
       await announcementsService.update(actor, announcementId, parsed.data);
-      await logAnnouncementsAdminEvent({
-        actor,
-        actionType: 'announcement_updated',
-        entityId: announcementId,
-        metadata: {
-          changed_fields: Object.keys(parsed.data),
-        },
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapAnnouncementsError(reply, error);
@@ -126,11 +111,6 @@ export function registerAnnouncementsRoutes(app: FastifyInstance) {
     try {
       const announcementId = (request.params as { announcementId: string }).announcementId;
       await announcementsService.delete(actor, announcementId);
-      await logAnnouncementsAdminEvent({
-        actor,
-        actionType: 'announcement_deleted',
-        entityId: announcementId,
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapAnnouncementsError(reply, error);
@@ -149,15 +129,6 @@ export function registerAnnouncementsRoutes(app: FastifyInstance) {
     try {
       const announcementId = (request.params as { announcementId: string }).announcementId;
       await announcementsService.toggleActive(actor, announcementId, parsed.data.currentState);
-      await logAnnouncementsAdminEvent({
-        actor,
-        actionType: 'announcement_toggled',
-        entityId: announcementId,
-        metadata: {
-          previous_state: parsed.data.currentState,
-          next_state: !parsed.data.currentState,
-        },
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapAnnouncementsError(reply, error);

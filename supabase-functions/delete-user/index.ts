@@ -165,23 +165,6 @@ serve(async (req: Request) => {
 
         console.log('[delete-user] Usuário excluído com sucesso:', userId);
 
-        // ✅ Registrar atividade
-        try {
-            await supabaseAdmin.from('activity_logs').insert({
-                user_id: currentUser.id,
-                action_type: 'user_deleted',
-                entity_type: 'user',
-                entity_id: userId,
-                metadata: {
-                    deleted_user: targetProfile || { id: userId },
-                    deleted_by: currentUser.id
-                }
-            });
-        } catch (logError) {
-            // Não falhar a operação principal por erro de log
-            console.warn('[delete-user] Erro ao registrar log (não crítico):', logError);
-        }
-
         return successResponse({
             success: true,
             message: 'Usuário excluído permanentemente'

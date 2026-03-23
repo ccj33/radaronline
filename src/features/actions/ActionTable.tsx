@@ -8,6 +8,7 @@ import { SearchFilter } from "../../components/common/SearchFilter";
 import { formatDateBr, getTodayStr } from "../../lib/date";
 import { staggerContainerFast, staggerItem } from "../../lib/motion";
 import {
+  activityIdsMatch,
   findObjectiveIdByActivityId,
   getActionDisplayId,
   getActivityDisplayId,
@@ -148,7 +149,7 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
     const objective = objectives.find((item) => item.id === selectedObjective);
     if (!objective) return null;
 
-    const activity = activities[selectedObjective]?.find((item) => item.id === selectedActivity);
+    const activity = activities[selectedObjective]?.find((item) => activityIdsMatch(item.id, selectedActivity));
 
     return {
       objective: { ...objective, description: activity?.description },
@@ -167,7 +168,7 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
 
   const filteredActions = useMemo(() => {
     return actions
-      .filter((action) => action.activityId === selectedActivity)
+      .filter((action) => activityIdsMatch(action.activityId, selectedActivity))
       .filter((action) => {
         if (searchTerm) {
           const lowerSearch = searchTerm.toLowerCase();

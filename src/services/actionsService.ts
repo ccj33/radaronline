@@ -1,6 +1,5 @@
 import type { Action, ActionComment, ActionTag, RaciMember } from '../types';
 import { generateActionUid } from '../types';
-import { loggingService } from './loggingService';
 import { log, logError } from '../lib/logger';
 import { shouldUseBackendActionsApi } from './apiClient';
 import {
@@ -71,11 +70,6 @@ export async function createAction(input: {
     });
 
     const newAction = mapActionDTOToAction(createdRecord, [], []);
-    loggingService.logActivity('action_created', 'action', newAction.id, {
-      title: newAction.title,
-      displayId: newAction.uid,
-      microregiaoId: newAction.microregiaoId,
-    });
 
     return {
       ...newAction,
@@ -107,11 +101,6 @@ export async function updateAction(
     ]);
 
     const updatedAction = mapActionDTOToAction(updatedRecord, raciData, commentsData);
-
-    loggingService.logActivity('action_updated', 'action', updatedRecord.id, {
-      changes: Object.keys(updates),
-      displayId: uid,
-    });
 
     if (updates.status === 'Conclu\u00EDdo' || updates.progress === 100) {
       const microNome = (await fetchMicroregiaoName(updatedAction.microregiaoId)) || updatedAction.microregiaoId;
@@ -170,13 +159,6 @@ export async function upsertAction(action: Action): Promise<Action> {
       });
 
       actionDbId = createdRecord.id;
-
-      loggingService.logActivity('action_created', 'action', createdRecord.id, {
-        title: action.title,
-        displayId: action.uid,
-        microregiaoId: action.microregiaoId,
-        source: 'upsert',
-      });
     }
 
     if (!actionDbId) {
@@ -213,9 +195,7 @@ export async function deleteAction(uid: string): Promise<void> {
       return;
     }
 
-    const actionDbId = await getActionDbIdByUid(uid);
     await deleteActionRecord(uid);
-    loggingService.logActivity('action_deleted', 'action', actionDbId || uid, { displayId: uid });
   } catch (error) {
     logError('actionsService', 'Erro inesperado ao excluir acao', error);
     throw error;

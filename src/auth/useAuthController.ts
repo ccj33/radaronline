@@ -4,7 +4,7 @@ import { DEMO_USER } from '../data/mockData';
 import { isAdminLike } from '../lib/authHelpers';
 import { withTimeout } from '../lib/asyncUtils';
 import { invalidateAllCache } from '../lib/sessionCache';
-import { loggingService } from '../services/loggingService';
+import { recordLoginAuditEvent } from '../services/actionAuditService';
 import * as authService from '../services/authService';
 import type { AuthContextType, Microrregiao, User } from '../types/auth.types';
 import {
@@ -255,9 +255,13 @@ export function useAuthController(): ExtendedAuthContextState {
     if (sid) {
       const profile = await loadUserProfile(sid);
       if (profile) {
+        void recordLoginAuditEvent({
+          userId: profile.id,
+          userName: profile.nome,
+          microregiaoId: profile.microregiaoId,
+        });
         setUser(profile);
         setViewingMicroregiaoId(profile.microregiaoId === 'all' ? null : profile.microregiaoId);
-        loggingService.logActivity('login', 'auth', profile.id, { name: profile.nome });
         setIsLoading(false);
         return { success: true };
       }

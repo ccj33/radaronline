@@ -1,7 +1,6 @@
 import { log, logError } from '../lib/logger';
 import { isValidEmail } from '../lib/validation';
 import { isAdminLike } from '../lib/authHelpers';
-import { loggingService } from './loggingService';
 import { getCurrentAuthUser, getCurrentUserId } from './sessionService';
 import type { User, UserRole } from '../types/auth.types';
 import {
@@ -20,7 +19,6 @@ import {
   shouldUseBackendAdminUsersApi,
   shouldUseBackendAuthProfileApi,
 } from './apiClient';
-import { buildUserAuditChanges } from './auth/authService.audit';
 import {
   createUserWithEdgeFunction,
   deleteUserWithEdgeFunction,
@@ -29,8 +27,6 @@ import {
 import { mapProfileToUser, toProfileUpdatePayload } from './auth/authService.mappers';
 import {
   fetchCreatedProfileWithRetry,
-  fetchProfileAuditSnapshot,
-  fetchProfileName,
   fetchProfileRecordById,
   fetchProfileRole,
   listProfileRecords,
@@ -175,15 +171,7 @@ export async function createUser(userData: {
 
     log('authService', 'Buscando perfil criado apos edge function');
     const createdProfile = await fetchCreatedProfileWithRetry(functionData.data.user.id);
-    const newUser = mapProfileToUser(createdProfile);
-
-    loggingService.logActivity('user_created', 'user', newUser.id, {
-      name: newUser.nome,
-      email: newUser.email,
-      role: newUser.role,
-    });
-
-    return newUser;
+    return mapProfileToUser(createdProfile);
   } catch (error: any) {
     logError('authService', 'Erro inesperado ao criar usuario', error);
     throw error;
@@ -193,7 +181,7 @@ export async function createUser(userData: {
 export async function updateUser(
   userId: string,
   updates: Partial<User> & { senha?: string },
-  currentUserId?: string
+  _currentUserId?: string
 ): Promise<User> {
   try {
     if (shouldUseBackendAdminUsersApi()) {
@@ -204,18 +192,13 @@ export async function updateUser(
 
     const { senha, ...userUpdates } = updates;
 
-    const [originalData, authorName] = await Promise.all([
-      fetchProfileAuditSnapshot(userId),
-      currentUserId ? fetchProfileName(currentUserId) : Promise.resolve(null),
-    ]);
-
     if (senha) {
       if (senha.length < 6) {
         throw new Error('Senha deve ter no minimo 6 caracteres');
       }
 
       const targetRole = await fetchProfileRole(userId);
-      if (targetRole === 'superadmin' && currentUserId !== userId) {
+      if (targetRole === 'superadmin' && _currentUserId !== userId) {
         throw new Error(
           'Nao e possivel alterar a senha do Super Admin. Apenas ele mesmo pode altera-la.'
         );
@@ -226,8 +209,6 @@ export async function updateUser(
         senha,
         'Atualizacao de senha demorou demais. Tente novamente ou verifique a funcao.'
       );
-
-      loggingService.logActivity('user_updated', 'user', userId, { changes: ['password'] });
     }
 
     const updateData = toProfileUpdatePayload(userUpdates);
@@ -236,20 +217,6 @@ export async function updateUser(
 
       if (!updatedProfile) {
         throw new Error('Usuario nao encontrado');
-      }
-
-      const realChanges = buildUserAuditChanges(originalData, userUpdates, updatedProfile);
-
-      if (realChanges.length > 0) {
-        loggingService.logActivity('user_updated', 'user', userId, {
-          author_id: currentUserId,
-          author_name: authorName || 'Admin',
-          target_user_name: updatedProfile.nome,
-          target_user_email: updatedProfile.email,
-          changes: realChanges.map((change) => change.field),
-          details: realChanges.map((change) => `${change.field}: ${change.from} -> ${change.to}`),
-          timestamp: new Date().toISOString(),
-        });
       }
 
       return mapProfileToUser(updatedProfile);
@@ -278,8 +245,6 @@ export async function deactivateUser(userId: string): Promise<boolean> {
       ativo: false,
       updated_at: new Date().toISOString(),
     });
-
-    loggingService.logActivity('user_deactivated', 'user', userId, {});
     return true;
   } catch (error: any) {
     logError('authService', 'Erro inesperado ao desativar usuario', error);
@@ -316,8 +281,6 @@ export async function deleteUser(userId: string): Promise<boolean> {
 
     log('authService', 'Excluindo usuario', { userId });
     await deleteUserWithEdgeFunction(userId);
-    loggingService.logActivity('user_deleted', 'user', userId, {});
-
     return true;
   } catch (error: any) {
     logError('authService', 'Erro inesperado ao excluir usuario', error);
@@ -337,8 +300,6 @@ export async function acceptLgpd(userId: string): Promise<void> {
       lgpd_consentimento_data: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
-
-    loggingService.logActivity('lgpd_accepted', 'user', userId, {});
   } catch (error: any) {
     logError('authService', 'Erro inesperado ao aceitar LGPD', error);
     throw error;
@@ -392,11 +353,6 @@ export async function completeFirstAccess(
       first_access: false,
       municipio,
       updated_at: new Date().toISOString(),
-    });
-
-    loggingService.logActivity('first_access_completed', 'user', userId, {
-      municipio,
-      password_changed: true,
     });
 
     log('authService', 'Primeiro acesso concluido com sucesso');

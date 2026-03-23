@@ -149,7 +149,7 @@ const AnnouncementCard = ({ announcement, index = 0 }: { announcement: Announcem
             }}
             whileHover={{ y: -4, transition: { duration: 0.2 } }}
             className={`
-                group relative overflow-hidden rounded-2xl 
+                group relative self-start overflow-hidden rounded-2xl 
                 bg-white dark:bg-slate-900
                 border border-slate-100 dark:border-slate-800
                 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50
@@ -346,7 +346,7 @@ interface NewsFeedProps {
 }
 
 export const NewsFeed = ({ onOpenRoadmap }: NewsFeedProps) => {
-    const { user } = useAuth();
+    const { user, viewingMicroregiaoId } = useAuth();
     const [events, setEvents] = useState<AutomatedEvent[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
@@ -354,9 +354,10 @@ export const NewsFeed = ({ onOpenRoadmap }: NewsFeedProps) => {
     useEffect(() => {
         const loadNews = async () => {
             // Se tiver usuário logado e com micro, filtra. Senão pega geral.
-            const userMicro = user?.microregiaoId;
+            const scopedMicroId = viewingMicroregiaoId
+                || (user?.microregiaoId && user.microregiaoId !== 'all' ? user.microregiaoId : undefined);
 
-            const data = await loadAnnouncements(userMicro);
+            const data = await loadAnnouncements(scopedMicroId);
 
             setAnnouncements(data);
 
@@ -370,7 +371,7 @@ export const NewsFeed = ({ onOpenRoadmap }: NewsFeedProps) => {
             }
         };
         loadNews();
-    }, [user?.microregiaoId, user?.role]);
+    }, [user?.microregiaoId, user?.role, viewingMicroregiaoId]);
 
     // Like logic
     const handleLike = (id: string) => {
@@ -431,7 +432,7 @@ export const NewsFeed = ({ onOpenRoadmap }: NewsFeedProps) => {
                             </div>
                         </div>
 
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid items-start gap-4 md:grid-cols-2">
                             <AnimatePresence>
                                 {announcements.map((announcement, index) => (
                                     <AnnouncementCard key={announcement.id} announcement={announcement} index={index} />

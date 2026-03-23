@@ -82,7 +82,6 @@ Com essas variaveis, a API passa para modo bridge:
 
 - sessao validada contra o provider atual
 - CRUD persistido no provider atual para `users`, `actions`, `requests`, `announcements`, `comments` e `tags`
-- auditoria administrativa registrada em `activity_logs`
 
 Com `AUTH_PROVIDER=entra-jwt` e variaveis `ENTRA_*`, a API passa a validar bearer token por JWT assinado:
 

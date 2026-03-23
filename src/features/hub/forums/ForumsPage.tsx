@@ -194,17 +194,6 @@ function getAuthorLabel(name?: string | null): string {
   return name?.trim() || 'Anonimo';
 }
 
-function getInitials(name?: string | null): string {
-  const initials = getAuthorLabel(name)
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase() || '')
-    .join('');
-
-  return initials || 'AN';
-}
-
 function formatDate(value?: string | null): string {
   if (!value) {
     return '-';

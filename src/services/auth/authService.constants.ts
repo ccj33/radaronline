@@ -17,15 +17,6 @@ const AUTH_PROFILE_FIELDS = [
 
 export const AUTH_PROFILE_SELECT = AUTH_PROFILE_FIELDS.join(', ');
 
-export const AUTH_PROFILE_AUDIT_SELECT = [
-  'nome',
-  'email',
-  'role',
-  'microregiao_id',
-  'ativo',
-  'lgpd_consentimento',
-].join(', ');
-
 export const AUTH_EDGE_FUNCTION_TIMEOUT_MS = (() => {
   try {
     const envValue = (import.meta as any).env?.VITE_API_TIMEOUT;

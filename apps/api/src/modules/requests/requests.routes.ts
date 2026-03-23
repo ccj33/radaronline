@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { assertAuthenticated } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { logRequestAdminEvent } from './requests.audit.js';
 import { createRequestsService } from './requests.factory.js';
 
 const requestsService = createRequestsService();
@@ -107,12 +106,6 @@ export function registerRequestsRoutes(app: FastifyInstance) {
     try {
       const requestId = (request.params as { requestId: string }).requestId;
       await requestsService.updateRequest(actor, requestId, parsed.data);
-      await logRequestAdminEvent({
-        actor,
-        actionType: 'request_updated',
-        requestId,
-        metadata: { status: parsed.data.status },
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapRequestsError(reply, error);
@@ -126,11 +119,6 @@ export function registerRequestsRoutes(app: FastifyInstance) {
     try {
       const requestId = (request.params as { requestId: string }).requestId;
       await requestsService.deleteRequest(actor, requestId);
-      await logRequestAdminEvent({
-        actor,
-        actionType: 'request_deleted',
-        requestId,
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapRequestsError(reply, error);

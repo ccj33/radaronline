@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { assertAuthenticated } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { logTagsAdminEvent } from './tags.audit.js';
 import { createTagsService } from './tags.factory.js';
 
 const tagsService = createTagsService();
@@ -50,12 +49,6 @@ export function registerTagsRoutes(app: FastifyInstance) {
 
     try {
       const item = await tagsService.createTag(actor, parsed.data.name);
-      await logTagsAdminEvent({
-        actor,
-        actionType: 'tag_created',
-        entityId: item.id,
-        targetTag: { ...item, favoriteMicros: [] },
-      });
       return reply.code(201).send(item);
     } catch (error) {
       return mapTagsError(reply, error);
@@ -68,13 +61,7 @@ export function registerTagsRoutes(app: FastifyInstance) {
 
     try {
       const tagId = (request.params as { tagId: string }).tagId;
-      const item = await tagsService.deleteTag(actor, tagId);
-      await logTagsAdminEvent({
-        actor,
-        actionType: 'tag_deleted',
-        entityId: tagId,
-        targetTag: item,
-      });
+      await tagsService.deleteTag(actor, tagId);
       return reply.code(204).send();
     } catch (error) {
       return mapTagsError(reply, error);
@@ -117,14 +104,7 @@ export function registerTagsRoutes(app: FastifyInstance) {
 
     try {
       const { actionUid, tagId } = request.params as { actionUid: string; tagId: string };
-      const item = await tagsService.assignToAction(actor, actionUid, tagId);
-      await logTagsAdminEvent({
-        actor,
-        actionType: 'tag_assigned',
-        entityId: tagId,
-        targetTag: item,
-        metadata: { action_uid: actionUid },
-      });
+      await tagsService.assignToAction(actor, actionUid, tagId);
       return reply.code(204).send();
     } catch (error) {
       return mapTagsError(reply, error);
@@ -138,12 +118,6 @@ export function registerTagsRoutes(app: FastifyInstance) {
     try {
       const { actionUid, tagId } = request.params as { actionUid: string; tagId: string };
       await tagsService.removeFromAction(actor, actionUid, tagId);
-      await logTagsAdminEvent({
-        actor,
-        actionType: 'tag_unassigned',
-        entityId: tagId,
-        metadata: { action_uid: actionUid },
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapTagsError(reply, error);

@@ -32,9 +32,9 @@ import { AdminPanelTab, PendingRegistration } from '../adminPanel.types';
 
 const mobileAdminTabs = [
   { id: 'dashboard' as AdminPanelTab, icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'atividades' as AdminPanelTab, icon: Activity, label: 'Atividades' },
   { id: 'usuarios' as AdminPanelTab, icon: Users, label: 'Usuarios' },
   { id: 'ranking' as AdminPanelTab, icon: Trophy, label: 'Ranking' },
-  { id: 'atividades' as AdminPanelTab, icon: Activity, label: 'Atividades' },
   { id: 'requests' as AdminPanelTab, icon: Bell, label: 'Pedidos' },
   { id: 'communication' as AdminPanelTab, icon: Megaphone, label: 'Mural' },
 ];

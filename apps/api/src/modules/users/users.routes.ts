@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { assertRole } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { logUsersAdminEvent } from './users.audit.js';
 import { createUsersService } from './users.factory.js';
 
 const usersService = createUsersService();
@@ -90,12 +89,6 @@ export function registerUsersRoutes(app: FastifyInstance) {
 
     try {
       const item = await usersService.createUser(actor, parsed.data);
-      await logUsersAdminEvent({
-        actor,
-        actionType: 'user_created',
-        entityId: item.id,
-        targetUser: item,
-      });
       return reply.code(201).send(item);
     } catch (error) {
       return mapUsersError(reply, error);
@@ -119,15 +112,6 @@ export function registerUsersRoutes(app: FastifyInstance) {
         (request.params as { userId: string }).userId,
         parsed.data
       );
-      await logUsersAdminEvent({
-        actor,
-        actionType: 'user_updated',
-        entityId: item?.id || (request.params as { userId: string }).userId,
-        targetUser: item,
-        metadata: {
-          changed_fields: Object.keys(parsed.data),
-        },
-      });
       return item;
     } catch (error) {
       return mapUsersError(reply, error);
@@ -142,14 +126,7 @@ export function registerUsersRoutes(app: FastifyInstance) {
 
     try {
       const userId = (request.params as { userId: string }).userId;
-      const targetUser = await usersService.getUserById(userId);
       await usersService.deleteUser(actor, userId);
-      await logUsersAdminEvent({
-        actor,
-        actionType: 'user_deleted',
-        entityId: userId,
-        targetUser,
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapUsersError(reply, error);
@@ -169,18 +146,11 @@ export function registerUsersRoutes(app: FastifyInstance) {
 
     try {
       const userId = (request.params as { userId: string }).userId;
-      const targetUser = await usersService.getUserById(userId);
       await usersService.resetPassword(
         actor,
         userId,
         parsed.data
       );
-      await logUsersAdminEvent({
-        actor,
-        actionType: 'user_password_updated',
-        entityId: userId,
-        targetUser,
-      });
       return reply.code(204).send();
     } catch (error) {
       return mapUsersError(reply, error);

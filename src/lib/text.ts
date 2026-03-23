@@ -19,6 +19,27 @@ export const getActivityDisplayId = (fullId: string): string => {
 };
 
 /**
+ * Normaliza um ID de atividade para comparacao entre formatos legados e atuais.
+ */
+export const getComparableActivityId = (fullId: string): string => {
+  if (!fullId) return '';
+
+  const displayId = getActivityDisplayId(fullId).trim();
+  const match = displayId.match(/(\d+\.\d+)/);
+
+  return match?.[1] || displayId;
+};
+
+export const activityIdsMatch = (leftId: string, rightId: string): boolean => {
+  if (!leftId || !rightId) return false;
+
+  return (
+    leftId === rightId ||
+    getComparableActivityId(leftId) === getComparableActivityId(rightId)
+  );
+};
+
+/**
  * Extrai o ID legível de uma ação a partir do ID técnico
  * Exemplo: "MR070_1.1.1" -> "1.1.1"
  *          "MR070_4.9.3" -> "4.9.3"
@@ -145,7 +166,7 @@ export const getCorrectActivityDisplayId = (
 
   // 2. Encontrar posição da atividade dentro do objetivo
   const objActivities = activities[objectiveId] || [];
-  const actIndex = objActivities.findIndex(a => a.id === activityId);
+  const actIndex = objActivities.findIndex(a => activityIdsMatch(a.id, activityId));
   const actNum = actIndex >= 0 ? actIndex + 1 : '?';
 
   return `${objNum}.${actNum}`;
@@ -177,14 +198,14 @@ export const getCorrectActionDisplayId = (
 
   // 2. Encontrar posição da atividade dentro do objetivo
   const objActivities = activities[objectiveId] || [];
-  const actIndex = objActivities.findIndex(a => a.id === activityId);
+  const actIndex = objActivities.findIndex(a => activityIdsMatch(a.id, activityId));
   const actNum = actIndex >= 0 ? actIndex + 1 : '?';
 
 
   // IMPORTANTE: Ordenar numericamente para garantir que 1.2.10 venha após 1.2.2
   // Caso contrário, "1.2.10" pode ganhar índice menor que "1.2.2" se a lista original for alfabética
   const actActions = actions
-    .filter(a => a.activityId === activityId)
+    .filter(a => activityIdsMatch(a.activityId, activityId))
     .sort((a, b) => naturalSortComparator(a.id, b.id));
 
   const actionIndex = actActions.findIndex(a => a.id === actionId);
@@ -214,7 +235,7 @@ export const findObjectiveIdByActivityId = (
   activities: Record<number, { id: string }[]>
 ): number | null => {
   for (const [objIdStr, acts] of Object.entries(activities)) {
-    if (acts.some(a => a.id === activityId)) {
+    if (acts.some(a => activityIdsMatch(a.id, activityId))) {
       return parseInt(objIdStr, 10);
     }
   }

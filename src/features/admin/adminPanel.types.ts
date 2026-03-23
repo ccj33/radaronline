@@ -3,10 +3,10 @@ import { PendingRegistration } from '../../services/teamsService';
 
 export type AdminPanelTab =
   | 'dashboard'
+  | 'atividades'
   | 'usuarios'
   | 'microregioes'
   | 'ranking'
-  | 'atividades'
   | 'requests'
   | 'communication';
 

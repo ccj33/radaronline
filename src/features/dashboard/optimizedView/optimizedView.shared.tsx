@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import type { Action, Status } from "../../../types";
+import { getDerivedActionStatus } from "../../../lib/actionPortfolio";
 import { formatDateBr } from "../../../lib/date";
 import { getActionDisplayId, getActivityDisplayId } from "../../../lib/text";
 import type { OptimizedObjectiveGroup } from "./optimizedView.types";
@@ -68,7 +69,8 @@ export const ActionCard: React.FC<{
   onClick?: () => void;
   isLate?: boolean;
 }> = ({ action, onClick, isLate }) => {
-  const status = STATUS_CONFIG[action.status] || STATUS_CONFIG["Não Iniciado"];
+  const derivedStatus = getDerivedActionStatus(action);
+  const status = STATUS_CONFIG[derivedStatus] || STATUS_CONFIG["Não Iniciado"];
   const responsible = action.raci.find((raci) => raci.role === "R")?.name || action.raci[0]?.name || "-";
   const commentCount = action.comments?.length || 0;
 
@@ -81,7 +83,7 @@ export const ActionCard: React.FC<{
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${status.bg}`}>
             {status.icon}
-            <span className={`${status.color} hidden sm:inline`}>{action.status === "Não Iniciado" ? "Pendente" : action.status === "Em Andamento" ? "Andamento" : action.status === "Concluído" ? "Concluído" : "Atrasado"}</span>
+            <span className={`${status.color} hidden sm:inline`}>{derivedStatus === "Não Iniciado" ? "Pendente" : derivedStatus === "Em Andamento" ? "Andamento" : derivedStatus === "Concluído" ? "Concluído" : "Atrasado"}</span>
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -150,13 +152,14 @@ export const ActionRow: React.FC<{
   onClick?: () => void;
   isLate?: boolean;
 }> = ({ action, onClick, isLate }) => {
-  const status = STATUS_CONFIG[action.status] || STATUS_CONFIG["Não Iniciado"];
+  const derivedStatus = getDerivedActionStatus(action);
+  const status = STATUS_CONFIG[derivedStatus] || STATUS_CONFIG["Não Iniciado"];
   const responsible = action.raci.find((raci) => raci.role === "R")?.name || "-";
   const commentCount = action.comments?.length || 0;
 
   return (
     <div className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent dark:hover:from-slate-700/50 dark:hover:to-transparent border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${isLate ? "bg-rose-50/40 dark:bg-rose-900/20" : ""}`} onClick={onClick}>
-      <div className={`w-1.5 h-8 rounded-full ${action.status === "Concluído" ? "bg-emerald-500" : action.status === "Em Andamento" ? "bg-blue-500" : action.status === "Atrasado" || isLate ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-600"}`} />
+      <div className={`w-1.5 h-8 rounded-full ${derivedStatus === "Concluído" ? "bg-emerald-500" : derivedStatus === "Em Andamento" ? "bg-blue-500" : derivedStatus === "Atrasado" || isLate ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-600"}`} />
       <span className={`shrink-0 p-1 rounded-lg ${status.bg}`}>{status.icon}</span>
       <span className="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded w-14 text-center shrink-0">{getActionDisplayId(action.id)}</span>
       <span className="flex-1 text-sm text-slate-700 dark:text-slate-200 truncate font-medium group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors">{action.title}</span>

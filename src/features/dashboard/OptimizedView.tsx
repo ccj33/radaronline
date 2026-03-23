@@ -1,7 +1,13 @@
-﻿import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
 import type { Action, Activity, Objective, RaciRole, TeamMember } from "../../types";
 import { getTodayStr, parseDateLocal } from "../../lib/date";
+import {
+  filterActionsByObjective,
+  getDerivedActionStatus,
+  summarizeActionPortfolio,
+} from "../../lib/actionPortfolio";
+import { activityIdsMatch } from "../../lib/text";
 import { ActionDetailModal } from "../actions/ActionDetailModal";
 import { OptimizedViewHeader } from "./optimizedView/OptimizedViewHeader";
 import {
@@ -58,31 +64,31 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const today = parseDateLocal(getTodayStr());
+  const today = useMemo(() => parseDateLocal(getTodayStr()) || new Date(), []);
 
   const isActionLate = useCallback((action: Action): boolean => {
-    if (action.status === "Concluído") return false;
-    const endDate = parseDateLocal(action.plannedEndDate);
-    return Boolean(endDate && today && endDate < today);
+    return getDerivedActionStatus(action, today) === "Atrasado";
   }, [today]);
 
   const isActionAlert = useCallback((action: Action): boolean => {
-    if (action.status === "Concluído") return false;
+    if (getDerivedActionStatus(action, today) === "Concluído") return false;
     const endDate = parseDateLocal(action.plannedEndDate);
-    if (!endDate || !today) return false;
+    if (!endDate) return false;
     const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return diffDays >= 0 && diffDays <= 7;
   }, [today]);
 
   const filteredActions = useMemo(() => {
     return actions.filter((action) => {
+      const derivedStatus = getDerivedActionStatus(action, today);
+
       if (searchTerm && !action.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       if (statusFilter === "late") return isActionLate(action);
       if (statusFilter === "alert") return isActionAlert(action) && !isActionLate(action);
-      if (statusFilter !== "all" && action.status !== statusFilter) return false;
+      if (statusFilter !== "all" && derivedStatus !== statusFilter) return false;
       return true;
     });
-  }, [actions, isActionAlert, isActionLate, searchTerm, statusFilter]);
+  }, [actions, isActionAlert, isActionLate, searchTerm, statusFilter, today]);
 
   const selectedAction = useMemo(() => {
     if (!selectedUid) return null;
@@ -92,34 +98,38 @@ export const OptimizedView: React.FC<OptimizedViewProps> = ({
   const selectedActivityName = useMemo(() => {
     if (!selectedAction) return "";
     for (const [, activityList] of Object.entries(activities)) {
-      const activity = activityList.find((item) => item.id === selectedAction.activityId);
+      const activity = activityList.find((item) => activityIdsMatch(item.id, selectedAction.activityId));
       if (activity) return activity.title;
     }
     return "";
   }, [activities, selectedAction]);
 
   const metrics = useMemo(() => {
-    const total = actions.length;
-    const completed = actions.filter((action) => action.status === "Concluído").length;
-    const inProgress = actions.filter((action) => action.status === "Em Andamento").length;
-    const notStarted = actions.filter((action) => action.status === "Não Iniciado").length;
-    const late = actions.filter(isActionLate).length;
+    const summary = summarizeActionPortfolio(actions, today);
     const alert = actions.filter((action) => isActionAlert(action) && !isActionLate(action)).length;
-    const avgProgress = total > 0 ? Math.round(actions.reduce((sum, action) => sum + action.progress, 0) / total) : 0;
-    return { total, completed, inProgress, notStarted, late, alert, avgProgress };
-  }, [actions, isActionAlert, isActionLate]);
+    const avgProgress = summary.total > 0 ? Math.round(actions.reduce((sum, action) => sum + action.progress, 0) / summary.total) : 0;
+    return {
+      total: summary.total,
+      completed: summary.completed,
+      inProgress: summary.inProgress,
+      notStarted: summary.notStarted,
+      late: summary.late,
+      alert,
+      avgProgress,
+    };
+  }, [actions, isActionAlert, isActionLate, today]);
 
   const groupedData = useMemo<OptimizedObjectiveGroup[]>(() => {
     return objectives.map((objective) => {
       const objectiveActivities = activities[objective.id] || [];
-      const objectiveActions = filteredActions.filter((action) => objectiveActivities.some((activity) => activity.id === action.activityId));
+      const objectiveActions = filterActionsByObjective(filteredActions, activities, objective.id);
       const objectiveProgress = objectiveActions.length > 0 ? Math.round(objectiveActions.reduce((sum, action) => sum + action.progress, 0) / objectiveActions.length) : 0;
       const objectiveLate = objectiveActions.filter(isActionLate).length;
 
       return {
         ...objective,
         activities: objectiveActivities.map((activity) => {
-          const activityActions = filteredActions.filter((action) => action.activityId === activity.id);
+          const activityActions = filteredActions.filter((action) => activityIdsMatch(action.activityId, activity.id));
           const activityProgress = activityActions.length > 0 ? Math.round(activityActions.reduce((sum, action) => sum + action.progress, 0) / activityActions.length) : 0;
           const activityLate = activityActions.filter(isActionLate).length;
           return { ...activity, actions: activityActions, progress: activityProgress, lateCount: activityLate };
