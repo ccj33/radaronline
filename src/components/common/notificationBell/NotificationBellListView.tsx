@@ -58,6 +58,8 @@ export function NotificationBellListView({
         ) : (
           filteredRequests.slice(0, 20).map((request) => {
             const unread = isUnread(request);
+            const requesterLabel = request.user?.nome || 'Usuário';
+            const responderLabel = request.resolved_by_name || 'Administrador';
             return (
               <div
                 key={request.id}
@@ -93,7 +95,7 @@ export function NotificationBellListView({
                       <span className={`text-sm ${unread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
                         {request.request_type === 'mention' ? 'Mencao' :
                           request.request_type === 'announcement' ? 'Comunicado' :
-                            isAdmin ? (request.user?.nome || 'Usuario') : 'Solicitacao'}
+                            isAdmin ? requesterLabel : 'Solicitacao'}
                       </span>
                       <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
                         {new Date(request.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
@@ -103,6 +105,12 @@ export function NotificationBellListView({
                     <p className={`text-sm leading-snug line-clamp-2 ${unread ? 'text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
                       {request.content}
                     </p>
+
+                    {request.status !== 'pending' ? (
+                      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                        Respondido por: {responderLabel}
+                      </p>
+                    ) : null}
 
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 border-dashed">
                       <span className={`

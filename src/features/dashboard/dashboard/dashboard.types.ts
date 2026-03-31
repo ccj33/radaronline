@@ -8,6 +8,8 @@ export interface DashboardNavigateFilters {
 export interface DashboardProps {
     actions: Action[];
     activities: Record<number, Activity[]>;
+    currentMicroId?: string;
+    currentMicroLabel?: string;
     objectives: Objective[];
     onNavigate: (view: "list" | "team", filters?: DashboardNavigateFilters) => void;
     objectiveId?: number;

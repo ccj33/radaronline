@@ -167,6 +167,7 @@ export function useForums() {
   const [forums, setForums] = useState<Forum[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const fetchForums = useCallback(async () => {
     try {
@@ -184,13 +185,16 @@ export function useForums() {
       }
 
       setForums((data || []).map(mapForum));
+      setIsFallback(false);
     } catch (err: unknown) {
       if (isHubBackendUnavailable(err)) {
         setForums(getFallbackForums());
         setError(null);
+        setIsFallback(true);
       } else {
         setForums([]);
         setError(normalizeForumError(err, 'Erro ao carregar foruns.'));
+        setIsFallback(false);
       }
     } finally {
       setLoading(false);
@@ -205,7 +209,7 @@ export function useForums() {
     void fetchForums();
   }), [fetchForums]);
 
-  return { forums, loading, error, refetch: fetchForums };
+  return { forums, loading, error, isFallback, refetch: fetchForums };
 }
 
 export function useForum(slug: string) {

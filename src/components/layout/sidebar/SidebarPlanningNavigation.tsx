@@ -89,7 +89,7 @@ export const SidebarPlanningNavigation = React.memo<SidebarPlanningNavigationPro
 
   return (
     <>
-      {(isAdmin || userRole === 'gestor' || userRole === 'superadmin') && (
+      {(isAdmin || userRole === 'superadmin') && (
         <div className={`mb-4 ${!isOpen && 'flex justify-center'}`}>
           <button
             onClick={onAdminClick}

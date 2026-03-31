@@ -3,6 +3,7 @@ import { Action, TeamMember } from '../../../types';
 import { User } from '../../../types/auth.types';
 import { ActivityCenter, RankingPanel, RequestsManagement } from '../dashboard';
 import { AnnouncementsManagement } from '../AnnouncementsManagement';
+import { MuralEventsPanel } from '../MuralEventsPanel';
 import { AdminPanelTab, AdminDropdownPosition, PendingRegistration } from '../adminPanel.types';
 import { DashboardFiltersState } from '../dashboard';
 import { AdminDashboardTab } from './AdminDashboardTab';
@@ -38,6 +39,7 @@ interface AdminDesktopContentProps {
   onSearchTermChange: (value: string) => void;
   onFilterRoleChange: (value: string) => void;
   onCreateUser: () => void;
+  onOpenUserImport: () => void;
   onCreatePendingUser: (pending: PendingRegistration) => void;
   onDeletePendingRegistration: (pending: PendingRegistration) => Promise<void>;
   onToggleExpandedUserMenu: (event: MouseEvent<HTMLButtonElement>, userId: string) => void;
@@ -78,6 +80,7 @@ export function AdminDesktopContent({
   onSearchTermChange,
   onFilterRoleChange,
   onCreateUser,
+  onOpenUserImport,
   onCreatePendingUser,
   onDeletePendingRegistration,
   onToggleExpandedUserMenu,
@@ -137,6 +140,7 @@ export function AdminDesktopContent({
           onSearchTermChange={onSearchTermChange}
           onFilterRoleChange={onFilterRoleChange}
           onCreateUser={onCreateUser}
+          onOpenUserImport={onOpenUserImport}
           onCreatePendingUser={onCreatePendingUser}
           onDeletePendingRegistration={onDeletePendingRegistration}
           onToggleExpandedUserMenu={onToggleExpandedUserMenu}
@@ -163,7 +167,12 @@ export function AdminDesktopContent({
       {activeTab === 'ranking' && (
         <RankingPanel actions={actions} onViewMicrorregiao={onViewMicrorregiao} />
       )}
+
+      {activeTab === 'mural-eventos' && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <MuralEventsPanel />
+        </div>
+      )}
     </main>
   );
 }
-

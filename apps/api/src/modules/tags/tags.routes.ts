@@ -18,6 +18,10 @@ const toggleFavoriteSchema = z.object({
 function mapTagsError(reply: FastifyReply, error: unknown) {
   const message = error instanceof Error ? error.message : 'UNKNOWN';
   switch (message) {
+    case 'FORBIDDEN':
+      return problem(reply, 403, 'Forbidden', 'User cannot manage tags in this scope.');
+    case 'FORBIDDEN_SCOPE':
+      return problem(reply, 403, 'Forbidden', 'User cannot access tags outside the allowed microregion.');
     case 'NOT_FOUND':
       return problem(reply, 404, 'Not found', 'Tag was not found.');
     default:

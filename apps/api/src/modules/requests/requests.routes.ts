@@ -8,11 +8,8 @@ import { createRequestsService } from './requests.factory.js';
 const requestsService = createRequestsService();
 
 const createRequestSchema = z.object({
-  userId: z.string().optional(),
-  requestType: z.string().min(1),
-  content: z.string().min(1),
-  status: z.enum(['pending', 'resolved', 'rejected']).optional(),
-  adminNotes: z.string().optional(),
+  requestType: z.enum(['request', 'feedback', 'support']),
+  content: z.string().trim().min(1),
 });
 
 const updateRequestSchema = z.object({
@@ -42,7 +39,7 @@ export function registerRequestsRoutes(app: FastifyInstance) {
       limit?: string;
       page?: string;
       pageSize?: string;
-      statusFilter?: 'pending' | 'resolved' | 'rejected' | 'all';
+      statusFilter?: 'pending' | 'resolved' | 'rejected' | 'all' | 'answered';
       typeFilter?: string;
     };
 

@@ -27,6 +27,10 @@ function mapTeamsError(reply: FastifyReply, error: unknown) {
   switch (message) {
     case 'FORBIDDEN':
       return problem(reply, 403, 'Forbidden', 'User cannot manage team operations.');
+    case 'FORBIDDEN_SCOPE':
+      return problem(reply, 403, 'Forbidden', 'User cannot access team data outside the allowed scope.');
+    case 'NOT_FOUND':
+      return problem(reply, 404, 'Not found', 'Team member or pending registration was not found.');
     default:
       return problem(reply, 500, 'Internal Server Error', 'Unexpected teams module failure.');
   }

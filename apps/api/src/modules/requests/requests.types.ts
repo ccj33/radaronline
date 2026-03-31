@@ -1,4 +1,5 @@
 export type RequestStatus = 'pending' | 'resolved' | 'rejected';
+export type ManagedStatusFilter = RequestStatus | 'all' | 'answered';
 
 export interface RequestUserSummary {
   nome?: string;
@@ -19,6 +20,7 @@ export interface RequestRecord {
   created_at: string;
   resolved_by?: string | null;
   resolved_at?: string | null;
+  resolved_by_name?: string | null;
   user?: RequestUserSummary;
 }
 

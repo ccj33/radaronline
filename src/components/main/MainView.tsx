@@ -1,4 +1,4 @@
-﻿import React, { RefObject, Suspense, lazy, useMemo } from 'react';
+﻿import React, { RefObject, Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useActionPatchHandler } from '../../hooks/useActionPatchHandler';
 import { Action, ActionComment, Activity, GanttRange, Objective, RaciRole, Status, TeamMember } from '../../types';
 import { ParsedAction } from '../../features/actions/SmartPasteModal';
@@ -62,6 +62,7 @@ interface MainViewProps {
   onSetResponsibleFilter: (responsible: string) => void;
   onSetSearchTerm: (term: string) => void;
   onSetSelectedActivity: (activityId: string) => void;
+  onSetSelectedObjective: (objectiveId: number) => void;
   onSetStatusFilter: (status: Status | 'all') => void;
   onShowToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   onUpdateAction: (uid: string, field: string, value: string | number) => void;
@@ -71,6 +72,30 @@ interface MainViewProps {
   checkCanCreate: () => boolean;
   checkCanDelete: (action: Action) => boolean;
   checkCanEdit: (action: Action) => boolean;
+}
+
+function readMobileObjectiveSelectionGate(storageKey: string): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    return window.sessionStorage.getItem(storageKey) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeMobileObjectiveSelectionGate(storageKey: string): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(storageKey, '1');
+  } catch {
+    // no-op when browser storage is blocked
+  }
 }
 
 export function MainView({
@@ -128,6 +153,7 @@ export function MainView({
   onSetResponsibleFilter,
   onSetSearchTerm,
   onSetSelectedActivity,
+  onSetSelectedObjective,
   onSetStatusFilter,
   onShowToast,
   onUpdateAction,
@@ -139,6 +165,13 @@ export function MainView({
   checkCanEdit,
 }: MainViewProps) {
   const handleUpdateActionPatch = useActionPatchHandler(onUpdateAction);
+  const mobileObjectiveSelectionStorageKey = useMemo(
+    () => `radar.mobile-actions-objective-selection.${currentMicroId || 'all'}`,
+    [currentMicroId],
+  );
+  const [hasMobileObjectiveSelection, setHasMobileObjectiveSelection] = useState(() =>
+    readMobileObjectiveSelectionGate(mobileObjectiveSelectionStorageKey),
+  );
 
   const selectedAction = useMemo(() => {
     if (!expandedActionUid) {
@@ -147,6 +180,23 @@ export function MainView({
 
     return microActions.find(action => action.uid === expandedActionUid) || null;
   }, [expandedActionUid, microActions]);
+
+  const isMobileActionsScreen = isMobile && currentNav === 'strategy' && viewMode === 'table';
+  const hasValidSelectedObjective = useMemo(
+    () => filteredObjectives.some((objective) => objective.id === selectedObjective),
+    [filteredObjectives, selectedObjective],
+  );
+
+  const markMobileObjectiveSelection = useCallback(() => {
+    setHasMobileObjectiveSelection(true);
+    writeMobileObjectiveSelectionGate(mobileObjectiveSelectionStorageKey);
+  }, [mobileObjectiveSelectionStorageKey]);
+
+  useEffect(() => {
+    setHasMobileObjectiveSelection(
+      readMobileObjectiveSelectionGate(mobileObjectiveSelectionStorageKey),
+    );
+  }, [mobileObjectiveSelectionStorageKey]);
 
   return (
     <>
@@ -163,11 +213,14 @@ export function MainView({
             canCreateObjective={canCreateObjective}
             filteredActivities={filteredActivities}
             filteredObjectives={filteredObjectives}
+            isMobile={isMobile}
             isEditMode={isEditMode}
             selectedActivity={selectedActivity}
             selectedObjective={selectedObjective}
             onAddObjective={onAddObjective}
+            onMobileObjectiveSelected={markMobileObjectiveSelection}
             onSetSelectedActivity={onSetSelectedActivity}
+            onSetSelectedObjective={onSetSelectedObjective}
             onUpdateActivity={onUpdateActivity}
           />
         )}
@@ -201,6 +254,11 @@ export function MainView({
           selectedObjective={selectedObjective}
           statusFilter={statusFilter}
           viewMode={viewMode}
+          requireMobileObjectiveSelection={
+            isMobileActionsScreen &&
+            filteredObjectives.length > 0 &&
+            (!hasValidSelectedObjective || !hasMobileObjectiveSelection)
+          }
           checkCanCreate={checkCanCreate}
           checkCanDelete={checkCanDelete}
           checkCanEdit={checkCanEdit}

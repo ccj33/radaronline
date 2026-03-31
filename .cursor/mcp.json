@@ -2,6 +2,15 @@
     "mcpServers": {
         "supabase": {
             "url": "https://mcp.supabase.com/mcp?project_ref=nnmgmklaygaxxepryktn"
+        },
+        "fetch": {
+            "url": "https://api.modelcontextprotocol.io/fetch"
+        },
+        "filesystem": {
+            "url": "https://api.modelcontextprotocol.io/filesystem"
+        },
+        "github": {
+            "url": "https://api.modelcontextprotocol.io/github"
         }
     }
 }

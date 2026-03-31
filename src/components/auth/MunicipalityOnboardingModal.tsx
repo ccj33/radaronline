@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { MapPin, Save, Building, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { MapPin, Save, Building, Lock, Eye, EyeOff, ShieldCheck, ChevronDown } from 'lucide-react';
 import { User } from '../../types/auth.types';
 import { getMunicipiosByMicro, getMicroregiaoById } from '../../data/microregioes';
 
 interface FirstAccessOnboardingModalProps {
     user: User;
-    onSave: (municipio: string, novaSenha: string) => Promise<void>;
+    onSave: (municipio: string, novaSenha: string, microregiaoId: string) => Promise<void>;
 }
 
 export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalProps> = ({ user, onSave }) => {
+    const isMultiMicro = user.microregiaoIds.length > 1;
+
+    const [selectedMicroId, setSelectedMicroId] = useState(user.microregiaoId || '');
     const [municipio, setMunicipio] = useState('');
     const [novaSenha, setNovaSenha] = useState('');
     const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -17,18 +20,21 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Lista de municípios da micro do usuário
-    const municipios = React.useMemo(() => {
-        if (!user.microregiaoId || user.microregiaoId === 'all') return [];
-        return getMunicipiosByMicro(user.microregiaoId);
-    }, [user.microregiaoId]);
-
     const microregiaoNome = React.useMemo(() => {
-        if (!user.microregiaoId || user.microregiaoId === 'all') return '';
-        return getMicroregiaoById(user.microregiaoId)?.nome || '';
-    }, [user.microregiaoId]);
+        if (!selectedMicroId || selectedMicroId === 'all') return '';
+        return getMicroregiaoById(selectedMicroId)?.nome || '';
+    }, [selectedMicroId]);
+
+    // Municípios da micro selecionada (recalcula quando muda a micro)
+    const municipios = React.useMemo(() => {
+        if (!selectedMicroId || selectedMicroId === 'all') return [];
+        return getMunicipiosByMicro(selectedMicroId);
+    }, [selectedMicroId]);
 
     const validateForm = (): string | null => {
+        if (isMultiMicro && !selectedMicroId) {
+            return 'Por favor, selecione sua microrregião de vínculo.';
+        }
         if (!municipio) {
             return 'Por favor, selecione um município.';
         }
@@ -57,7 +63,7 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
         setError('');
 
         try {
-            await onSave(municipio, novaSenha);
+            await onSave(municipio, novaSenha, selectedMicroId);
         } catch (err: any) {
             setError(err.message || 'Erro ao salvar. Tente novamente.');
             setLoading(false);
@@ -88,18 +94,47 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
                             </div>
                         )}
 
-                        {/* Microrregião (readonly) */}
+                        {/* Microrregião de Vínculo */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                Microrregião de Vínculo
+                                Microrregião de Vínculo {isMultiMicro && <span className="text-rose-500">*</span>}
                             </label>
-                            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed">
-                                <Building size={18} />
-                                <span>{microregiaoNome || 'Microrregião não identificada'}</span>
-                            </div>
+
+                            {isMultiMicro ? (
+                                /* Gestor com múltiplas micros: deixar escolher */
+                                <div className="relative">
+                                    <select
+                                        value={selectedMicroId}
+                                        onChange={(e) => {
+                                            setSelectedMicroId(e.target.value);
+                                            setMunicipio(''); // reseta município ao trocar micro
+                                        }}
+                                        className="w-full appearance-none px-4 py-3 border border-teal-300 dark:border-teal-700 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                                        required
+                                    >
+                                        <option value="">Selecione sua microrregião...</option>
+                                        {user.microregiaoIds.map(id => {
+                                            const m = getMicroregiaoById(id);
+                                            return (
+                                                <option key={id} value={id}>
+                                                    {m?.nome || id}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                </div>
+                            ) : (
+                                /* Usuário/gestor com micro única: campo readonly */
+                                <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed">
+                                    <Building size={18} />
+                                    <span>{microregiaoNome || 'Microrregião não identificada'}</span>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Município */}
+                        {/* Município — só aparece se uma micro estiver selecionada */}
+                        {selectedMicroId && selectedMicroId !== 'all' && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 <MapPin size={16} className="inline mr-1" />
@@ -117,9 +152,12 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
                                         {mun.nome}
                                     </option>
                                 ))}
-                                <option value="Sede/Remoto">Sede Administrativa / Remoto</option>
+                                {(user.role === 'admin' || user.role === 'superadmin') && (
+                                    <option value="Sede/Remoto">Sede Administrativa / Remoto</option>
+                                )}
                             </select>
                         </div>
+                        )}
 
                         {/* Divider */}
                         <div className="relative py-2">
@@ -192,7 +230,7 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
 
                         <button
                             type="submit"
-                            disabled={loading || !municipio || !novaSenha || novaSenha !== confirmarSenha}
+                            disabled={loading || !selectedMicroId || !municipio || !novaSenha || novaSenha !== confirmarSenha}
                             className="w-full px-6 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-teal-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                         >
                             {loading ? (

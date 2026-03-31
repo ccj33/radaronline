@@ -1,4 +1,5 @@
 import { getMicroregiaoById } from '../data/microregioes';
+import { parseMicroregiaoIds } from '../lib/authHelpers';
 import type { Microrregiao, User } from '../types/auth.types';
 
 export function extractProfileFromMetadata(sessionUser: any): User | null {
@@ -6,7 +7,7 @@ export function extractProfileFromMetadata(sessionUser: any): User | null {
   const appMeta = sessionUser?.app_metadata || {};
 
   const role = appMeta.role || userMeta.role;
-  const microId = appMeta.microregiao_id || userMeta.microregiao_id;
+  const rawMicroId = appMeta.microregiao_id || userMeta.microregiao_id;
   const ativo = appMeta.ativo !== undefined ? appMeta.ativo : userMeta.ativo !== false;
   const nome = userMeta.nome || appMeta.nome;
 
@@ -14,12 +15,16 @@ export function extractProfileFromMetadata(sessionUser: any): User | null {
     return null;
   }
 
+  const ids = parseMicroregiaoIds(rawMicroId);
+  const primaryId = ids[0] || 'all';
+
   return {
     id: sessionUser.id,
     nome,
     email: sessionUser.email,
     role,
-    microregiaoId: microId || 'all',
+    microregiaoId: primaryId,
+    microregiaoIds: ids,
     ativo,
     lgpdConsentimento: true,
     avatarId: userMeta.avatar_id || 'zg10',

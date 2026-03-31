@@ -17,6 +17,7 @@ export class DevHeaderAuthProvider implements AuthProvider {
     const email = request.headers['x-dev-user-email'];
     const role = request.headers['x-dev-user-role'];
     const name = request.headers['x-dev-user-name'];
+    const microregionId = request.headers['x-dev-user-microregion-id'];
 
     if (
       typeof userId !== 'string' ||
@@ -26,6 +27,15 @@ export class DevHeaderAuthProvider implements AuthProvider {
       return { authenticated: false };
     }
 
+    const rawMicroregionId =
+      typeof microregionId === 'string' && microregionId.trim().length > 0
+        ? microregionId.trim()
+        : null;
+    const microregionIds = rawMicroregionId
+      ? rawMicroregionId.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    const primaryMicroregionId = microregionIds[0] ?? null;
+
     return {
       authenticated: true,
       user: {
@@ -33,6 +43,8 @@ export class DevHeaderAuthProvider implements AuthProvider {
         email,
         name,
         role: parseRole(typeof role === 'string' ? role : undefined),
+        microregionId: primaryMicroregionId,
+        microregionIds,
       },
     };
   }

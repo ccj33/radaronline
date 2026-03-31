@@ -1,14 +1,17 @@
 import type { SessionUser } from '../../shared/auth/auth.types.js';
+import { assertActionAccess } from '../../shared/auth/authorization.js';
 import type { CommentsRepository } from './comments.repository.js';
 
 export class CommentsService {
   constructor(private readonly repository: CommentsRepository) {}
 
-  async listComments(_actor: SessionUser, actionUid: string) {
+  async listComments(actor: SessionUser, actionUid: string) {
+    assertActionAccess(actor, actionUid);
     return this.repository.listByActionUid(actionUid);
   }
 
   async addComment(actor: SessionUser, actionUid: string, input: { content: string; parentId?: string | null }) {
+    assertActionAccess(actor, actionUid);
     return this.repository.create({
       actionUid,
       authorId: actor.id,
@@ -20,6 +23,8 @@ export class CommentsService {
   async updateComment(actor: SessionUser, commentId: string, content: string) {
     const current = await this.repository.getById(commentId);
     if (!current) throw new Error('NOT_FOUND');
+
+    assertActionAccess(actor, current.actionUid);
 
     const isAdmin = actor.role === 'admin' || actor.role === 'superadmin';
     if (!isAdmin && current.authorId !== actor.id) {
@@ -34,6 +39,8 @@ export class CommentsService {
   async deleteComment(actor: SessionUser, commentId: string) {
     const current = await this.repository.getById(commentId);
     if (!current) throw new Error('NOT_FOUND');
+
+    assertActionAccess(actor, current.actionUid);
 
     const isAdmin = actor.role === 'admin' || actor.role === 'superadmin';
     if (!isAdmin && current.authorId !== actor.id) {

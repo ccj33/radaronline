@@ -13,6 +13,9 @@ export default defineConfig({
       brotliSize: true,
     }),
   ],
+  optimizeDeps: {
+    include: ['canvas-confetti'],
+  },
   server: {
     port: 3000,
     open: true,

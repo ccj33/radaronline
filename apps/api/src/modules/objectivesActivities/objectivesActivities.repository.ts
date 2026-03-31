@@ -10,6 +10,8 @@ import type {
 export interface ObjectivesActivitiesRepository {
   listObjectives(microregionId?: string): Promise<ObjectiveRecord[]>;
   listActivities(microregionId?: string): Promise<Record<number, ActivityRecord[]>>;
+  getObjectiveById(id: number): Promise<ObjectiveRecord | null>;
+  getActivityById(id: string): Promise<ActivityRecord | null>;
   createObjective(input: CreateObjectiveInput): Promise<ObjectiveRecord>;
   updateObjective(id: number, updates: UpdateObjectiveInput): Promise<void>;
   deleteObjective(id: number): Promise<void>;
@@ -66,6 +68,14 @@ export class InMemoryObjectivesActivitiesRepository implements ObjectivesActivit
         (item) => !microregionId || microregionId === 'all' || item.microregionId === microregionId
       )
     );
+  }
+
+  async getObjectiveById(id: number): Promise<ObjectiveRecord | null> {
+    return inMemoryObjectives.get(id) || null;
+  }
+
+  async getActivityById(id: string): Promise<ActivityRecord | null> {
+    return inMemoryActivities.get(id) || null;
   }
 
   async createObjective(input: CreateObjectiveInput): Promise<ObjectiveRecord> {

@@ -1,10 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Course, Trail, EducationStats, CourseCategory, CourseLevel, CourseFormat } from '../types/education.types';
-
-// =====================================================
-// DTO → Domain Mappers
-// =====================================================
+import type {
+  Course,
+  Trail,
+  EducationStats,
+  CourseCategory,
+  CourseLevel,
+  CourseFormat,
+} from '../types/education.types';
+import {
+  addFallbackCourse,
+  addFallbackTrail,
+  enrollFallbackCourse,
+  getFallbackCourses,
+  getFallbackTrails,
+  subscribeToEducationFallbackUpdates,
+} from './educationFallbackStore';
+import { isHubBackendUnavailable, normalizeHubError } from './hubFallbackUtils';
 
 function mapCourse(row: Record<string, unknown>): Course {
   return {
@@ -35,10 +47,6 @@ function mapTrail(row: Record<string, unknown>): Trail {
   };
 }
 
-// =====================================================
-// Hook
-// =====================================================
-
 export interface CourseFormData {
   title: string;
   description: string;
@@ -62,45 +70,81 @@ export function useEducacao() {
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
+
+  const loadFallbackData = useCallback(() => {
+    const fallbackCourses = getFallbackCourses();
+    const fallbackTrails = getFallbackTrails();
+
+    setCourses(fallbackCourses);
+    setTrails(fallbackTrails);
+    setEnrolledCourses(fallbackCourses.filter((course) => course.progress > 0));
+    setIsFallback(true);
+    setError(null);
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const [coursesRes, trailsRes] = await Promise.all([
         supabase.from('courses').select('*').order('created_at', { ascending: false }),
         supabase.from('trails').select('*').order('created_at', { ascending: false }),
       ]);
 
-      if (coursesRes.error) throw coursesRes.error;
-      if (trailsRes.error) throw trailsRes.error;
+      if (coursesRes.error) {
+        throw coursesRes.error;
+      }
 
-      setCourses((coursesRes.data || []).map(mapCourse));
-      setTrails((trailsRes.data || []).map(mapTrail));
+      if (trailsRes.error) {
+        throw trailsRes.error;
+      }
 
-      // enrolled courses = those with progress > 0
-      setEnrolledCourses(
-        (coursesRes.data || []).filter((c: Record<string, unknown>) => (c.progress as number) > 0).map(mapCourse)
-      );
+      const mappedCourses = (coursesRes.data || []).map(mapCourse);
+      const mappedTrails = (trailsRes.data || []).map(mapTrail);
+
+      setCourses(mappedCourses);
+      setTrails(mappedTrails);
+      setEnrolledCourses(mappedCourses.filter((course) => course.progress > 0));
+      setIsFallback(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados de educação');
+      if (isHubBackendUnavailable(err)) {
+        loadFallbackData();
+      } else {
+        setCourses([]);
+        setTrails([]);
+        setEnrolledCourses([]);
+        setIsFallback(false);
+        setError(normalizeHubError(err, 'O modulo de educacao esta em modo local.'));
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadFallbackData]);
 
-  useEffect(() => { void fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    return subscribeToEducationFallbackUpdates(() => {
+      if (isFallback) {
+        loadFallbackData();
+      }
+    });
+  }, [isFallback, loadFallbackData]);
 
   const stats: EducationStats = {
     totalCourses: courses.length,
     totalTrails: trails.length,
-    inProgress: enrolledCourses.filter(c => c.progress > 0 && c.progress < 100).length,
-    completed: enrolledCourses.filter(c => c.progress >= 100).length,
+    inProgress: enrolledCourses.filter((course) => course.progress > 0 && course.progress < 100).length,
+    completed: enrolledCourses.filter((course) => course.progress >= 100).length,
   };
 
   const addCourse = useCallback(async (data: CourseFormData): Promise<boolean> => {
     try {
-      const { error } = await supabase.from('courses').insert({
+      const { error: dbError } = await supabase.from('courses').insert({
         title: data.title,
         description: data.description,
         duration: data.duration,
@@ -109,44 +153,92 @@ export function useEducacao() {
         format: data.format,
         url: data.url || null,
       });
-      if (error) throw error;
+
+      if (dbError) {
+        throw dbError;
+      }
+
       await fetchData();
       return true;
-    } catch {
+    } catch (err: unknown) {
+      if (isHubBackendUnavailable(err)) {
+        const success = addFallbackCourse(data);
+        if (success) {
+          loadFallbackData();
+        }
+        return success;
+      }
+
       return false;
     }
-  }, [fetchData]);
+  }, [fetchData, loadFallbackData]);
 
   const addTrail = useCallback(async (data: TrailFormData): Promise<boolean> => {
     try {
-      const { error } = await supabase.from('trails').insert({
+      const { error: dbError } = await supabase.from('trails').insert({
         title: data.title,
         description: data.description,
         courses_count: data.coursesCount,
         total_hours: data.totalHours,
       });
-      if (error) throw error;
+
+      if (dbError) {
+        throw dbError;
+      }
+
       await fetchData();
       return true;
-    } catch {
+    } catch (err: unknown) {
+      if (isHubBackendUnavailable(err)) {
+        const success = addFallbackTrail(data);
+        if (success) {
+          loadFallbackData();
+        }
+        return success;
+      }
+
       return false;
     }
-  }, [fetchData]);
+  }, [fetchData, loadFallbackData]);
 
   const enrollInCourse = useCallback(async (courseId: string): Promise<boolean> => {
     try {
-      // Simple enrollment - just mark progress start
-      const { error } = await supabase
+      const course = courses.find((entry) => entry.id === courseId);
+      const { error: dbError } = await supabase
         .from('courses')
-        .update({ enrolled: courses.find(c => c.id === courseId)?.enrolled ?? 0 + 1 })
+        .update({ enrolled: (course?.enrolled || 0) + 1 })
         .eq('id', courseId);
-      if (error) throw error;
+
+      if (dbError) {
+        throw dbError;
+      }
+
       await fetchData();
       return true;
-    } catch {
+    } catch (err: unknown) {
+      if (isHubBackendUnavailable(err)) {
+        const success = enrollFallbackCourse(courseId);
+        if (success) {
+          loadFallbackData();
+        }
+        return success;
+      }
+
       return false;
     }
-  }, [courses, fetchData]);
+  }, [courses, fetchData, loadFallbackData]);
 
-  return { courses, trails, enrolledCourses, loading, error, stats, addCourse, addTrail, enrollInCourse, refetch: fetchData };
+  return {
+    courses,
+    trails,
+    enrolledCourses,
+    loading,
+    error,
+    isFallback,
+    stats,
+    addCourse,
+    addTrail,
+    enrollInCourse,
+    refetch: fetchData,
+  };
 }

@@ -306,8 +306,8 @@ export const MentorshipPage: React.FC<MentorshipPageProps> = React.memo(({ userI
   const [searchTerm, setSearchTerm] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState<MentorshipSpecialty | 'all'>('all');
 
-  const { mentors, loading, error } = useMentors();
-  const { matches } = useMentorshipMatches(userId);
+  const { mentors, loading, error, isFallback } = useMentors();
+  const { matches, isFallback: matchesFallback } = useMentorshipMatches(userId);
   const { badges } = useMentorshipBadges(userId);
   const { mentor: myMentorProfile } = useMentorProfile(userId);
 
@@ -358,9 +358,17 @@ export const MentorshipPage: React.FC<MentorshipPageProps> = React.memo(({ userI
             <SummaryChip label={`${activeMatches.length} ativas`} />
             <SummaryChip label={`${mentors.length} mentores`} />
             <SummaryChip label={`${visibleBadges.length} badges`} />
+            {matchesFallback ? <SummaryChip label="Jornadas locais" /> : null}
             {myMentorProfile ? <SummaryChip label="Voce tambem e mentor" /> : null}
           </div>
         </div>
+
+        {isFallback ? (
+          <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/20 dark:text-sky-100">
+            Mentorias em modo local: o catalogo e as jornadas desta area estao sendo mantidos no
+            navegador ate o banco definitivo do Hub ficar pronto.
+          </div>
+        ) : null}
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">

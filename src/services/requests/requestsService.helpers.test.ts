@@ -4,14 +4,15 @@ import {
   buildCreateRequestBatchPayload,
   buildCreateRequestPayload,
   buildUpdateRequestPayload,
-  getUniqueRequestUserIds,
+  getUniqueRequestProfileIds,
   mergeRequestsWithProfiles,
+  shouldCreateOwnRequestViaBackend,
 } from './requestsService.helpers';
 
 describe('requestsService.helpers', () => {
-  it('deduplicates request user ids', () => {
+  it('deduplicates request profile ids', () => {
     expect(
-      getUniqueRequestUserIds([
+      getUniqueRequestProfileIds([
         {
           id: '1',
           user_id: 'u1',
@@ -35,15 +36,16 @@ describe('requestsService.helpers', () => {
           user_id: 'u2',
           request_type: 'support',
           content: 'c',
-          status: 'pending',
+          status: 'resolved',
           admin_notes: null,
+          resolved_by: 'admin-1',
           created_at: '2026-03-01',
         },
       ])
-    ).toEqual(['u1', 'u2']);
+    ).toEqual(['u1', 'u2', 'admin-1']);
   });
 
-  it('merges request profile details', () => {
+  it('merges request profile and responder details', () => {
     expect(
       mergeRequestsWithProfiles(
         [
@@ -52,8 +54,9 @@ describe('requestsService.helpers', () => {
             user_id: 'u1',
             request_type: 'support',
             content: 'a',
-            status: 'pending',
+            status: 'resolved',
             admin_notes: null,
+            resolved_by: 'admin-1',
             created_at: '2026-03-01',
           },
         ],
@@ -70,6 +73,18 @@ describe('requestsService.helpers', () => {
               microregiao_id: 'MR1',
             },
           ],
+          [
+            'admin-1',
+            {
+              id: 'admin-1',
+              nome: 'Admin Radar',
+              email: 'admin@example.com',
+              role: 'admin',
+              cargo: 'Coordenador',
+              municipio: 'Belo Horizonte',
+              microregiao_id: 'MR1',
+            },
+          ],
         ])
       )
     ).toEqual([
@@ -78,8 +93,59 @@ describe('requestsService.helpers', () => {
         user_id: 'u1',
         request_type: 'support',
         content: 'a',
-        status: 'pending',
+        status: 'resolved',
         admin_notes: null,
+        resolved_by: 'admin-1',
+        created_at: '2026-03-01',
+        resolved_by_name: 'Admin Radar',
+        user: {
+          nome: 'Maria',
+          email: 'maria@example.com',
+          role: 'admin',
+          cargo: 'Gestora',
+          municipio: 'Belo Horizonte',
+          microregiao_id: 'MR1',
+        },
+      },
+    ]);
+  });
+
+  it('preserves joined names when the fallback profile lookup is empty', () => {
+    expect(
+      mergeRequestsWithProfiles(
+        [
+          {
+            id: '1',
+            user_id: 'u1',
+            request_type: 'support',
+            content: 'a',
+            status: 'resolved',
+            admin_notes: null,
+            resolved_by: 'admin-1',
+            resolved_by_name: 'Admin Radar',
+            created_at: '2026-03-01',
+            user: {
+              nome: 'Maria',
+              email: 'maria@example.com',
+              role: 'admin',
+              cargo: 'Gestora',
+              municipio: 'Belo Horizonte',
+              microregiao_id: 'MR1',
+            },
+          },
+        ],
+        new Map()
+      )
+    ).toEqual([
+      {
+        id: '1',
+        user_id: 'u1',
+        request_type: 'support',
+        content: 'a',
+        status: 'resolved',
+        admin_notes: null,
+        resolved_by: 'admin-1',
+        resolved_by_name: 'Admin Radar',
         created_at: '2026-03-01',
         user: {
           nome: 'Maria',
@@ -130,5 +196,31 @@ describe('requestsService.helpers', () => {
         admin_notes: null,
       },
     ]);
+  });
+
+  it('uses backend request creation only for the authenticated owner', () => {
+    expect(
+      shouldCreateOwnRequestViaBackend({
+        backendRequestsEnabled: true,
+        currentUserId: 'user-1',
+        targetUserId: 'user-1',
+      })
+    ).toBe(true);
+
+    expect(
+      shouldCreateOwnRequestViaBackend({
+        backendRequestsEnabled: true,
+        currentUserId: 'user-1',
+        targetUserId: 'user-2',
+      })
+    ).toBe(false);
+
+    expect(
+      shouldCreateOwnRequestViaBackend({
+        backendRequestsEnabled: false,
+        currentUserId: 'user-1',
+        targetUserId: 'user-1',
+      })
+    ).toBe(false);
   });
 });

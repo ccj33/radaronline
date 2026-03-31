@@ -13,6 +13,13 @@ import type {
   UserRequest,
 } from '../../../services/requestsService';
 
+const MODERATABLE_REQUEST_TYPES = new Set([
+  'request',
+  'feedback',
+  'support',
+  'system',
+]);
+
 interface NotificationBellDetailViewProps {
   adminNote: string;
   isAdmin: boolean;
@@ -36,6 +43,9 @@ export function NotificationBellDetailView({
   selectedRequest,
   setIsOpen,
 }: NotificationBellDetailViewProps) {
+  const canModerateRequest =
+    isAdmin && MODERATABLE_REQUEST_TYPES.has(selectedRequest.request_type);
+
   return (
     <div className="animate-fade-in">
       <button
@@ -140,7 +150,7 @@ export function NotificationBellDetailView({
             </p>
           </div>
 
-          {(selectedRequest.admin_notes || isAdmin) && (
+          {(selectedRequest.admin_notes || canModerateRequest || selectedRequest.request_type === 'announcement') && (
             <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
               {selectedRequest.request_type === 'announcement' && !isAdmin ? (
                 <div className="flex justify-end">
@@ -158,7 +168,7 @@ export function NotificationBellDetailView({
               ) : (
                 <>
                   <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                    {isAdmin ? 'Area Administrativa' : 'Resposta da Administracao'}
+                    {canModerateRequest ? 'Area Administrativa' : 'Resposta da Administracao'}
                   </h5>
 
                   {!isAdmin && selectedRequest.admin_notes && (
@@ -177,7 +187,7 @@ export function NotificationBellDetailView({
                     </div>
                   )}
 
-                  {isAdmin && (
+                  {canModerateRequest && (
                     <div className="space-y-4">
                       <textarea
                         value={adminNote}

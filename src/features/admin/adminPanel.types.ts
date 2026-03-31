@@ -8,7 +8,8 @@ export type AdminPanelTab =
   | 'microregioes'
   | 'ranking'
   | 'requests'
-  | 'communication';
+  | 'communication'
+  | 'mural-eventos';
 
 export interface AdminDropdownPosition {
   top: number;

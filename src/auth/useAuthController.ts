@@ -384,8 +384,10 @@ export function useAuthController(): ExtendedAuthContextState {
   const setViewingMicrorregiao = useCallback((id: string) => {
     if (isAdminLike(user?.role)) {
       setViewingMicroregiaoId(id === 'all' ? null : id);
+    } else if (user?.role === 'gestor' && id !== 'all' && user.microregiaoIds.includes(id)) {
+      setViewingMicroregiaoId(id);
     }
-  }, [user?.role]);
+  }, [user?.role, user?.microregiaoIds]);
 
   const currentMicrorregiao: Microrregiao | null = useMemo(
     () => getCurrentMicrorregiao(viewingMicroregiaoId, user),

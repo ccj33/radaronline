@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { List, BarChart2, Menu, Shield, MapPin, Zap, Pencil, Info } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { List, BarChart2, CalendarDays, Menu, Shield, MapPin, Zap, Pencil, Info, Users, ChevronDown } from 'lucide-react';
 import { Objective } from '../../types';
 import { UserRole } from '../../types/auth.types';
+import { getMicroregiaoById } from '../../data/microregioes';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { ZoomControl } from '../common/ZoomControl';
 import { NotificationBell } from '../common/NotificationBell';
 import { getObjectiveTitleWithoutNumber } from '../../lib/text';
+import { canAccessTeamView } from '../../lib/userRole';
 import { EixoSelectorModal } from '../modals/EixoSelectorModal';
 import { EixoConfig, EIXOS_PREDEFINIDOS } from '../../lib/eixosConfig';
 
@@ -26,6 +28,10 @@ interface HeaderProps {
   onToggleEditMode?: () => void;
   onUpdateObjective?: (id: number, field: 'eixo' | 'eixoLabel' | 'eixoColor' | 'description', value: string | number) => void;
   onNavigate?: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
+  // Navegação multi-micro para gestores
+  userMicroregiaoIds?: string[];
+  viewingMicroregiaoId?: string | null;
+  onSwitchMicrorregiao?: (id: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -45,6 +51,9 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleEditMode,
   onUpdateObjective,
   onNavigate,
+  userMicroregiaoIds,
+  viewingMicroregiaoId,
+  onSwitchMicrorregiao,
 }) => {
   const objectiveIndex = objectives.findIndex(o => o.id === selectedObjective);
   const objective = objectives[objectiveIndex];
@@ -56,6 +65,22 @@ export const Header: React.FC<HeaderProps> = ({
 
   // State para modal de seleção de Eixo
   const [isEixoModalOpen, setIsEixoModalOpen] = useState(false);
+
+  // State para dropdown de troca de microrregião (gestores multi-micro)
+  const [isMicroDropdownOpen, setIsMicroDropdownOpen] = useState(false);
+  const microDropdownRef = useRef<HTMLDivElement>(null);
+  const isMultiMicro = userRole === 'gestor' && (userMicroregiaoIds?.length ?? 0) > 1;
+
+  useEffect(() => {
+    if (!isMicroDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (microDropdownRef.current && !microDropdownRef.current.contains(e.target as Node)) {
+        setIsMicroDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMicroDropdownOpen]);
 
   // Handler para salvar eixo selecionado
   const handleSaveEixo = (eixo: EixoConfig) => {
@@ -88,6 +113,31 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'Biblioteca'
                   : 'Configuracoes';
 
+  const shouldShowStrategyModeTabs =
+    currentNav === 'strategy' && viewMode !== 'team' && viewMode !== 'calendar';
+  const shouldShowMobileStrategyModeTabs = currentNav === 'strategy';
+  const shouldShowMobileStrategyContextTitle =
+    currentNav === 'strategy' && (viewMode === 'table' || viewMode === 'team' || viewMode === 'calendar');
+
+  const strategyContextTitle =
+    viewMode === 'team'
+      ? 'Gestão de Equipe'
+      : viewMode === 'calendar'
+        ? 'Agenda Estratégica'
+        : objectiveTitle || 'Selecione um objetivo';
+
+  const canAccessTeamMode = canAccessTeamView(userRole);
+  const mobileStrategyModes: Array<{ mode: HeaderProps['viewMode']; label: string; icon: React.ReactNode }> = [
+    { mode: 'table', label: 'Tabela', icon: <List size={13} /> },
+    { mode: 'calendar', label: 'Agenda', icon: <CalendarDays size={13} /> },
+    { mode: 'gantt', label: 'Gantt', icon: <BarChart2 size={13} /> },
+    { mode: 'optimized', label: 'Rapida', icon: <Zap size={13} /> },
+  ];
+
+  if (canAccessTeamMode) {
+    mobileStrategyModes.push({ mode: 'team', label: 'Equipe', icon: <Users size={13} /> });
+  }
+
 
 
   // =============================================
@@ -113,47 +163,106 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Badge de localização compacto */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/80 min-w-0 flex-1">
-              <MapPin size={12} className="text-teal-500 shrink-0" />
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
-                {micro || macro || 'Minas Gerais'}
-              </span>
-            </div>
+            {/* Badge de localização compacto — com switcher para gestores multi-micro */}
+            {isMultiMicro && onSwitchMicrorregiao ? (
+              <div ref={microDropdownRef} className="relative min-w-0 flex-1">
+                <button
+                  onClick={() => setIsMicroDropdownOpen(v => !v)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700/50 min-w-0 w-full"
+                >
+                  <MapPin size={12} className="text-teal-500 shrink-0" />
+                  <span className="text-xs font-semibold text-teal-700 dark:text-teal-300 truncate flex-1 text-left">
+                    {micro || macro || 'Minas Gerais'}
+                  </span>
+                  <ChevronDown size={11} className={`text-teal-500 shrink-0 transition-transform ${isMicroDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isMicroDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50 min-w-[180px]">
+                    {userMicroregiaoIds!.map(id => {
+                      const m = getMicroregiaoById(id);
+                      const isActive = viewingMicroregiaoId === id;
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => { onSwitchMicrorregiao(id); setIsMicroDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${isActive ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                        >
+                          <MapPin size={10} className={isActive ? 'text-teal-500' : 'text-slate-400'} />
+                          {m?.nome || id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/80 min-w-0 flex-1">
+                <MapPin size={12} className="text-teal-500 shrink-0" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                  {micro || macro || 'Minas Gerais'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Lado direito: Ações compactas */}
           <div className="flex items-center gap-1 shrink-0">
             <NotificationBell onNavigate={onNavigate} />
-            <ZoomControl />
             <ThemeToggle size="sm" />
           </div>
         </div>
 
         {/* Linha 2: Título da página/objetivo (apenas no modo estratégia) */}
         {currentNav === 'strategy' && (
-          <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
-            <h1
-              className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate flex-1"
-              title={objectiveTitle}
-            >
-              {objectiveTitle || 'Selecione um objetivo'}
-            </h1>
+          <div className={`mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50 ${shouldShowMobileStrategyContextTitle ? 'space-y-2' : ''}`}>
+            {shouldShowMobileStrategyContextTitle && (
+              <div className="flex items-center justify-between gap-2">
+                <h1
+                  className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate flex-1"
+                  title={strategyContextTitle}
+                >
+                  {strategyContextTitle}
+                </h1>
 
-            {/* Edit mode toggle para admin */}
-            {(isAdmin || userRole === 'superadmin') && onToggleEditMode && viewMode === 'table' && (
-              <button
-                onClick={onToggleEditMode}
-                className={`
-                  p-1.5 rounded-lg transition-all shrink-0
-                  ${isEditMode
-                    ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
-                    : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'}
-                `}
-                title={isEditMode ? "Modo de edição ativo" : "Ativar modo de edição"}
-              >
-                <Pencil size={14} />
-              </button>
+                {/* Edit mode toggle para admin */}
+                {(isAdmin || userRole === 'superadmin') && onToggleEditMode && viewMode === 'table' && (
+                  <button
+                    onClick={onToggleEditMode}
+                    className={`
+                      p-1.5 rounded-lg transition-all shrink-0
+                      ${isEditMode
+                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
+                        : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'}
+                    `}
+                    title={isEditMode ? "Modo de edição ativo" : "Ativar modo de edição"}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {shouldShowMobileStrategyModeTabs && (
+              <div className="flex items-center gap-1 overflow-x-auto pb-0.5" role="tablist" aria-label="Modos da estrategia">
+                {mobileStrategyModes.map(mode => (
+                  <button
+                    key={mode.mode}
+                    onClick={() => setViewMode(mode.mode)}
+                    role="tab"
+                    aria-selected={viewMode === mode.mode}
+                    className={`
+                      flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all
+                      ${viewMode === mode.mode
+                        ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 ring-1 ring-teal-200/70 dark:ring-teal-800/80'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                      }
+                    `}
+                  >
+                    {mode.icon}
+                    <span>{mode.label}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -240,7 +349,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* ====== CENTRO: Navegação (Tabs de Visualização) ====== */}
       <div className="flex-1 flex justify-center min-w-0">
-        {currentNav === 'strategy' && (
+        {shouldShowStrategyModeTabs && (
           <div data-tour="view-mode" className="flex bg-slate-100/80 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
             <TabButton
               active={viewMode === 'table'}
@@ -266,6 +375,38 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* ====== DIREITA: Ações Primárias + Separador + Utilitários ====== */}
       <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
+
+        {/* Switcher multi-micro para gestores (desktop) */}
+        {isMultiMicro && onSwitchMicrorregiao && (
+          <div ref={microDropdownRef} className="relative">
+            <button
+              onClick={() => setIsMicroDropdownOpen(v => !v)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700/50 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
+            >
+              <MapPin size={12} className="text-teal-500" />
+              <span className="max-w-[140px] truncate">{micro || macro}</span>
+              <ChevronDown size={11} className={`text-teal-500 transition-transform ${isMicroDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isMicroDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50 min-w-[200px]">
+                {userMicroregiaoIds!.map(id => {
+                  const m = getMicroregiaoById(id);
+                  const isActive = viewingMicroregiaoId === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => { onSwitchMicrorregiao(id); setIsMicroDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${isActive ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                    >
+                      <MapPin size={10} className={isActive ? 'text-teal-500' : 'text-slate-400'} />
+                      {m?.nome || id}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Grupo de Ações Primárias (EDITAR + ADMIN) */}
         <div className="flex items-center gap-1.5 lg:gap-2">

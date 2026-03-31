@@ -5,6 +5,8 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   name: string;
+  microregionId: string | null;   // primária (primeiro ID da lista)
+  microregionIds: string[];        // todas as micros acessíveis
 }
 
 export interface AuthenticatedSession {

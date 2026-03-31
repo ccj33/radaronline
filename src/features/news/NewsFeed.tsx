@@ -14,7 +14,9 @@ import {
     Zap,
     MapPin,
     Lightbulb,
-    Megaphone
+    Megaphone,
+    CheckCircle2,
+    BarChart2,
 } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import confetti from 'canvas-confetti';
@@ -22,6 +24,7 @@ import confetti from 'canvas-confetti';
 import { loadAnnouncements } from '../../services/announcementsService';
 import { loadAutomatedEvents } from '../../services/automatedEventsService';
 import type { AutomatedEvent } from '../../services/automatedEventsService';
+import { loadMuralConfig } from '../../services/muralConfigService';
 import { useAuth } from '../../auth/AuthContext';
 import { Announcement } from '../../types/announcement.types';
 
@@ -291,6 +294,8 @@ const AutomatedEventCard = ({ event, onLike }: { event: AutomatedEvent, onLike: 
             <div className="p-4 pl-6 flex items-start gap-4">
                 <div className={`p-3 rounded-2xl bg-gradient-to-br ${event.imageGradient} text-white shadow-lg shrink-0 group-hover:scale-110 transition-transform duration-300`}>
                     {event.type === 'plan_completed' && <Trophy size={20} />}
+                    {event.type === 'activity_completed' && <CheckCircle2 size={20} />}
+                    {event.type === 'progress_milestone' && <BarChart2 size={20} />}
                     {event.type === 'goal_reached' && <TrendingUp size={20} />}
                     {event.type === 'system_milestone' && <Zap size={20} />}
                     {event.type === 'new_user' && <Users size={20} />}
@@ -361,10 +366,11 @@ export const NewsFeed = ({ onOpenRoadmap }: NewsFeedProps) => {
 
             setAnnouncements(data);
 
-            // Carregar eventos reais
+            // Carregar eventos reais respeitando config do admin
             try {
-                const autoEvents = await loadAutomatedEvents(6);
-                setEvents(autoEvents); // Sempre atualiza, mesmo se vazio
+                const config = await loadMuralConfig();
+                const autoEvents = await loadAutomatedEvents(6, config);
+                setEvents(autoEvents);
             } catch (err) {
                 console.error('Falha ao carregar eventos:', err);
                 setEvents([]);

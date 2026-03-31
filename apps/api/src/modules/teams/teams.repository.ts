@@ -7,7 +7,12 @@ import type {
 
 export interface TeamsRepository {
   listTeams(microregionId?: string): Promise<Record<string, TeamMemberRecord[]>>;
-  getUserTeamStatus(email: string): Promise<{ exists: boolean; municipality: string | null }>;
+  getUserTeamStatus(
+    email: string,
+    microregionId?: string
+  ): Promise<{ exists: boolean; municipality: string | null }>;
+  getTeamMemberById(memberId: string): Promise<TeamMemberRecord | null>;
+  getPendingRegistrationById(id: string): Promise<PendingRegistrationRecord | null>;
   saveUserMunicipality(input: SaveUserMunicipalityInput): Promise<void>;
   addTeamMember(input: CreateTeamMemberInput): Promise<TeamMemberRecord>;
   removeTeamMember(memberId: string): Promise<void>;
@@ -51,9 +56,16 @@ export class InMemoryTeamsRepository implements TeamsRepository {
     );
   }
 
-  async getUserTeamStatus(email: string): Promise<{ exists: boolean; municipality: string | null }> {
+  async getUserTeamStatus(
+    email: string,
+    microregionId?: string
+  ): Promise<{ exists: boolean; municipality: string | null }> {
     const normalized = normalizeEmail(email);
-    for (const members of inMemoryTeams.values()) {
+    const microIds =
+      microregionId && microregionId !== 'all' ? [microregionId] : [...inMemoryTeams.keys()];
+
+    for (const microId of microIds) {
+      const members = inMemoryTeams.get(microId) || [];
       const found = members.find((member) => normalizeEmail(member.email) === normalized);
       if (found) {
         return { exists: true, municipality: found.municipality || null };
@@ -61,6 +73,21 @@ export class InMemoryTeamsRepository implements TeamsRepository {
     }
 
     return { exists: false, municipality: null };
+  }
+
+  async getTeamMemberById(memberId: string): Promise<TeamMemberRecord | null> {
+    for (const members of inMemoryTeams.values()) {
+      const found = members.find((member) => member.id === memberId);
+      if (found) {
+        return { ...found };
+      }
+    }
+
+    return null;
+  }
+
+  async getPendingRegistrationById(id: string): Promise<PendingRegistrationRecord | null> {
+    return inMemoryPending.get(id) || null;
   }
 
   async saveUserMunicipality(input: SaveUserMunicipalityInput): Promise<void> {

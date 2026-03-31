@@ -55,23 +55,6 @@ const checkIsSuperadmin = async (
     return profile.role === 'superadmin';
 };
 
-const getUserProfile = async (
-    supabaseAdmin: any,
-    userId: string
-): Promise<{ nome: string; email: string; role: string } | null> => {
-    const { data: profile, error } = await supabaseAdmin
-        .from('profiles')
-        .select('nome, email, role')
-        .eq('id', userId)
-        .single();
-
-    if (error || !profile) {
-        return null;
-    }
-
-    return profile;
-};
-
 // =====================================
 // HANDLER PRINCIPAL
 // =====================================
@@ -137,12 +120,10 @@ serve(async (req: Request) => {
             return errorResponse('Não é possível excluir o Super Admin', 403, origin);
         }
 
-        // ✅ Obter dados do usuário antes de excluir (para log)
-        const targetProfile = await getUserProfile(supabaseAdmin, userId);
-
-        // ✅ Log da operação
-        console.log('[delete-user] Excluindo usuário:', userId, 'por:', currentUser.id);
-        console.log('[delete-user] Dados do usuário:', targetProfile);
+        console.info('[delete-user] exclusão administrativa autorizada', {
+            actorId: currentUser.id,
+            targetUserId: userId,
+        });
 
         // ✅ Excluir profile primeiro (cascade deve cuidar de relacionamentos)
         const { error: profileDeleteError } = await supabaseAdmin
@@ -162,8 +143,6 @@ serve(async (req: Request) => {
             console.error('[delete-user] Erro ao excluir do Auth:', authDeleteError);
             return errorResponse(authDeleteError.message || 'Erro ao excluir usuário', 500, origin);
         }
-
-        console.log('[delete-user] Usuário excluído com sucesso:', userId);
 
         return successResponse({
             success: true,

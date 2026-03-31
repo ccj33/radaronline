@@ -3,9 +3,10 @@ import { z } from 'zod';
 
 import { assertRole } from '../../shared/auth/authorization.js';
 import { problem } from '../../shared/http/problem.js';
-import { createUsersService } from './users.factory.js';
+import { createUsersImportService, createUsersService } from './users.factory.js';
 
 const usersService = createUsersService();
+const usersImportService = createUsersImportService();
 
 const createUserSchema = z.object({
   email: z.email(),
@@ -26,12 +27,43 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8),
 });
 
+const importRowSchema = z.object({
+  rowNumber: z.number().int().positive().optional(),
+  name: z.string().optional(),
+  email: z.string().optional(),
+  role: z.string().optional(),
+  microregions: z.string().optional(),
+  municipality: z.string().optional(),
+});
+
+const importPreviewSchema = z.object({
+  rows: z.array(importRowSchema).min(1).max(500),
+});
+
+const importCommitSchema = importPreviewSchema.extend({
+  loginUrl: z.string().trim().optional(),
+});
+
 function mapUsersError(reply: FastifyReply, error: unknown) {
   const message = error instanceof Error ? error.message : 'UNKNOWN';
 
   switch (message) {
     case 'FORBIDDEN':
       return problem(reply, 403, 'Forbidden', 'Administrative privileges are required.');
+    case 'FORBIDDEN_PRIVILEGED_TARGET':
+      return problem(
+        reply,
+        403,
+        'Forbidden',
+        'Only superadmin can manage admin or superadmin accounts.'
+      );
+    case 'FORBIDDEN_ROLE_ASSIGNMENT':
+      return problem(
+        reply,
+        403,
+        'Forbidden',
+        'Only superadmin can assign admin or superadmin roles.'
+      );
     case 'FORBIDDEN_SUPERADMIN_TARGET':
       return problem(reply, 403, 'Forbidden', 'The target superadmin operation is not allowed.');
     case 'SELF_DELETE_FORBIDDEN':
@@ -44,6 +76,10 @@ function mapUsersError(reply: FastifyReply, error: unknown) {
       return problem(reply, 400, 'Validation error', 'microregionId is not allowed for admin or superadmin.');
     case 'PASSWORD_TOO_SHORT':
       return problem(reply, 400, 'Validation error', 'Password must contain at least 8 characters.');
+    case 'EMPTY_IMPORT':
+      return problem(reply, 400, 'Validation error', 'At least one row is required for import.');
+    case 'IMPORT_LIMIT_EXCEEDED':
+      return problem(reply, 400, 'Validation error', 'The import limit is 500 rows per request.');
     case 'NOT_FOUND':
       return problem(reply, 404, 'Not found', 'User was not found.');
     default:
@@ -52,6 +88,44 @@ function mapUsersError(reply: FastifyReply, error: unknown) {
 }
 
 export function registerUsersRoutes(app: FastifyInstance) {
+  app.post('/v1/users/import/preview', async (request, reply) => {
+    const actor = await assertRole(request, reply, ['admin', 'superadmin']);
+    if (!actor) {
+      return reply;
+    }
+
+    const parsed = importPreviewSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return problem(reply, 400, 'Validation error', parsed.error.issues[0]?.message);
+    }
+
+    try {
+      const preview = await usersImportService.preview(actor, parsed.data.rows);
+      return preview;
+    } catch (error) {
+      return mapUsersError(reply, error);
+    }
+  });
+
+  app.post('/v1/users/import/commit', async (request, reply) => {
+    const actor = await assertRole(request, reply, ['admin', 'superadmin']);
+    if (!actor) {
+      return reply;
+    }
+
+    const parsed = importCommitSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return problem(reply, 400, 'Validation error', parsed.error.issues[0]?.message);
+    }
+
+    try {
+      const result = await usersImportService.commit(actor, parsed.data.rows, parsed.data.loginUrl || null);
+      return result;
+    } catch (error) {
+      return mapUsersError(reply, error);
+    }
+  });
+
   app.get('/v1/users', async (request, reply) => {
     const actor = await assertRole(request, reply, ['admin', 'superadmin']);
     if (!actor) {

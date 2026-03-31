@@ -27,7 +27,7 @@ export const STATUS_CONFIG: Record<Status, { icon: React.ReactNode; color: strin
   "Concluído": { icon: <CheckCircle2 size={14} />, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800", header: "bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" },
   "Em Andamento": { icon: <Clock size={14} />, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800", header: "bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
   "Não Iniciado": { icon: <Circle size={14} />, color: "text-slate-400", bg: "bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600", header: "bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300" },
-  Atrasado: { icon: <AlertTriangle size={14} />, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800", header: "bg-rose-50 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300" },
+  Atrasado: { icon: <AlertTriangle size={14} />, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800", header: "bg-orange-50 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" },
 };
 
 export const KANBAN_COLUMNS: { key: Status; label: string }[] = [
@@ -76,7 +76,7 @@ export const ActionCard: React.FC<{
 
   return (
     <div
-      className={`group relative p-3 rounded-xl border cursor-pointer transition-all duration-200 ${isLate ? "border-rose-200/80 bg-gradient-to-br from-rose-50 to-white dark:border-rose-700/60 dark:from-rose-900/40 dark:to-slate-800 shadow-rose-100/50 dark:shadow-rose-900/20" : "border-slate-200/60 dark:border-slate-600/60 bg-white dark:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-lg hover:shadow-teal-100/40 dark:hover:shadow-teal-900/20"} shadow-sm hover:-translate-y-0.5`}
+      className={`group relative p-3 rounded-xl border cursor-pointer transition-all duration-200 ${isLate ? "border-orange-200/80 bg-gradient-to-br from-orange-50 to-white dark:border-orange-700/60 dark:from-orange-900/40 dark:to-slate-800 shadow-orange-100/50 dark:shadow-orange-900/20" : "border-slate-200/60 dark:border-slate-600/60 bg-white dark:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-lg hover:shadow-teal-100/40 dark:hover:shadow-teal-900/20"} shadow-sm hover:-translate-y-0.5`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-2 mb-2.5">
@@ -139,8 +139,8 @@ export const ActionCard: React.FC<{
 
       {isLate ? (
         <div className="absolute -top-1.5 -right-1.5 flex items-center justify-center">
-          <span className="absolute w-4 h-4 bg-rose-500 rounded-full animate-ping opacity-40" />
-          <span className="relative w-3 h-3 bg-rose-500 rounded-full shadow-lg shadow-rose-500/50" />
+          <span className="absolute h-4 w-4 rounded-full bg-orange-500 opacity-40 animate-ping" />
+          <span className="relative h-3 w-3 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50" />
         </div>
       ) : null}
     </div>
@@ -158,8 +158,8 @@ export const ActionRow: React.FC<{
   const commentCount = action.comments?.length || 0;
 
   return (
-    <div className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent dark:hover:from-slate-700/50 dark:hover:to-transparent border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${isLate ? "bg-rose-50/40 dark:bg-rose-900/20" : ""}`} onClick={onClick}>
-      <div className={`w-1.5 h-8 rounded-full ${derivedStatus === "Concluído" ? "bg-emerald-500" : derivedStatus === "Em Andamento" ? "bg-blue-500" : derivedStatus === "Atrasado" || isLate ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-600"}`} />
+    <div className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent dark:hover:from-slate-700/50 dark:hover:to-transparent border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${isLate ? "bg-orange-50/40 dark:bg-orange-900/20" : ""}`} onClick={onClick}>
+      <div className={`w-1.5 h-8 rounded-full ${derivedStatus === "Concluído" ? "bg-emerald-500" : derivedStatus === "Em Andamento" ? "bg-blue-500" : derivedStatus === "Atrasado" || isLate ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-600"}`} />
       <span className={`shrink-0 p-1 rounded-lg ${status.bg}`}>{status.icon}</span>
       <span className="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded w-14 text-center shrink-0">{getActionDisplayId(action.id)}</span>
       <span className="flex-1 text-sm text-slate-700 dark:text-slate-200 truncate font-medium group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors">{action.title}</span>
@@ -183,7 +183,7 @@ export const ActionRow: React.FC<{
         <span className="truncate">{responsible.split(" ")[0]}</span>
       </span>
       <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 w-24 shrink-0 justify-end bg-slate-50 dark:bg-slate-700/50 px-2 py-1 rounded-lg"><Calendar size={11} />{formatDateBr(action.plannedEndDate)}</span>
-      {isLate ? <span className="shrink-0 p-1 rounded-full bg-rose-100 dark:bg-rose-900/50"><AlertTriangle size={12} className="text-rose-500" /></span> : null}
+      {isLate ? <span className="shrink-0 rounded-full bg-orange-100 p-1 dark:bg-orange-900/50"><AlertTriangle size={12} className="text-orange-500" /></span> : null}
       <span className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-teal-500 transition-all shrink-0"><Edit3 size={11} className="text-white" /></span>
     </div>
   );

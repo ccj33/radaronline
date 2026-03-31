@@ -6,8 +6,13 @@ import { SupabaseBridgeAuthProvider } from './supabase-bridge-auth.provider.js';
 import { hasSupabaseAdminConfig } from '../persistence/supabase-admin.js';
 
 export function createAuthProvider(config: AppConfig): AuthProvider {
+  const canUseDevAuthProvider = config.env !== 'production' || config.allowDevAuthProvider;
+
   switch (config.authProviderMode) {
     case 'dev-header':
+      if (!canUseDevAuthProvider) {
+        throw new Error('DEV_AUTH_PROVIDER_DISABLED');
+      }
       return new DevHeaderAuthProvider();
     case 'supabase-bridge':
       return new SupabaseBridgeAuthProvider();
@@ -21,6 +26,10 @@ export function createAuthProvider(config: AppConfig): AuthProvider {
 
       if (hasSupabaseAdminConfig()) {
         return new SupabaseBridgeAuthProvider();
+      }
+
+      if (!canUseDevAuthProvider) {
+        throw new Error('AUTH_PROVIDER_NOT_CONFIGURED');
       }
 
       return new DevHeaderAuthProvider();

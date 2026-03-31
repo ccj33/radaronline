@@ -28,7 +28,8 @@ export interface User {
   nome: string;
   email: string;
   role: UserRole;
-  microregiaoId: string; // NUNCA null (converte null/'all' para string)
+  microregiaoId: string; // NUNCA null — primeira/primária microrregião
+  microregiaoIds: string[]; // todas as micros acessíveis (array de 1 se for única)
   ativo: boolean;
   lgpdConsentimento: boolean;
   lgpdConsentimentoData?: string;

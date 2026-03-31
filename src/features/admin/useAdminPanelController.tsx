@@ -4,8 +4,16 @@ import { useAuth } from '../../auth';
 import { useToast } from '../../components/common/Toast';
 import { MICROREGIOES, getMicroregiaoById } from '../../data/microregioes';
 import { useResponsive } from '../../hooks/useResponsive';
+import {
+  canAssignAdminRole,
+  canManageAdminTarget,
+  getAdminRoleAssignmentError,
+  getAdminTargetManagementError,
+} from '../../lib/adminRolePolicy';
 import { log, logError } from '../../lib/logger';
+import { canUseAdminUserImport } from '../../services/adminUserImportService';
 import * as authService from '../../services/authService';
+import type { UserImportCommitResponse } from '../../services/adminUsersApi';
 import {
   deletePendingRegistration,
   loadPendingRegistrations,
@@ -45,6 +53,7 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
   const [userFilterMacro, setUserFilterMacro] = useState<string>('all');
   const [userFilterMicro, setUserFilterMicro] = useState<string>('all');
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showUserImportModal, setShowUserImportModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<AdminDropdownPosition | null>(null);
@@ -64,6 +73,7 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<'profile' | 'appearance'>('profile');
   const [settingsMode, setSettingsMode] = useState<'settings' | 'avatar'>('settings');
+  const canImportUsers = canUseAdminUserImport();
 
   const loadPending = async () => {
     setPendingLoading(true);
@@ -155,7 +165,24 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
     setShowUserModal(true);
   };
 
+  const handleOpenUserImport = () => {
+    if (!canImportUsers) {
+      showToast(
+        'A importacao em lote esta indisponivel porque o backend novo nao esta ativo e o fluxo legado foi desativado.',
+        'error'
+      );
+      return;
+    }
+
+    setShowUserImportModal(true);
+  };
+
   const handleEditUser = (user: User) => {
+    if (!canManageAdminTarget(currentUser?.role, user.role)) {
+      showToast(getAdminTargetManagementError(user.role), 'error');
+      return;
+    }
+
     setEditingUser(user);
     setShowUserModal(true);
   };
@@ -163,6 +190,11 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
   const handleToggleUserStatus = async (userId: string) => {
     const user = users.find((item) => item.id === userId);
     if (!user) {
+      return;
+    }
+
+    if (!canManageAdminTarget(currentUser?.role, user.role)) {
+      showToast(getAdminTargetManagementError(user.role), 'error');
       return;
     }
 
@@ -178,6 +210,20 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
     setActionLoadingId('save-user');
 
     try {
+      const targetRole = editingUser?.role;
+      if (targetRole && !canManageAdminTarget(currentUser?.role, targetRole)) {
+        showToast(getAdminTargetManagementError(targetRole), 'error');
+        setActionLoadingId(null);
+        return;
+      }
+
+      const requestedRole = (userData.role || editingUser?.role) as User['role'] | undefined;
+      if (requestedRole && !canAssignAdminRole(currentUser?.role, requestedRole)) {
+        showToast(getAdminRoleAssignmentError(requestedRole), 'error');
+        setActionLoadingId(null);
+        return;
+      }
+
       if (editingUser) {
         await authService.updateUser(editingUser.id, userData);
 
@@ -239,6 +285,10 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
     setPendingUserData(null);
   };
 
+  const handleCloseUserImportModal = () => {
+    setShowUserImportModal(false);
+  };
+
   const handleSaveUserFromModal = async (userData: AdminUserPayload) => {
     await handleSaveUser(userData);
     setPendingUserData(null);
@@ -266,6 +316,18 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
 
   const handleConfirmDeleteUser = async () => {
     if (!confirmDelete.user) {
+      return;
+    }
+
+    if (currentUser?.role !== 'superadmin') {
+      setConfirmDelete({ open: false });
+      showToast('Apenas Super Admin pode excluir usuarios.', 'error');
+      return;
+    }
+
+    if (confirmDelete.user.role === 'superadmin') {
+      setConfirmDelete({ open: false });
+      showToast('Super Admin nao pode excluir outro Super Admin.', 'error');
       return;
     }
 
@@ -323,6 +385,19 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
     }
   };
 
+  const handleUsersImported = async (result: UserImportCommitResponse) => {
+    await loadUsers();
+    setShowUserImportModal(false);
+
+    if (result.summary.created === 0) {
+      showToast('Nenhuma linha pronta foi importada. Revise a previa e tente novamente.', 'warning');
+      return;
+    }
+
+    const summaryMessage = `${result.summary.created} usuario(s) criado(s), ${result.summary.skipped} pulado(s) e ${result.summary.failed} falha(s).`;
+    showToast(summaryMessage, result.summary.failed > 0 ? 'warning' : 'success');
+  };
+
   const handleToggleDesktopUserMenu = (event: MouseEvent<HTMLButtonElement>, userId: string) => {
     if (expandedUserId === userId) {
       setExpandedUserId(null);
@@ -358,6 +433,16 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
   };
 
   const handleRequestDesktopUserDelete = (user: User) => {
+    if (currentUser?.role !== 'superadmin') {
+      showToast('Apenas Super Admin pode excluir usuarios.', 'error');
+      return;
+    }
+
+    if (user.role === 'superadmin') {
+      showToast('Super Admin nao pode excluir outro Super Admin.', 'error');
+      return;
+    }
+
     setConfirmDelete({ open: true, user });
     setExpandedUserId(null);
   };
@@ -399,6 +484,7 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
   return {
     actionLoadingId,
     activeTab,
+    canImportUsers,
     confirmDelete,
     confirmToggle,
     currentNav,
@@ -419,12 +505,17 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
     handleDeletePendingRegistrationRequest,
     handleDesktopUserFilterMacroChange,
     handleDesktopUserFilterMicroChange,
+    handleEditUser,
     handleEditDesktopUser,
+    handleCloseUserImportModal,
     handleOpenPendingUserCreation,
+    handleOpenUserImport,
     handleRequestDesktopUserDelete,
     handleSaveUserFromModal,
+    handleToggleUserStatus,
     handleToggleDesktopUserMenu,
     handleToggleDesktopUserStatus,
+    handleUsersImported,
     handleViewDesktopUserMicroregion,
     handleViewMicrorregiao,
     isAdmin,
@@ -463,10 +554,12 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
     setSettingsInitialTab,
     setSettingsMode,
     setShowMicroSelector,
+    setShowUserImportModal,
     settingsInitialTab,
     settingsMode,
     setShowUserModal,
     showMicroSelector,
+    showUserImportModal,
     showUserModal,
     toggleFullscreen,
     userFilterMacro,

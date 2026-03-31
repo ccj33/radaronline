@@ -1,4 +1,9 @@
-﻿import { formatReportDate, formatReportPeriod } from "../../../lib/reportUtils";
+import {
+    escapeHtml,
+    formatReportDate,
+    formatReportPeriod,
+    sanitizeCssColor,
+} from "../../../lib/reportUtils";
 import type { GenerateStrategicReportHtmlParams } from "./strategicReport.types";
 
 interface ReportAreaTag {
@@ -17,6 +22,7 @@ export function generateStrategicReportHTML({
 }: GenerateStrategicReportHtmlParams): string {
     const now = new Date();
     const allTags: ReportAreaTag[] = [];
+    const safeMicroName = escapeHtml(microName);
 
     actions.forEach((action) => {
         action.tags?.forEach((tag) => {
@@ -59,11 +65,11 @@ export function generateStrategicReportHTML({
             <div class="meta-info">
                 <div class="meta-item">
                     <div class="meta-label">Unidade Gestora</div>
-                    <div class="meta-value">${microName}</div>
+                    <div class="meta-value">${safeMicroName}</div>
                 </div>
                 <div class="meta-item" style="margin-top: 8px;">
                     <div class="meta-label">Data de Emissão</div>
-                    <div class="meta-value">${formatReportDate(now)}</div>
+                    <div class="meta-value">${escapeHtml(formatReportDate(now))}</div>
                 </div>
             </div>
         </header>
@@ -75,7 +81,7 @@ export function generateStrategicReportHTML({
                 ${type === "executive" ? "RELATÓRIO EXECUTIVO" : type === "byObjective" ? "ANÁLISE POR OBJETIVO" : "RELATÓRIO ESTRATÉGICO INSTITUCIONAL"}
             </h2>
             <p class="hero-subtitle">
-                Período de Referência: ${formatReportPeriod(now)} •
+                Período de Referência: ${escapeHtml(formatReportPeriod(now))} •
                 ${metrics.total} Ações Monitoradas
             </p>
         </div>
@@ -126,8 +132,8 @@ export function generateStrategicReportHTML({
             <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                 ${topAreas.map((area) => `
                     <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${area.color};"></div>
-                        <span style="font-weight: 600; font-size: 11px; color: #334155;">${area.name}</span>
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${sanitizeCssColor(area.color)};"></div>
+                        <span style="font-weight: 600; font-size: 11px; color: #334155;">${escapeHtml(area.name)}</span>
                         <span style="font-size: 10px; color: #94a3b8; background: #f1f5f9; padding: 2px 6px; border-radius: 10px;">${area.count} ações</span>
                     </div>
                 `).join("")}
@@ -142,9 +148,9 @@ export function generateStrategicReportHTML({
                 const percent = metrics.total > 0 ? Math.round((status.value / metrics.total) * 100) : 0;
                 return `
                     <div class="bar-chart-row">
-                        <div class="bar-label">${status.name}</div>
+                        <div class="bar-label">${escapeHtml(status.name)}</div>
                         <div class="bar-track">
-                            <div class="bar-fill" style="width: ${percent}%; background: ${status.color};"></div>
+                            <div class="bar-fill" style="width: ${percent}%; background: ${sanitizeCssColor(status.color)};"></div>
                         </div>
                         <div class="bar-value">${percent}%</div>
                     </div>
@@ -161,11 +167,11 @@ export function generateStrategicReportHTML({
                     <tbody>
                         ${metrics.upcomingDeadlines.map((action) => `
                             <tr>
-                                <td style="width: 80px; font-weight: 600; color: #64748b;">${action.plannedEndDate || action.endDate}</td>
-                                <td>${action.title}</td>
+                                <td style="width: 80px; font-weight: 600; color: #64748b;">${escapeHtml(action.plannedEndDate || action.endDate)}</td>
+                                <td>${escapeHtml(action.title)}</td>
                                 <td style="width: 80px; text-align: right;">
                                     <span class="status-pill ${action.status === "Atrasado" ? "pill-danger" : "pill-blue"}">
-                                        ${action.status}
+                                        ${escapeHtml(action.status)}
                                     </span>
                                 </td>
                             </tr>
@@ -187,7 +193,9 @@ export function generateStrategicReportHTML({
                 ${metrics.progressoPorObjetivo.map((objective) => {
                     const objectiveAreas = getAreasForObjective(objective.id);
                     const areasHTML = objectiveAreas.length > 0
-                        ? objectiveAreas.map((tag) => `<span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; color: white; background: ${tag.color}; margin-right: 3px;">${tag.name}</span>`).join("")
+                        ? objectiveAreas
+                              .map((tag) => `<span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; color: white; background: ${sanitizeCssColor(tag.color)}; margin-right: 3px;">${escapeHtml(tag.name)}</span>`)
+                              .join("")
                         : "";
 
                     return `
@@ -197,7 +205,7 @@ export function generateStrategicReportHTML({
                                 <div style="font-weight: 700; color: var(--primary);">${objective.progress}%</div>
                             </div>
                             <div style="font-size: 11px; margin-bottom: 8px; color: #475569; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                                ${objective.fullName}
+                                ${escapeHtml(objective.fullName)}
                             </div>
                             <div class="obj-progress-track">
                                 <div class="obj-progress-fill" style="width: ${objective.progress}%"></div>
@@ -239,16 +247,19 @@ export function generateStrategicReportHTML({
                                     ? "pill-danger"
                                     : "pill-gray";
                         const areasHTML = action.tags && action.tags.length > 0
-                            ? action.tags.slice(0, 2).map((tag) => `<span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; color: white; background: ${tag.color}; margin-right: 3px;">${tag.name}</span>`).join("") + (action.tags.length > 2 ? `<span style="font-size: 8px; color: #94a3b8;">+${action.tags.length - 2}</span>` : "")
+                            ? action.tags
+                                  .slice(0, 2)
+                                  .map((tag) => `<span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; color: white; background: ${sanitizeCssColor(tag.color)}; margin-right: 3px;">${escapeHtml(tag.name)}</span>`)
+                                  .join("") + (action.tags.length > 2 ? `<span style="font-size: 8px; color: #94a3b8;">+${action.tags.length - 2}</span>` : "")
                             : '<span style="color: #94a3b8; font-size: 9px;">-</span>';
 
                         return `
                             <tr>
                                 <td style="font-family: monospace; font-weight: 600; color: #64748b;">#${action.id}</td>
-                                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${action.title}</td>
-                                <td style="color: #64748b;">${responsible}</td>
+                                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(action.title)}</td>
+                                <td style="color: #64748b;">${escapeHtml(responsible)}</td>
                                 <td style="white-space: nowrap;">${areasHTML}</td>
-                                <td><span class="status-pill ${statusClass}">${action.status}</span></td>
+                                <td><span class="status-pill ${statusClass}">${escapeHtml(action.status)}</span></td>
                                 <td style="text-align: center; font-weight: 600;">${action.progress}%</td>
                             </tr>
                         `;
@@ -270,7 +281,7 @@ export function generateStrategicReportHTML({
                 Secretaria de Estado da Saúde
             </div>
             <div class="footer-right">
-                Este relatório reflete a posição dos dados em ${formatReportDate(now)}<br>
+                Este relatório reflete a posição dos dados em ${escapeHtml(formatReportDate(now))}<br>
                 Autenticação do Sistema: ${Math.random().toString(36).substring(7).toUpperCase()}
             </div>
         </footer>

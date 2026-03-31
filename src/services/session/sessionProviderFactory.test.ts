@@ -9,9 +9,8 @@ describe('sessionProviderFactory', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns backend-first provider when backend auth session flag is enabled', () => {
+  it('returns backend-first provider when backend api is configured and no opt-out exists', () => {
     vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
-    vi.stubEnv('VITE_USE_BACKEND_AUTH_SESSION', 'true');
 
     expect(getSessionProvider()).toBe(backendFirstSessionProvider);
   });

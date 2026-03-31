@@ -1,8 +1,11 @@
-﻿import { Dispatch, ReactNode, SetStateAction } from 'react';
+﻿import { ReactNode } from 'react';
 import {
   Activity,
+  AlertTriangle,
   Bell,
+  CheckCircle2,
   ChevronRight,
+  Clock3,
   LayoutDashboard,
   MapPin,
   Megaphone,
@@ -12,18 +15,18 @@ import {
   Shield,
   Target,
   Trophy,
+  Upload,
   UserPlus,
   Users,
 } from 'lucide-react';
 import { NotificationBell } from '../../../components/common/NotificationBell';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { getMacrorregioes, getMicroregiaoById } from '../../../data/microregioes';
+import { getUpcomingActions, isActionLate, summarizeActionPortfolio } from '../../../lib/actionPortfolio';
 import { Action } from '../../../types';
 import { User } from '../../../types/auth.types';
 import {
   ActivityCenter,
-  DashboardFiltersState,
-  MinasMicroMap,
   RankingPanel,
   RequestsManagement,
 } from '../dashboard';
@@ -50,17 +53,15 @@ interface AdminMobileLayoutProps {
   actions: Action[];
   pendingRegistrations: PendingRegistration[];
   expandedUserId: string | null;
-  dashboardFilters: DashboardFiltersState;
-  setDashboardFilters: Dispatch<SetStateAction<DashboardFiltersState>>;
   getRoleBadge: (role: User['role']) => ReactNode;
   onTabChange: (tab: AdminPanelTab) => void;
   onRefreshUsers: () => void | Promise<void>;
   onOpenMicroSelector: () => void;
-  onMapMicroSelect: (microId: string) => void;
   onViewMicrorregiao: (microId: string) => void;
   onSearchTermChange: (value: string) => void;
   onUserFilterMacroChange: (value: string) => void;
   onCreateUser: () => void;
+  onOpenUserImport: () => void;
   onCreatePendingUser: (pending: PendingRegistration) => void;
   onToggleExpandedUser: (userId: string) => void;
   onEditUser: (user: User) => void;
@@ -79,25 +80,64 @@ export function AdminMobileLayout({
   actions,
   pendingRegistrations,
   expandedUserId,
-  dashboardFilters,
-  setDashboardFilters,
   getRoleBadge,
   onTabChange,
   onRefreshUsers,
   onOpenMicroSelector,
-  onMapMicroSelect,
   onViewMicrorregiao,
   onSearchTermChange,
   onUserFilterMacroChange,
   onCreateUser,
+  onOpenUserImport,
   onCreatePendingUser,
   onToggleExpandedUser,
   onEditUser,
   onRequestToggleUserStatus,
   onRequestDeleteUser,
 }: AdminMobileLayoutProps) {
+  const today = new Date();
+  const activeUsers = users.filter((user) => user.ativo !== false).length;
   const lgpdPendingCount = users.filter((user) => user.ativo && !user.lgpdConsentimento).length;
-  const completedActions = actions.filter((action) => action.status === 'Conclu\u00EDdo').length;
+  const actionSummary = summarizeActionPortfolio(actions, today);
+  const upcomingWeekActions = getUpcomingActions(actions, today, 7, 50);
+  const overdueActions = actions
+    .filter((action) => isActionLate(action, today))
+    .sort((left, right) => {
+      const leftDate = left.plannedEndDate ? new Date(`${left.plannedEndDate}T00:00:00`).getTime() : Number.POSITIVE_INFINITY;
+      const rightDate = right.plannedEndDate ? new Date(`${right.plannedEndDate}T00:00:00`).getTime() : Number.POSITIVE_INFINITY;
+
+      return leftDate - rightDate;
+    });
+
+  const priorityActions = (overdueActions.length > 0 ? overdueActions : upcomingWeekActions).slice(0, 3);
+
+  const formatDeadline = (dateValue?: string) => {
+    if (!dateValue) {
+      return 'Sem prazo';
+    }
+
+    const parsedDate = new Date(`${dateValue}T00:00:00`);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return 'Sem prazo';
+    }
+
+    return parsedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  };
+
+  const getDaysOverdue = (dateValue?: string) => {
+    if (!dateValue) {
+      return 0;
+    }
+
+    const plannedDate = new Date(`${dateValue}T00:00:00`);
+
+    if (Number.isNaN(plannedDate.getTime())) {
+      return 0;
+    }
+
+    return Math.max(0, Math.floor((today.getTime() - plannedDate.getTime()) / (1000 * 60 * 60 * 24)));
+  };
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-900 overflow-hidden">
@@ -158,19 +198,37 @@ export function AdminMobileLayout({
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
                     <Users className="w-3.5 h-3.5" />
-                    <span>Usuarios</span>
+                    <span>Usuarios ativos</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{users.length}</p>
-                  <p className="text-xs text-slate-400 mt-1">{users.filter((user) => user.ativo !== false).length} ativos</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{activeUsers}</p>
+                  <p className="text-xs text-slate-400 mt-1">{users.length} cadastrados</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Taxa conclusao</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{actionSummary.percentConcluido}%</p>
+                  <p className="text-xs text-emerald-600 mt-1">{actionSummary.completed} concluidas</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Acoes atrasadas</span>
+                  </div>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{actionSummary.late}</p>
+                  <p className="text-xs text-slate-400 mt-1">{actionSummary.inProgress} em andamento</p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
                     <Activity className="w-3.5 h-3.5" />
-                    <span>Acoes</span>
+                    <span>Vencem em 7 dias</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{actions.length}</p>
-                  <p className="text-xs text-emerald-500 mt-1">{completedActions} concluidas</p>
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{upcomingWeekActions.length}</p>
+                  <p className="text-xs text-slate-400 mt-1">{actionSummary.notStarted} nao iniciadas</p>
                 </div>
               </div>
 
@@ -185,7 +243,7 @@ export function AdminMobileLayout({
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-amber-800 dark:text-amber-200">
-                        {pendingRegistrations.length} solicitacao{pendingRegistrations.length > 1 ? 'oes' : ''} pendente{pendingRegistrations.length > 1 ? 's' : ''}
+                        {pendingRegistrations.length} cadastro{pendingRegistrations.length > 1 ? 's' : ''} pendente{pendingRegistrations.length > 1 ? 's' : ''}
                       </p>
                       <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Toque para revisar</p>
                     </div>
@@ -194,23 +252,81 @@ export function AdminMobileLayout({
                 </button>
               )}
 
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => onTabChange('requests')}
+                  className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700 text-left active:scale-[0.99] transition-transform"
+                >
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Triagem</span>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Pedidos e respostas</p>
+                  <p className="text-xs text-slate-400 mt-1">Abrir central</p>
+                </button>
+
+                <button
+                  onClick={() => onTabChange('atividades')}
+                  className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700 text-left active:scale-[0.99] transition-transform"
+                >
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Auditoria</span>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Ultimas atividades</p>
+                  <p className="text-xs text-slate-400 mt-1">Ver historico</p>
+                </button>
+              </div>
+
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="p-3">
-                  <MinasMicroMap
-                    actions={actions}
-                    onMacroSelect={(macroId) =>
-                      setDashboardFilters((previous) => ({
-                        ...previous,
-                        selectedMacroId: macroId,
-                        selectedMicroId: null,
-                        selectedMunicipioCode: null,
-                      }))
-                    }
-                    onMicroSelect={(microId) => onMapMicroSelect(microId as string)}
-                    onNavigateToObjectives={onViewMicrorregiao}
-                    selectedMacroId={dashboardFilters.selectedMacroId}
-                    selectedMicroId={dashboardFilters.selectedMicroId}
-                  />
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <Clock3 className="w-4 h-4 text-rose-500" />
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Prioridades da semana</span>
+                  </div>
+                  <button
+                    onClick={() => onTabChange('atividades')}
+                    className="text-xs text-teal-600 dark:text-teal-400 font-medium"
+                  >
+                    Ver trilha
+                  </button>
+                </div>
+
+                <div className="p-3 space-y-2">
+                  {priorityActions.length === 0 ? (
+                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-xs text-emerald-700 dark:text-emerald-300">
+                      Sem pendencias urgentes no momento. Operacao em ritmo estavel.
+                    </div>
+                  ) : (
+                    priorityActions.map((action) => {
+                      const micro = getMicroregiaoById(action.microregiaoId);
+                      const isLate = isActionLate(action, today);
+                      const dueDate = formatDeadline(action.plannedEndDate || action.endDate);
+                      const daysOverdue = getDaysOverdue(action.plannedEndDate);
+
+                      return (
+                        <button
+                          key={action.uid}
+                          onClick={() => onViewMicrorregiao(action.microregiaoId)}
+                          className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+                            isLate
+                              ? 'border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/20'
+                              : 'border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 line-clamp-1">{action.title}</p>
+                            <span className={`text-[10px] font-bold shrink-0 ${isLate ? 'text-red-600 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                              {isLate ? `${daysOverdue}d atraso` : dueDate}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+                            {micro?.nome || 'Microrregiao nao definida'}
+                          </p>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -314,6 +430,14 @@ export function AdminMobileLayout({
                   ))}
                 </select>
 
+                <button
+                  onClick={onOpenUserImport}
+                  className="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 rounded-lg text-sm font-medium flex items-center gap-1.5 shrink-0"
+                >
+                  <Upload className="w-4 h-4" />
+                  Lote
+                </button>
+
                 {isSuperAdmin && (
                   <button
                     onClick={onCreateUser}
@@ -328,6 +452,8 @@ export function AdminMobileLayout({
               <div className="space-y-2">
                 {filteredUsers.map((user) => {
                   const micro = getMicroregiaoById(user.microregiaoId);
+                  const canManageUser =
+                    isSuperAdmin || (user.role !== 'admin' && user.role !== 'superadmin');
                   return (
                     <div
                       key={user.id}
@@ -365,23 +491,31 @@ export function AdminMobileLayout({
 
                       {expandedUserId === user.id && (
                         <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex gap-2">
-                          <button
-                            onClick={() => onEditUser(user)}
-                            className="flex-1 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => onRequestToggleUserStatus(user)}
-                            className={`flex-1 py-2 text-xs font-medium rounded-lg ${
-                              user.ativo !== false
-                                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                                : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                            }`}
-                          >
-                            {user.ativo !== false ? 'Desativar' : 'Ativar'}
-                          </button>
-                          {isSuperAdmin && (
+                          {canManageUser ? (
+                            <>
+                              <button
+                                onClick={() => onEditUser(user)}
+                                className="flex-1 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => onRequestToggleUserStatus(user)}
+                                className={`flex-1 py-2 text-xs font-medium rounded-lg ${
+                                  user.ativo !== false
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                }`}
+                              >
+                                {user.ativo !== false ? 'Desativar' : 'Ativar'}
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex-1 py-2 text-center text-[11px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-lg">
+                              Apenas Super Admin gerencia este perfil.
+                            </div>
+                          )}
+                          {isSuperAdmin && user.role !== 'superadmin' && (
                             <button
                               onClick={() => onRequestDeleteUser(user)}
                               className="px-3 py-2 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg"

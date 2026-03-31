@@ -181,7 +181,16 @@ export const EducationPage: React.FC<EducationPageProps> = React.memo(({ userId:
   const [categoryFilter, setCategoryFilter] = useState<CourseCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { courses, trails, enrolledCourses, loading, error, stats, enrollInCourse } = useEducacao();
+  const {
+    courses,
+    trails,
+    enrolledCourses,
+    loading,
+    error,
+    isFallback,
+    stats,
+    enrollInCourse,
+  } = useEducacao();
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -244,6 +253,13 @@ export const EducationPage: React.FC<EducationPageProps> = React.memo(({ userId:
             <SummaryChip label={`${stats.totalTrails} trilhas`} />
           </div>
         </div>
+
+        {isFallback ? (
+          <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/20 dark:text-sky-100">
+            Educacao em modo local: cursos e trilhas desta area estao sendo mantidos no navegador
+            ate o banco definitivo do Hub ficar pronto.
+          </div>
+        ) : null}
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">

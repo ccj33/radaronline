@@ -1,5 +1,10 @@
 import { getActionDisplayId } from "../../../../lib/text";
-import { formatReportDate, formatReportPeriod } from "../../../../lib/reportUtils";
+import {
+  escapeHtml,
+  formatReportDate,
+  formatReportPeriod,
+  sanitizeCssColor,
+} from "../../../../lib/reportUtils";
 
 import { KPI_MODAL_CONFIGS } from "./kpiDetailModal.constants";
 import type { KpiDetailModalProps, KpiType } from "./kpiDetailModal.types";
@@ -44,7 +49,7 @@ export function generateKpiReportHTML({
           .map(
             (objective) => `
           <div class="progress-item">
-            <span class="progress-label">${objective.name}</span>
+            <span class="progress-label">${escapeHtml(objective.name)}</span>
             <div class="progress-bar-container"><div class="progress-bar" style="width: ${objective.percentage}%"></div></div>
             <span class="progress-value">${objective.completed}/${objective.total} (${objective.percentage}%)</span>
           </div>
@@ -74,8 +79,8 @@ export function generateKpiReportHTML({
                 (action) => `
               <tr>
                 <td>#${getActionDisplayId(action.id)}</td>
-                <td>${action.title}</td>
-                <td>${action.plannedEndDate}</td>
+                <td>${escapeHtml(action.title)}</td>
+                <td>${escapeHtml(action.plannedEndDate)}</td>
                 <td><span class="status-badge status-atrasado">${action.daysOverdue} dias</span></td>
               </tr>
             `,
@@ -105,8 +110,8 @@ export function generateKpiReportHTML({
               .map(
                 (micro) => `
               <tr>
-                <td>${micro.nome}</td>
-                <td>${micro.macrorregiao}</td>
+                <td>${escapeHtml(micro.nome)}</td>
+                <td>${escapeHtml(micro.macrorregiao)}</td>
                 <td><span class="status-badge ${micro.hasActions ? "status-concluido" : "status-nao-iniciado"}">${micro.hasActions ? "Com Ações" : "Sem Ações"}</span></td>
                 <td>${micro.actionCount}</td>
               </tr>
@@ -131,8 +136,8 @@ export function generateKpiReportHTML({
           .map(
             (item) => `
           <div class="progress-item">
-            <span class="progress-label">${item.name}</span>
-            <div class="progress-bar-container"><div class="progress-bar" style="width: ${total > 0 ? (item.value / total) * 100 : 0}%; background: ${item.color}"></div></div>
+            <span class="progress-label">${escapeHtml(item.name)}</span>
+            <div class="progress-bar-container"><div class="progress-bar" style="width: ${total > 0 ? (item.value / total) * 100 : 0}%; background: ${sanitizeCssColor(item.color)}"></div></div>
             <span class="progress-value">${item.value} ações</span>
           </div>
         `,
@@ -144,7 +149,7 @@ export function generateKpiReportHTML({
     const total = statusData.reduce((sum, item) => sum + item.value, 0);
     metricsHTML = `
       <div class="metrics-grid">
-        ${statusData.map((item) => `<div class="metric-card"><div class="metric-value" style="color: ${item.color}">${item.value}</div><div class="metric-label">${item.name}</div></div>`).join("")}
+        ${statusData.map((item) => `<div class="metric-card"><div class="metric-value" style="color: ${sanitizeCssColor(item.color)}">${item.value}</div><div class="metric-label">${escapeHtml(item.name)}</div></div>`).join("")}
       </div>
     `;
     sectionsHTML = `
@@ -154,8 +159,8 @@ export function generateKpiReportHTML({
           .map(
             (item) => `
           <div class="progress-item">
-            <span class="progress-label">${item.name}</span>
-            <div class="progress-bar-container"><div class="progress-bar" style="width: ${total > 0 ? (item.value / total) * 100 : 0}%; background: ${item.color}"></div></div>
+            <span class="progress-label">${escapeHtml(item.name)}</span>
+            <div class="progress-bar-container"><div class="progress-bar" style="width: ${total > 0 ? (item.value / total) * 100 : 0}%; background: ${sanitizeCssColor(item.color)}"></div></div>
             <span class="progress-value">${item.value} (${total > 0 ? Math.round((item.value / total) * 100) : 0}%)</span>
           </div>
         `,
@@ -176,13 +181,13 @@ export function generateKpiReportHTML({
           </div>
         </div>
         <div class="report-meta">
-          <p><strong>Data:</strong> ${formatReportDate(now)}</p>
-          <p><strong>Período:</strong> ${formatReportPeriod(now)}</p>
+          <p><strong>Data:</strong> ${escapeHtml(formatReportDate(now))}</p>
+          <p><strong>Período:</strong> ${escapeHtml(formatReportPeriod(now))}</p>
         </div>
       </header>
       <div class="report-title-section">
-        <h2 class="report-title">${KPI_MODAL_CONFIGS[type].title}</h2>
-        <p class="report-subtitle">${KPI_MODAL_CONFIGS[type].subtitle}</p>
+        <h2 class="report-title">${escapeHtml(KPI_MODAL_CONFIGS[type].title)}</h2>
+        <p class="report-subtitle">${escapeHtml(KPI_MODAL_CONFIGS[type].subtitle)}</p>
       </div>
       ${metricsHTML}
       ${sectionsHTML}

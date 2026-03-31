@@ -103,6 +103,7 @@ export class SupabaseUsersRepository implements UsersRepository {
         created_by: input.createdBy,
         ativo: true,
         lgpd_consentimento: false,
+        first_access: true,
         avatar_id: createAvatarId(),
       })
       .select('id, email, nome, role, microregiao_id, ativo, created_at, updated_at')

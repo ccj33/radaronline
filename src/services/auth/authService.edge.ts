@@ -48,6 +48,12 @@ export function mapCreateUserErrorMessage(errorMessage: string | undefined): str
   if (errorMessage.includes('Microrregiao')) {
     return 'Microrregiao invalida ou obrigatoria';
   }
+  if (errorMessage.includes('Super Admin')) {
+    return errorMessage;
+  }
+  if (errorMessage.includes('administrador')) {
+    return errorMessage;
+  }
   if (errorMessage.includes('Nao autenticado')) {
     return 'Sessao expirada. Faca login novamente.';
   }

@@ -48,6 +48,8 @@ export function UserSettingsNotificationsTab({
         ) : (
           requests.map((request) => {
             const unread = isUnread(request);
+            const requesterLabel = request.user?.nome || 'Usuário';
+            const responderLabel = request.resolved_by_name || 'Administrador';
             return (
               <div
                 key={request.id}
@@ -84,7 +86,7 @@ export function UserSettingsNotificationsTab({
                       <span className={`text-sm ${unread ? 'font-bold text-slate-800 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
                         {request.request_type === 'mention' ? 'Você foi mencionado' :
                           request.request_type === 'system' ? 'Aviso do Sistema' :
-                            isAdmin ? (request.user?.nome || 'Usuário') : 'Minha solicitação'}
+                            isAdmin ? requesterLabel : 'Minha solicitação'}
                       </span>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-bold ${request.status === 'pending'
@@ -106,7 +108,7 @@ export function UserSettingsNotificationsTab({
                       <div className="mt-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm border border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 font-medium mb-1 text-xs uppercase tracking-wide">
                           <MessageSquare className="w-3 h-3" />
-                          Resposta do Admin
+                          Resposta de {responderLabel}
                         </div>
                         <p className="text-slate-600 dark:text-slate-400">
                           {request.admin_notes}

@@ -258,6 +258,52 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
+  /v1/users/import/preview:
+    post:
+      tags: [Users]
+      summary: Valida um lote de usuarios antes da criacao
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserImportPreviewRequest"
+      responses:
+        "200":
+          description: Previa da importacao
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserImportPreviewResponse"
+        "400":
+          description: Payload invalido
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /v1/users/import/commit:
+    post:
+      tags: [Users]
+      summary: Cria os usuarios prontos de um lote e devolve CSV de retorno
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserImportCommitRequest"
+      responses:
+        "200":
+          description: Resultado da importacao
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserImportCommitResponse"
+        "400":
+          description: Payload invalido
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
   /v1/teams:
     get:
       tags: [Teams]
@@ -1481,6 +1527,171 @@ components:
       properties:
         password:
           type: string
+    UserImportInputRow:
+      type: object
+      properties:
+        rowNumber:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        microregions:
+          type: string
+        municipality:
+          type: string
+    UserImportPreviewRequest:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserImportInputRow"
+    UserImportCommitRequest:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserImportInputRow"
+        loginUrl:
+          type: string
+          nullable: true
+    UserImportMicroregionResolution:
+      type: object
+      required: [input, status, suggestions]
+      properties:
+        input:
+          type: string
+        status:
+          type: string
+          enum: [exact-id, exact-code, exact-name, exact-alias, fuzzy, ambiguous, none]
+        id:
+          type: string
+          nullable: true
+        code:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        suggestions:
+          type: array
+          items:
+            type: string
+    UserImportPreviewRow:
+      type: object
+      required:
+        [rowNumber, name, email, roleInput, microregionsInput, normalizedMicroregionIds, normalizedMicroregionNames, microregions, status, issues, warnings]
+      properties:
+        rowNumber:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        roleInput:
+          type: string
+        role:
+          type: string
+          nullable: true
+          enum: [superadmin, admin, gestor, usuario]
+        microregionsInput:
+          type: string
+        municipality:
+          type: string
+          nullable: true
+        normalizedMicroregionIds:
+          type: array
+          items:
+            type: string
+        normalizedMicroregionNames:
+          type: array
+          items:
+            type: string
+        microregions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserImportMicroregionResolution"
+        status:
+          type: string
+          enum: [ready, review, error, duplicate]
+        issues:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+    UserImportPreviewResponse:
+      type: object
+      required: [rows, summary]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserImportPreviewRow"
+        summary:
+          type: object
+          required: [total, ready, review, error, duplicate]
+          properties:
+            total:
+              type: integer
+            ready:
+              type: integer
+            review:
+              type: integer
+            error:
+              type: integer
+            duplicate:
+              type: integer
+    UserImportCommitRow:
+      allOf:
+        - $ref: "#/components/schemas/UserImportPreviewRow"
+        - type: object
+          required: [result]
+          properties:
+            result:
+              type: string
+              enum: [created, skipped, failed]
+            userId:
+              type: string
+              nullable: true
+            temporaryPassword:
+              type: string
+              nullable: true
+            loginUrl:
+              type: string
+              nullable: true
+    UserImportCommitResponse:
+      type: object
+      required: [rows, summary, csvFileName, csvContent]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserImportCommitRow"
+        summary:
+          type: object
+          required: [total, created, skipped, failed]
+          properties:
+            total:
+              type: integer
+            created:
+              type: integer
+            skipped:
+              type: integer
+            failed:
+              type: integer
+        csvFileName:
+          type: string
+        csvContent:
+          type: string
     RequestUserSummary:
       type: object
       properties:
@@ -1548,8 +1759,6 @@ components:
       type: object
       required: [requestType, content]
       properties:
-        userId:
-          type: string
         requestType:
           type: string
         content:

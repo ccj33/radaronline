@@ -1,6 +1,6 @@
 ﻿import React, { useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, FileSpreadsheet, Plus } from "lucide-react";
+import { Eye, FileSpreadsheet, Plus, Target } from "lucide-react";
 
 import { useAuth } from "../../auth/AuthContext";
 import { ObjectiveHeader } from "../../components/common/ObjectiveHeader";
@@ -26,6 +26,8 @@ export { formatRelativeTime } from "./actionTable/actionTable.utils";
 
 interface ActionTableProps {
   actions: Action[];
+  isMobile?: boolean;
+  requireObjectiveSelection?: boolean;
   selectedActivity: string;
   selectedObjective?: number;
   team: TeamMember[];
@@ -62,6 +64,8 @@ interface ActionTableProps {
 
 const ActionTableImpl: React.FC<ActionTableProps> = ({
   actions,
+  isMobile = false,
+  requireObjectiveSelection = false,
   selectedActivity,
   selectedObjective,
   team,
@@ -233,6 +237,24 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
     setResponsibleFilter("");
     setInvolvedAreaFilter?.("");
   }, [setInvolvedAreaFilter, setResponsibleFilter, setSearchTerm, setStatusFilter]);
+
+  if (isMobile && requireObjectiveSelection) {
+    return (
+      <div data-tour="actions-table" className="max-w-5xl mx-auto px-4 py-8">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 text-center shadow-sm">
+          <div className="mx-auto mb-3 w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+            <Target size={24} className="text-slate-400 dark:text-slate-300" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-700 dark:text-slate-100 mb-1">
+            Selecione um objetivo acima
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Para ver as ações no mobile, escolha primeiro o objetivo em foco no seletor superior.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div data-tour="actions-table" className="max-w-5xl mx-auto px-4 py-8">

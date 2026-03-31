@@ -46,6 +46,7 @@ function AppContent() {
   const currentMicrorregiao = authContext?.currentMicrorregiao ?? null;
   const logout = useMemo(() => authContext?.logout ?? (() => {}), [authContext?.logout]);
   const viewingMicroregiaoId = authContext?.viewingMicroregiaoId ?? null;
+  const setViewingMicrorregiao = authContext?.setViewingMicrorregiao;
   const isDemoMode = authContext?.isDemoMode ?? false;
 
   const [currentPage, setCurrentPage] = useState<'main' | 'admin' | 'lgpd'>('main');
@@ -265,7 +266,6 @@ function AppContent() {
     handleHeaderMenuClick,
     handleCloseMobileDrawer,
     handleGoToStrategyTable,
-    handleGoToStrategyCalendar,
     handleCloseSettingsModal,
     handleToggleEditMode,
     handleOpenSettingsPanel,
@@ -420,6 +420,7 @@ function AppContent() {
             onProfileClick={handleProfileClick}
             isMobile={isMobile}
             userName={user?.nome}
+            userRole={user?.role}
             userAvatarId={user?.avatarId}
             onLogout={handleLogout}
             onAdminClick={handleOpenAdminPage}
@@ -450,11 +451,12 @@ function AppContent() {
             onSelectActivity={setSelectedActivity}
             onGoToStrategy={handleGoToStrategyTable}
             userName={user?.nome}
+            userRole={user?.role}
             userAvatarId={user?.avatarId}
+            isAdmin={isAdmin || user?.role === 'superadmin'}
             onAdminClick={handleOpenAdminPage}
             onSettingsClick={handleOpenSettingsPanel}
             onAvatarClick={handleOpenAvatarSettings}
-            onCalendarClick={handleGoToStrategyCalendar}
             onLogout={handleLogout}
           />
         )}
@@ -471,11 +473,15 @@ function AppContent() {
             onMenuClick={handleHeaderMenuClick}
             isMobile={isMobile}
             isAdmin={isAdmin}
+            userRole={user?.role}
             onAdminClick={handleOpenAdminPage}
             isEditMode={isEditMode}
             onToggleEditMode={isAdmin ? handleToggleEditMode : undefined}
             onUpdateObjective={handleEditObjectiveField}
             onNavigate={handleCurrentNavChange}
+            userMicroregiaoIds={user?.microregiaoIds}
+            viewingMicroregiaoId={viewingMicroregiaoId}
+            onSwitchMicrorregiao={setViewingMicrorregiao}
           />
 
           {currentNav === 'strategy' && (
@@ -545,6 +551,7 @@ function AppContent() {
             onSetResponsibleFilter={setResponsibleFilter}
             onSetSearchTerm={setSearchTerm}
             onSetSelectedActivity={setSelectedActivity}
+            onSetSelectedObjective={setSelectedObjective}
             onSetStatusFilter={setStatusFilter}
             onShowToast={showToast}
             onUpdateAction={handleUpdateAction}
@@ -593,8 +600,10 @@ function AppContent() {
           onOnboardingComplete={handleOnboardingComplete}
           onOnboardingSkip={handleOnboardingSkip}
           onOpenOnboarding={openOnboarding}
+          onMenuOpen={handleHeaderMenuClick}
           onShowToast={showToast}
           onViewModeChange={setViewMode}
+          onWorkspaceSelect={handleWorkspaceSelect}
         />
       </div>
     </AppEntryGate>

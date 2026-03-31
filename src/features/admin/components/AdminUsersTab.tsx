@@ -1,5 +1,5 @@
 ﻿import { MouseEvent, ReactNode } from 'react';
-import { ChevronDown, MoreVertical, Plus, RefreshCw, Search, UserCheck, UserX, Users } from 'lucide-react';
+import { ChevronDown, MoreVertical, Plus, RefreshCw, Search, Upload, UserCheck, UserX, Users } from 'lucide-react';
 import { MICROREGIOES, getMacrorregioes, getMicroregiaoById } from '../../../data/microregioes';
 import { User } from '../../../types/auth.types';
 import { PendingRegistrationsPanel } from '../dashboard';
@@ -24,6 +24,7 @@ interface AdminUsersTabProps {
   onSearchTermChange: (value: string) => void;
   onFilterRoleChange: (value: string) => void;
   onCreateUser: () => void;
+  onOpenUserImport: () => void;
   onCreatePendingUser: (pending: PendingRegistration) => void;
   onDeletePendingRegistration: (pending: PendingRegistration) => Promise<void>;
   onToggleExpandedUserMenu: (event: MouseEvent<HTMLButtonElement>, userId: string) => void;
@@ -52,6 +53,7 @@ export function AdminUsersTab({
   onSearchTermChange,
   onFilterRoleChange,
   onCreateUser,
+  onOpenUserImport,
   onCreatePendingUser,
   onDeletePendingRegistration,
   onToggleExpandedUserMenu,
@@ -120,13 +122,22 @@ export function AdminUsersTab({
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
-        <button
-          onClick={onCreateUser}
-          className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-all hover:shadow-lg shadow-sm whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Usuario
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onOpenUserImport}
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 rounded-lg font-medium transition-all hover:shadow-sm whitespace-nowrap"
+          >
+            <Upload className="w-4 h-4" />
+            Importar lote
+          </button>
+          <button
+            onClick={onCreateUser}
+            className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-all hover:shadow-lg shadow-sm whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Usuario
+          </button>
+        </div>
       </div>
 
       {pendingRegistrations.length > 0 && (
@@ -154,6 +165,7 @@ export function AdminUsersTab({
             {filteredUsers.map((user) => {
               const microrregiao = getMicroregiaoById(user.microregiaoId);
               const isExpanded = expandedUserId === user.id;
+              const canManageUser = isSuperAdmin || (user.role !== 'admin' && user.role !== 'superadmin');
 
               return (
                 <div key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
@@ -227,12 +239,18 @@ export function AdminUsersTab({
                               left: Math.max(8, dropdownPosition.left),
                             }}
                           >
-                            <button
-                              onClick={() => onEditUser(user)}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-                            >
-                              Editar usuario
-                            </button>
+                            {canManageUser ? (
+                              <button
+                                onClick={() => onEditUser(user)}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                              >
+                                Editar usuario
+                              </button>
+                            ) : (
+                              <div className="px-4 py-2 text-xs text-amber-600 dark:text-amber-300">
+                                Apenas Super Admin gerencia este perfil.
+                              </div>
+                            )}
                             {user.microregiaoId !== 'all' && (
                               <button
                                 onClick={() => onViewMicrorregiao(user.microregiaoId)}
@@ -241,15 +259,17 @@ export function AdminUsersTab({
                                 Ver microrregiao
                               </button>
                             )}
-                            <button
-                              onClick={() => onToggleUserStatus(user.id)}
-                              disabled={actionLoadingId === user.id}
-                              className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${
-                                user.ativo ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-                              }`}
-                            >
-                              {user.ativo ? 'Desativar usuario' : 'Ativar usuario'}
-                            </button>
+                            {canManageUser && (
+                              <button
+                                onClick={() => onToggleUserStatus(user.id)}
+                                disabled={actionLoadingId === user.id}
+                                className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                                  user.ativo ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+                                }`}
+                              >
+                                {user.ativo ? 'Desativar usuario' : 'Ativar usuario'}
+                              </button>
+                            )}
                             {isSuperAdmin && user.role !== 'superadmin' && (
                               <button
                                 onClick={() => onRequestDeleteUser(user)}

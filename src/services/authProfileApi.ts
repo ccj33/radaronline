@@ -1,4 +1,5 @@
 import type { User, UserRole } from '../types/auth.types';
+import { parseMicroregiaoIds } from '../lib/authHelpers';
 
 import { apiRequest } from './apiClient';
 
@@ -18,12 +19,15 @@ type BackendAuthProfile = {
 };
 
 function mapBackendAuthProfile(profile: BackendAuthProfile): User {
+  const ids = parseMicroregiaoIds(profile.microregionId);
+
   return {
     id: profile.id,
     nome: profile.name,
     email: profile.email,
     role: profile.role,
-    microregiaoId: profile.microregionId || 'all',
+    microregiaoId: ids[0] || 'all',
+    microregiaoIds: ids,
     ativo: profile.active,
     lgpdConsentimento: profile.lgpdAccepted,
     lgpdConsentimentoData: profile.lgpdAcceptedAt || undefined,

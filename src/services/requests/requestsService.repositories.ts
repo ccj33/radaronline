@@ -2,26 +2,88 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { getPlatformClient } from '../platformClient';
 import type {
+  ManagedStatusFilter,
   ProfileSummary,
   RequestsRealtimeChannel,
-  RequestStatus,
   RequestSubscriptionConfig,
   UserRequest,
 } from './requestsService.types';
 
 const platformClient = getPlatformClient;
-const PROFILE_FIELDS = 'id, nome, email, role, municipio, microregiao_id';
+const PROFILE_FIELDS = 'id, nome, email, role, cargo, municipio, microregiao_id';
+const REQUEST_FIELDS = `
+  *,
+  user:profiles!user_requests_user_id_fkey(nome, email, role, cargo, municipio, microregiao_id),
+  resolver:profiles!user_requests_resolved_by_fkey(nome)
+`;
+const ADMIN_ACTIONABLE_REQUEST_TYPES = ['request', 'feedback', 'support', 'system'];
+const ADMIN_PERSONAL_NOTIFICATION_TYPES = ['announcement', 'mention', 'request', 'feedback', 'support', 'system'];
+
+type JoinedRequestRow = UserRequest & {
+  resolver?: { nome?: string | null } | null;
+  user?: Omit<ProfileSummary, 'id'> | null;
+};
+
+function mapJoinedRequestRow(row: JoinedRequestRow): UserRequest {
+  const { resolver, user, ...request } = row;
+
+  return {
+    ...request,
+    resolved_by_name: row.resolved_by_name ?? resolver?.nome ?? null,
+    user: user ?? request.user,
+  };
+}
+
+function isPrivilegedRequester(role?: string): boolean {
+  return role === 'admin' || role === 'superadmin';
+}
+
+function filterManagedModerationRequests(
+  requests: UserRequest[],
+  profilesMap: Map<string, ProfileSummary>
+): UserRequest[] {
+  return requests.filter((request) => {
+    const role = request.user?.role || profilesMap.get(request.user_id)?.role;
+    return !isPrivilegedRequester(role);
+  });
+}
+
+function filterAdminNotificationRequests(
+  userId: string,
+  requests: UserRequest[],
+  profilesMap: Map<string, ProfileSummary>
+): UserRequest[] {
+  return requests.filter((request) => {
+    const role = request.user?.role || profilesMap.get(request.user_id)?.role;
+
+    const isPersonal =
+      request.user_id === userId &&
+      ADMIN_PERSONAL_NOTIFICATION_TYPES.includes(request.request_type);
+
+    const isActionableQueueItem =
+      request.status === 'pending' &&
+      ADMIN_ACTIONABLE_REQUEST_TYPES.includes(request.request_type) &&
+      !isPrivilegedRequester(role);
+
+    return isPersonal || isActionableQueueItem;
+  });
+}
 
 function applyStatusAndTypeFilters<T>(
   query: T,
-  statusFilter?: RequestStatus | 'all',
+  statusFilter?: ManagedStatusFilter,
   typeFilter?: string | 'all'
 ): T {
   let nextQuery = query as unknown as {
     eq: (column: string, value: string) => unknown;
+    in: (column: string, values: string[]) => unknown;
+    not: (column: string, operator: string, value: string) => unknown;
   };
 
-  if (statusFilter && statusFilter !== 'all') {
+  if (statusFilter === 'answered') {
+    nextQuery = nextQuery.in('status', ['resolved', 'rejected']) as typeof nextQuery;
+    nextQuery = nextQuery.not('resolved_by', 'is', 'null') as typeof nextQuery;
+  } else if (statusFilter && statusFilter !== 'all') {
     nextQuery = nextQuery.eq('status', statusFilter) as typeof nextQuery;
   }
 
@@ -57,7 +119,7 @@ export async function listUserRequests(params: {
 }): Promise<UserRequest[]> {
   let query = platformClient()
     .from('user_requests')
-    .select('*')
+    .select(REQUEST_FIELDS)
     .order('created_at', { ascending: false })
     .limit(params.limit);
 
@@ -70,7 +132,7 @@ export async function listUserRequests(params: {
     throw new Error(error.message || 'Falha ao carregar requests do usuario');
   }
 
-  return (data as UserRequest[] | null) || [];
+  return ((data as JoinedRequestRow[] | null) || []).map(mapJoinedRequestRow);
 }
 
 export async function listNotificationRequests(params: {
@@ -78,15 +140,18 @@ export async function listNotificationRequests(params: {
   isAdmin: boolean;
   limit: number;
 }): Promise<UserRequest[]> {
+  const fetchLimit = params.isAdmin ? Math.max(params.limit * 4, params.limit) : params.limit;
   let query = platformClient()
     .from('user_requests')
-    .select('*')
+    .select(REQUEST_FIELDS)
     .order('created_at', { ascending: false })
-    .limit(params.limit);
+    .limit(fetchLimit);
 
   if (params.isAdmin) {
+    const actionableTypes = ADMIN_ACTIONABLE_REQUEST_TYPES.join(',');
+    const personalTypes = ADMIN_PERSONAL_NOTIFICATION_TYPES.join(',');
     query = query.or(
-      `request_type.in.(request,feedback,support,mention),and(request_type.eq.announcement,user_id.eq.${params.userId})`
+      `and(request_type.in.(${actionableTypes}),status.eq.pending),and(user_id.eq.${params.userId},request_type.in.(${personalTypes}))`
     );
   } else {
     query = query.eq('user_id', params.userId);
@@ -97,35 +162,48 @@ export async function listNotificationRequests(params: {
     throw new Error(error.message || 'Falha ao carregar requests de notificacao');
   }
 
-  return (data as UserRequest[] | null) || [];
+  const requests = ((data as JoinedRequestRow[] | null) || []).map(mapJoinedRequestRow);
+  if (!params.isAdmin || requests.length === 0) {
+    return requests.slice(0, params.limit);
+  }
+
+  const profilesMap = await fetchProfilesMap([...new Set(requests.map((request) => request.user_id))]);
+  return filterAdminNotificationRequests(params.userId, requests, profilesMap).slice(0, params.limit);
 }
 
 export async function countManagedRequests(params: {
-  statusFilter?: RequestStatus | 'all';
+  statusFilter?: ManagedStatusFilter;
   typeFilter?: string | 'all';
 }): Promise<number> {
-  let query = platformClient().from('user_requests').select('*', { count: 'exact', head: true });
+  let query = platformClient().from('user_requests').select('*').order('created_at', { ascending: false });
   query = applyStatusAndTypeFilters(query, params.statusFilter, params.typeFilter);
 
-  const { count, error } = await query;
+  const { data, error } = await query;
   if (error) {
     throw new Error(error.message || 'Falha ao contar requests');
   }
 
-  return count || 0;
+  const requests = (data as UserRequest[] | null) || [];
+  if (requests.length === 0) {
+    return 0;
+  }
+
+  const profilesMap = await fetchProfilesMap([...new Set(requests.map((request) => request.user_id))]);
+  const scoped = filterManagedModerationRequests(requests, profilesMap);
+
+  return scoped.length;
 }
 
 export async function listManagedRequests(params: {
   page: number;
   pageSize: number;
-  statusFilter?: RequestStatus | 'all';
+  statusFilter?: ManagedStatusFilter;
   typeFilter?: string | 'all';
 }): Promise<UserRequest[]> {
   let query = platformClient()
     .from('user_requests')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .range((params.page - 1) * params.pageSize, params.page * params.pageSize - 1);
+    .select(REQUEST_FIELDS)
+    .order('created_at', { ascending: false });
 
   query = applyStatusAndTypeFilters(query, params.statusFilter, params.typeFilter);
 
@@ -134,25 +212,55 @@ export async function listManagedRequests(params: {
     throw new Error(error.message || 'Falha ao carregar requests gerenciados');
   }
 
-  return (data as UserRequest[] | null) || [];
+  const requests = ((data as JoinedRequestRow[] | null) || []).map(mapJoinedRequestRow);
+  if (requests.length === 0) {
+    return [];
+  }
+
+  const profilesMap = await fetchProfilesMap([...new Set(requests.map((request) => request.user_id))]);
+  const scoped = filterManagedModerationRequests(requests, profilesMap);
+  const start = (params.page - 1) * params.pageSize;
+  return scoped.slice(start, start + params.pageSize);
 }
 
 export async function countPendingRequestRecords(userId: string, isAdmin: boolean): Promise<number> {
-  let query = platformClient()
-    .from('user_requests')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending');
-
   if (!isAdmin) {
-    query = query.eq('user_id', userId);
+    const { count, error } = await platformClient()
+      .from('user_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error(error.message || 'Falha ao contar requests pendentes');
+    }
+
+    return count || 0;
   }
 
-  const { count, error } = await query;
+  const { data, error } = await platformClient()
+    .from('user_requests')
+    .select('*')
+    .eq('status', 'pending')
+    .in('request_type', ADMIN_ACTIONABLE_REQUEST_TYPES);
+
   if (error) {
     throw new Error(error.message || 'Falha ao contar requests pendentes');
   }
 
-  return count || 0;
+  const pendingRequests = (data as UserRequest[] | null) || [];
+  if (pendingRequests.length === 0) {
+    return 0;
+  }
+
+  const profilesMap = await fetchProfilesMap([
+    ...new Set(pendingRequests.map((request) => request.user_id)),
+  ]);
+
+  return pendingRequests.filter((request) => {
+    const role = profilesMap.get(request.user_id)?.role;
+    return !isPrivilegedRequester(role);
+  }).length;
 }
 
 export async function updateRequestRecord(

@@ -1,6 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export type RequestStatus = 'pending' | 'resolved' | 'rejected';
+export type ManagedStatusFilter = RequestStatus | 'all' | 'answered';
 
 export interface ProfileSummary {
   id: string;
@@ -22,6 +23,7 @@ export interface UserRequest {
   created_at: string;
   resolved_by?: string | null;
   resolved_at?: string | null;
+  resolved_by_name?: string | null;
   user?: Omit<ProfileSummary, 'id'>;
 }
 
@@ -42,7 +44,7 @@ export interface LoadNotificationRequestsOptions {
 export interface LoadManagedRequestsOptions {
   page: number;
   pageSize: number;
-  statusFilter?: RequestStatus | 'all';
+  statusFilter?: ManagedStatusFilter;
   typeFilter?: string | 'all';
   includeProfileDetails?: boolean;
 }

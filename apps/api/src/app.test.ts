@@ -115,6 +115,189 @@ test('POST /v1/users creates user in development mode with admin headers', async
   }
 });
 
+test('POST /v1/users blocks admin from creating privileged roles', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/users',
+      headers: {
+        'x-dev-user-id': 'seed-admin',
+        'x-dev-user-email': 'admin@example.gov.br',
+        'x-dev-user-name': 'Administrador',
+        'x-dev-user-role': 'admin',
+      },
+      payload: {
+        email: 'admin.novo@example.gov.br',
+        password: '12345678',
+        name: 'Admin Novo',
+        role: 'admin',
+        microregionId: null,
+      },
+    });
+
+    assert.equal(response.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
+test('POST /v1/users allows superadmin to create another superadmin', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/users',
+      headers: {
+        'x-dev-user-id': 'seed-superadmin',
+        'x-dev-user-email': 'superadmin@example.gov.br',
+        'x-dev-user-name': 'Super Admin',
+        'x-dev-user-role': 'superadmin',
+      },
+      payload: {
+        email: 'super.novo@example.gov.br',
+        password: '12345678',
+        name: 'Super Novo',
+        role: 'superadmin',
+        microregionId: null,
+      },
+    });
+
+    assert.equal(response.statusCode, 201);
+    const payload = response.json();
+    assert.equal(payload.role, 'superadmin');
+  } finally {
+    await app.close();
+  }
+});
+
+test('POST /v1/users/import/preview normalizes exact microregions and flags fuzzy matches for review', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/users/import/preview',
+      headers: {
+        'x-dev-user-id': 'seed-admin',
+        'x-dev-user-email': 'admin@example.gov.br',
+        'x-dev-user-name': 'Administrador',
+        'x-dev-user-role': 'admin',
+      },
+      payload: {
+        rows: [
+          {
+            rowNumber: 1,
+            name: 'Maria Teste',
+            email: 'maria@example.gov.br',
+            role: 'usuario',
+            microregions: 'tres pontas',
+          },
+          {
+            rowNumber: 2,
+            name: 'Joao Teste',
+            email: 'joao@example.gov.br',
+            role: 'usuario',
+            microregions: 'vargina',
+          },
+        ],
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.equal(payload.summary.ready, 1);
+    assert.equal(payload.summary.review, 1);
+    assert.equal(payload.rows[0].normalizedMicroregionIds[0], 'MR011');
+    assert.equal(payload.rows[1].status, 'review');
+  } finally {
+    await app.close();
+  }
+});
+
+test('POST /v1/users/import/preview blocks privileged rows for admin actors', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/users/import/preview',
+      headers: {
+        'x-dev-user-id': 'seed-admin',
+        'x-dev-user-email': 'admin@example.gov.br',
+        'x-dev-user-name': 'Administrador',
+        'x-dev-user-role': 'admin',
+      },
+      payload: {
+        rows: [
+          {
+            rowNumber: 1,
+            name: 'Admin Bloqueado',
+            email: 'admin.bloqueado@example.gov.br',
+            role: 'admin',
+          },
+        ],
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.equal(payload.summary.error, 1);
+    assert.match(payload.rows[0].issues[0], /Only superadmin can create or promote admin accounts/);
+  } finally {
+    await app.close();
+  }
+});
+
+test('POST /v1/users/import/commit creates ready rows and returns csv output', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/users/import/commit',
+      headers: {
+        'x-dev-user-id': 'seed-admin',
+        'x-dev-user-email': 'admin@example.gov.br',
+        'x-dev-user-name': 'Administrador',
+        'x-dev-user-role': 'admin',
+      },
+      payload: {
+        loginUrl: 'https://radar.example.gov.br/login',
+        rows: [
+          {
+            rowNumber: 1,
+            name: 'Gestor Importado',
+            email: 'gestor.importado@example.gov.br',
+            role: 'gestor',
+            microregions: 'MR011, 31012',
+          },
+          {
+            rowNumber: 2,
+            name: 'Linha Fuzzy',
+            email: 'linha.fuzzy@example.gov.br',
+            role: 'usuario',
+            microregions: 'vargina',
+          },
+        ],
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.equal(payload.summary.created, 1);
+    assert.equal(payload.summary.skipped, 1);
+    assert.ok(payload.csvFileName.endsWith('.csv'));
+    assert.match(payload.csvContent, /gestor\.importado@example\.gov\.br/);
+    assert.match(payload.csvContent, /senha_temporaria/);
+    const createdRow = payload.rows.find(
+      (row: { email: string; result: string; temporaryPassword: string | null }) =>
+        row.email === 'gestor.importado@example.gov.br'
+    );
+    assert.equal(createdRow.result, 'created');
+    assert.ok(createdRow.temporaryPassword);
+  } finally {
+    await app.close();
+  }
+});
+
 test('POST /v1/auth/first-access/complete accepts self-service completion in development mode', async () => {
   const app = buildApp();
   try {
@@ -291,6 +474,100 @@ test('POST /v1/objectives creates and GET /v1/activities returns grouped activit
         (item: { title: string }) => item.title === 'Atividade API'
       )
     );
+  } finally {
+    await app.close();
+  }
+});
+
+test('POST /v1/requests ignores spoofed userId and binds the request to the authenticated actor', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/requests',
+      headers: {
+        'x-dev-user-id': 'user-first-access',
+        'x-dev-user-email': 'user@example.gov.br',
+        'x-dev-user-name': 'Usuario Teste',
+        'x-dev-user-role': 'usuario',
+        'x-dev-user-microregion-id': 'MR001',
+      },
+      payload: {
+        userId: 'spoofed-user',
+        requestType: 'support',
+        content: 'Teste de integridade',
+      },
+    });
+
+    assert.equal(response.statusCode, 201);
+    const payload = response.json();
+    assert.equal(payload.user_id, 'user-first-access');
+  } finally {
+    await app.close();
+  }
+});
+
+test('POST /v1/tags blocks non-admin catalog mutation', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/tags',
+      headers: {
+        'x-dev-user-id': 'user-first-access',
+        'x-dev-user-email': 'user@example.gov.br',
+        'x-dev-user-name': 'Usuario Teste',
+        'x-dev-user-role': 'usuario',
+        'x-dev-user-microregion-id': 'MR001',
+      },
+      payload: {
+        name: 'Governanca Local',
+      },
+    });
+
+    assert.equal(response.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
+test('GET /v1/actions/:actionUid blocks gestor access outside the actor microregion', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/actions/MR000::1.1.1',
+      headers: {
+        'x-dev-user-id': 'gestor-mr001',
+        'x-dev-user-email': 'gestor@example.gov.br',
+        'x-dev-user-name': 'Gestor MR001',
+        'x-dev-user-role': 'gestor',
+        'x-dev-user-microregion-id': 'MR001',
+      },
+    });
+
+    assert.equal(response.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
+test('GET /v1/teams/status blocks user lookup for another email outside the actor scope', async () => {
+  const app = buildApp();
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/teams/status?email=admin@example.gov.br',
+      headers: {
+        'x-dev-user-id': 'user-first-access',
+        'x-dev-user-email': 'user@example.gov.br',
+        'x-dev-user-name': 'Usuario Teste',
+        'x-dev-user-role': 'usuario',
+        'x-dev-user-microregion-id': 'MR001',
+      },
+    });
+
+    assert.equal(response.statusCode, 403);
   } finally {
     await app.close();
   }

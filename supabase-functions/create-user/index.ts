@@ -1,22 +1,31 @@
-// supabase/functions/create-user/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.87.3';
 
-// ✅ DICA 1: Constantes centralizadas (evita hardcode)
 const VALID_ROLES = ['admin', 'superadmin', 'gestor', 'usuario'] as const;
 const MIN_PASSWORD_LENGTH = 6;
 const MAX_RETRY_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 500;
 const REQUEST_TIMEOUT_MS = 30000;
 
-// CORS Headers reutilizáveis
-// ⚠️ SEGURANÇA: Em produção, defina ALLOWED_ORIGIN como variável de ambiente no Supabase
-// Suporta múltiplas origens separadas por vírgula: "https://example.com,http://localhost:3000"
-const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGIN') || 'https://radar-ses-mg.vercel.app').split(',');
+const ALLOWED_ORIGINS = (
+  Deno.env.get('ALLOWED_ORIGIN') || 'https://radar-ses-mg.vercel.app'
+).split(',');
 
-// Função para obter headers CORS baseado na origem da requisição
+type ActorRole = 'admin' | 'superadmin';
+type ManagedRole = (typeof VALID_ROLES)[number];
+
+interface ValidatedInput {
+  email: string;
+  password: string;
+  nome: string;
+  role: ManagedRole;
+  microregiao_id: string | null;
+  created_by: string;
+}
+
 const getCorsHeaders = (origin: string | null) => {
   const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -25,94 +34,86 @@ const getCorsHeaders = (origin: string | null) => {
   };
 };
 
-// ✅ DICA 1: Helper pra respostas de erro (remove duplicatas)
-const errorResponse = (message: string, status: number, origin: string | null) => new Response(
-  JSON.stringify({ error: message }),
-  { status, headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' } }
-);
+const errorResponse = (message: string, status: number, origin: string | null) =>
+  new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },
+  });
 
-// ✅ DICA 1: Helper pra respostas de sucesso (consistência)
-const successResponse = (data: any, origin: string | null) => new Response(
-  JSON.stringify(data),
-  { status: 200, headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' } }
-);
+const successResponse = (data: unknown, origin: string | null) =>
+  new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },
+  });
 
-// ✅ DICA 2: Sanitização global (previne inputs sujos)
-const sanitizeString = (value: any): string => {
-  if (typeof value !== 'string') return '';
+const sanitizeString = (value: unknown): string => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
   return value.trim();
 };
 
-// ✅ DICA 1: Validações em função única (remove espalhamento)
-interface ValidatedInput {
-  email: string;
-  password: string;
-  nome: string;
-  role: 'admin' | 'superadmin' | 'gestor' | 'usuario';
-  microregiao_id: string | null;
-  created_by: string;
-}
+const canAssignRole = (actorRole: ActorRole, targetRole: ManagedRole): boolean => {
+  if (actorRole === 'superadmin') {
+    return true;
+  }
 
-const validateAndSanitizeInputs = (
-  body: any,
-  currentUserId: string
-): ValidatedInput => {
-  // Sanitizar todos os campos
-  const email = sanitizeString(body.email);
-  const password = body.password ? String(body.password) : '';
-  const nome = sanitizeString(body.nome);
-  const role = body.role ? String(body.role) : '';
-  const microregiaoId = body.microregiaoId ? sanitizeString(body.microregiaoId) : '';
-  const createdBy = body.createdBy ? sanitizeString(body.createdBy) : currentUserId;
+  return targetRole === 'gestor' || targetRole === 'usuario';
+};
 
-  // Validações
+const validateAndSanitizeInputs = (body: unknown, currentUserId: string): ValidatedInput => {
+  const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const email = sanitizeString(payload.email);
+  const password = payload.password ? String(payload.password) : '';
+  const nome = sanitizeString(payload.nome);
+  const role = payload.role ? String(payload.role) : '';
+  const microregiaoId = payload.microregiaoId ? sanitizeString(payload.microregiaoId) : '';
+
   if (!email) {
-    throw new Error('Email é obrigatório');
+    throw new Error('Email e obrigatorio');
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email.toLowerCase())) {
-    throw new Error('Formato de email inválido');
+    throw new Error('Formato de email invalido');
   }
 
   if (!password || password.length < MIN_PASSWORD_LENGTH) {
-    throw new Error(`Senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`);
+    throw new Error(`Senha deve ter no minimo ${MIN_PASSWORD_LENGTH} caracteres`);
   }
 
   if (!nome) {
-    throw new Error('Nome é obrigatório');
+    throw new Error('Nome e obrigatorio');
   }
 
-  if (!role || !VALID_ROLES.includes(role as any)) {
-    throw new Error(`Role inválido. Use: ${VALID_ROLES.join(', ')}`);
+  if (!role || !VALID_ROLES.includes(role as ManagedRole)) {
+    throw new Error(`Role invalido. Use: ${VALID_ROLES.join(', ')}`);
   }
 
-  // Converter microregiaoId (camelCase) para microregiao_id (snake_case)
-  let microregiao_id: string | null = null;
-  if (role === 'admin' || role === 'superadmin' || microregiaoId === 'all' || !microregiaoId) {
-    microregiao_id = null;
-  } else {
+  let normalizedMicroregionId: string | null = null;
+  if (role !== 'admin' && role !== 'superadmin' && microregiaoId !== 'all') {
     if (!microregiaoId) {
-      throw new Error('Microrregião é obrigatória para usuários não-admin');
+      throw new Error('Microrregiao e obrigatoria para usuarios nao-admin');
     }
-    microregiao_id = microregiaoId;
+
+    normalizedMicroregionId = microregiaoId;
   }
 
   return {
     email: email.toLowerCase(),
     password,
     nome,
-    role: role as 'admin' | 'superadmin' | 'gestor' | 'usuario',
-    microregiao_id,
-    created_by: createdBy,
+    role: role as ManagedRole,
+    microregiao_id: normalizedMicroregionId,
+    created_by: currentUserId,
   };
 };
 
-// ✅ DICA 2: Verificação de admin extraída (testável)
-const checkIsAdmin = async (
-  supabaseAdmin: any,
+const checkActorRole = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
   userId: string
-): Promise<boolean> => {
+): Promise<ActorRole | null> => {
   const { data: profile, error } = await supabaseAdmin
     .from('profiles')
     .select('role')
@@ -120,43 +121,42 @@ const checkIsAdmin = async (
     .single();
 
   if (error || !profile) {
-    return false;
+    return null;
   }
 
-  return profile.role === 'admin' || profile.role === 'superadmin';
+  return profile.role === 'admin' || profile.role === 'superadmin' ? profile.role : null;
 };
 
-// ✅ DICA 3: Retry com timeout (safeguard automático)
 const insertProfileWithRetry = async (
-  supabaseAdmin: any,
-  profileData: any,
-  maxAttempts: number = MAX_RETRY_ATTEMPTS
-): Promise<{ data: any; error: any }> => {
-  let lastError = null;
+  supabaseAdmin: ReturnType<typeof createClient>,
+  profileData: Record<string, unknown>
+): Promise<{ data: Record<string, unknown> | null; error: unknown }> => {
+  let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt += 1) {
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Timeout ao inserir perfil')), REQUEST_TIMEOUT_MS);
     });
 
-    const insertPromise = supabaseAdmin
-      .from('profiles')
-      .insert([profileData])
-      .select()
-      .single();
+    const insertPromise = supabaseAdmin.from('profiles').insert([profileData]).select().single();
 
     try {
-      const result = await Promise.race([insertPromise, timeoutPromise]);
+      const result = (await Promise.race([insertPromise, timeoutPromise])) as {
+        data: Record<string, unknown> | null;
+        error: unknown;
+      };
+
       if (result.data && !result.error) {
         return result;
       }
+
       lastError = result.error;
-    } catch (error: any) {
+    } catch (error) {
       lastError = error;
     }
 
-    if (attempt < maxAttempts - 1) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+    if (attempt < MAX_RETRY_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
     }
   }
 
@@ -164,53 +164,57 @@ const insertProfileWithRetry = async (
 };
 
 serve(async (req: Request) => {
-  // Obter origem da requisição para CORS dinâmico
   const origin = req.headers.get('origin');
 
-  // Handle OPTIONS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: getCorsHeaders(origin) });
   }
 
   try {
-    // ✅ Obter e validar auth token
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return errorResponse('Não autenticado', 401, origin);
+      return errorResponse('Nao autenticado', 401, origin);
     }
+
     const token = authHeader.replace('Bearer ', '');
 
-    // ✅ Cliente Admin
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // ✅ Obter usuário atual
-    const { data: { user: currentUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const {
+      data: { user: currentUser },
+      error: userError,
+    } = await supabaseAdmin.auth.getUser(token);
+
     if (userError || !currentUser) {
-      return errorResponse('Não autenticado', 401, origin);
+      return errorResponse('Nao autenticado', 401, origin);
     }
 
-    // ✅ DICA 2: Verificar se é admin (função extraída, testável)
-    const isAdmin = await checkIsAdmin(supabaseAdmin, currentUser.id);
-    if (!isAdmin) {
-      return errorResponse('Apenas administradores podem criar usuários', 403, origin);
+    const actorRole = await checkActorRole(supabaseAdmin, currentUser.id);
+    if (!actorRole) {
+      return errorResponse('Apenas administradores podem criar usuarios', 403, origin);
     }
 
-    // ✅ Parse body (único)
-    let body;
+    let body: unknown;
     try {
       body = await req.json();
-    } catch (error: any) {
-      console.error('[create-user] Erro ao parsear body:', error);
-      return errorResponse('Dados inválidos', 400, origin);
+    } catch (error) {
+      console.error('[create-user] body invalido', error);
+      return errorResponse('Dados invalidos', 400, origin);
     }
 
-    // ✅ DICA 1: Validação e sanitização centralizadas
     const validated = validateAndSanitizeInputs(body, currentUser.id);
 
-    // ✅ Criar user no Auth
+    if (!canAssignRole(actorRole, validated.role)) {
+      if (validated.role === 'superadmin') {
+        return errorResponse('Apenas o Super Admin pode criar outro Super Admin', 403, origin);
+      }
+
+      return errorResponse('Apenas o Super Admin pode criar administradores', 403, origin);
+    }
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: validated.email,
       password: validated.password,
@@ -218,21 +222,20 @@ serve(async (req: Request) => {
     });
 
     if (authError) {
-      console.error('[create-user] Erro ao criar usuário:', authError);
+      console.error('[create-user] erro ao criar usuario', authError);
 
-      if (authError.message?.includes('already registered') ||
+      if (
+        authError.message?.includes('already registered') ||
         authError.message?.includes('already exists') ||
-        authError.message?.includes('já está cadastrado')) {
-        return errorResponse('Este email já está cadastrado', 400, origin);
+        authError.message?.includes('ja esta cadastrado')
+      ) {
+        return errorResponse('Este email ja esta cadastrado', 400, origin);
       }
 
-      return errorResponse(authError.message || 'Erro ao criar usuário', 500, origin);
+      return errorResponse(authError.message || 'Erro ao criar usuario', 500, origin);
     }
 
-    // ✅ DICA 3: Insert com retry e timeout (safeguard automático)
-    // ✅ Avatar aleatório do Zé Gotinha (zg1 a zg16)
     const randomAvatarId = `zg${Math.floor(Math.random() * 16) + 1}`;
-
     const profileData = {
       id: authData.user.id,
       nome: validated.nome,
@@ -250,42 +253,34 @@ serve(async (req: Request) => {
       profileData
     );
 
-    // ✅ DICA 3: Rollback automático se perfil falhar
     if (profileInsertError || !newProfile) {
-      console.error('[create-user] Erro ao inserir perfil:', profileInsertError);
-
-      // Rollback: Delete user do Auth
+      console.error('[create-user] erro ao inserir perfil', profileInsertError);
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-
-      return errorResponse('Erro ao criar perfil de usuário', 500, origin);
+      return errorResponse('Erro ao criar perfil de usuario', 500, origin);
     }
 
-    // ✅ Resposta alinhada com app
-    return successResponse({
-      data: {
-        user: {
-          id: authData.user.id,
-          email: authData.user.email,
+    return successResponse(
+      {
+        data: {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+          },
+          profile: newProfile,
         },
-        profile: newProfile,
       },
-    }, origin);
+      origin
+    );
+  } catch (error) {
+    console.error('[create-user] erro inesperado', error);
+    const message = error instanceof Error ? error.message : 'Erro inesperado';
+    const status =
+      message.includes('invalido') ||
+      message.includes('obrigatorio') ||
+      message.includes('cadastrado')
+        ? 400
+        : 500;
 
-  } catch (error: any) {
-    // ✅ DICA 4: Logging padronizado com tags
-    console.error('[create-user] Erro inesperado:', {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-    });
-
-    const errorMessage = error.message || 'Erro inesperado';
-    const status = errorMessage.includes('inválido') ||
-      errorMessage.includes('obrigatório') ||
-      errorMessage.includes('já está') ? 400 : 500;
-
-    return errorResponse(errorMessage, status, null);
+    return errorResponse(message, status, origin);
   }
 });
-
-

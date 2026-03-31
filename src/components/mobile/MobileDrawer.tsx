@@ -26,7 +26,6 @@ interface MobileDrawerProps {
   onAdminClick?: () => void;
   onSettingsClick?: () => void;
   onAvatarClick?: () => void;
-  onCalendarClick?: () => void;
   onLogout?: () => void;
 }
 
@@ -47,7 +46,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onAdminClick,
   onSettingsClick,
   onAvatarClick,
-  onCalendarClick,
   onLogout,
 }) => {
   const {
@@ -55,7 +53,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     handleAvatarClick,
     handleAdminClick,
     handleSettingsClick,
-    handleCalendarClick,
     handleLogout,
   } = useMobileDrawerHandlers({
     onClose,
@@ -65,7 +62,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     onAvatarClick,
     onAdminClick,
     onSettingsClick,
-    onCalendarClick,
     onLogout,
   });
 
@@ -127,7 +123,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             />
 
             <MobileDrawerFooter
-              onCalendarClick={onCalendarClick ? handleCalendarClick : undefined}
               onSettingsClick={onSettingsClick ? handleSettingsClick : undefined}
               onLogout={onLogout ? handleLogout : undefined}
             />

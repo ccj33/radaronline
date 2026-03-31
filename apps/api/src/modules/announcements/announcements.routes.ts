@@ -43,6 +43,8 @@ function mapAnnouncementsError(reply: FastifyReply, error: unknown) {
   switch (message) {
     case 'FORBIDDEN':
       return problem(reply, 403, 'Forbidden', 'Administrative privileges are required.');
+    case 'FORBIDDEN_SCOPE':
+      return problem(reply, 403, 'Forbidden', 'User cannot access announcements outside the allowed microregion.');
     case 'NOT_FOUND':
       return problem(reply, 404, 'Not found', 'Announcement was not found.');
     default:

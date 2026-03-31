@@ -112,6 +112,34 @@ export class SupabaseObjectivesActivitiesRepository implements ObjectivesActivit
     return groupActivities(((data as ActivityRow[] | null) || []).map(mapActivity));
   }
 
+  async getObjectiveById(id: number): Promise<ObjectiveRecord | null> {
+    const { data, error } = await this.client
+      .from('objectives')
+      .select('id, title, status, microregiao_id, eixo, description, eixo_label, eixo_color')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message || 'Failed to load objective');
+    }
+
+    return data ? mapObjective(data as ObjectiveRow) : null;
+  }
+
+  async getActivityById(id: string): Promise<ActivityRecord | null> {
+    const { data, error } = await this.client
+      .from('activities')
+      .select('id, objective_id, title, description, microregiao_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message || 'Failed to load activity');
+    }
+
+    return data ? mapActivity(data as ActivityRow) : null;
+  }
+
   async createObjective(input: CreateObjectiveInput): Promise<ObjectiveRecord> {
     const { data, error } = await this.client
       .from('objectives')

@@ -111,6 +111,7 @@ describe('MainViewContentSwitch', () => {
           2: [createActivity('2.1', 'MR002')],
         }}
         readOnly={false}
+        requireMobileObjectiveSelection={false}
         responsibleFilter=""
         searchTerm=""
         selectedActivity=""
@@ -185,6 +186,7 @@ describe('MainViewContentSwitch', () => {
         objectives={[]}
         activities={{}}
         readOnly={false}
+        requireMobileObjectiveSelection={false}
         responsibleFilter=""
         searchTerm=""
         selectedActivity=""
@@ -227,5 +229,75 @@ describe('MainViewContentSwitch', () => {
 
     expect(hubHomeSpy).toHaveBeenCalled();
     expect(onCommunityNavigate).toHaveBeenCalledWith('forums');
+  });
+
+  it('bloqueia os modulos legados do Hub quando a flag de seguranca esta ativa', async () => {
+    vi.stubEnv('VITE_DISABLE_UNSUPPORTED_HUB_MODULES', 'true');
+
+    render(
+      <MainViewContentSwitch
+        chartContainerRef={createRef<HTMLDivElement>()}
+        containerWidth={1280}
+        currentMicroId="MR001"
+        currentNav="hub"
+        userId="user-1"
+        currentTeam={[createTeamMember()]}
+        expandedActionUid={null}
+        filteredActivities={{}}
+        filteredObjectives={[]}
+        ganttActions={[createAction()]}
+        ganttRange="all"
+        ganttStatusFilter="all"
+        handleUpdateActionPatch={vi.fn()}
+        involvedAreaFilter=""
+        isEditMode={false}
+        isMobile={false}
+        isSaving={false}
+        microActions={[createAction()]}
+        objectives={[]}
+        activities={{}}
+        readOnly={false}
+        requireMobileObjectiveSelection={false}
+        responsibleFilter=""
+        searchTerm=""
+        selectedActivity=""
+        selectedObjective={0}
+        statusFilter="all"
+        viewMode="table"
+        checkCanCreate={() => true}
+        checkCanDelete={() => true}
+        checkCanEdit={() => true}
+        onCommunityNavigate={vi.fn()}
+        onAddComment={vi.fn(async () => null)}
+        onAddMember={vi.fn(async () => null)}
+        onBulkImport={vi.fn(async () => {})}
+        onCreateAction={vi.fn()}
+        onDashboardNavigate={vi.fn()}
+        onDeleteAction={vi.fn()}
+        onExpandAction={vi.fn()}
+        onGanttActionClick={vi.fn()}
+        onOpenRoadmapSettings={vi.fn()}
+        onRemoveMember={vi.fn(async () => false)}
+        onAddRaci={vi.fn()}
+        onRemoveRaci={vi.fn()}
+        onSaveAction={vi.fn(async () => {})}
+        onSetGanttRange={vi.fn()}
+        onSetGanttStatusFilter={vi.fn()}
+        onSetInvolvedAreaFilter={vi.fn()}
+        onSetResponsibleFilter={vi.fn()}
+        onSetSearchTerm={vi.fn()}
+        onSetStatusFilter={vi.fn()}
+        onShowToast={vi.fn()}
+        onUpdateAction={vi.fn()}
+        onUpdateActivity={vi.fn()}
+        onUpdateObjectiveField={vi.fn()}
+        onUpdateTeam={vi.fn()}
+      />
+    );
+
+    expect(
+      await screen.findByText('Modulos do Hub temporariamente protegidos')
+    ).toBeInTheDocument();
+    expect(hubHomeSpy).not.toHaveBeenCalled();
   });
 });

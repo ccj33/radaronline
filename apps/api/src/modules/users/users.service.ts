@@ -1,4 +1,8 @@
 import type { SessionUser } from '../../shared/auth/auth.types.js';
+import {
+  canActorAssignUserRole,
+  canActorManageTargetUser,
+} from './users.policy.js';
 import type { UsersRepository } from './users.repository.js';
 import type { CreateUserInput, ResetPasswordInput, UpdateUserInput } from './users.types.js';
 
@@ -28,6 +32,10 @@ export class UsersService {
       throw new Error('EMAIL_ALREADY_EXISTS');
     }
 
+    if (!canActorAssignUserRole(actor.role, input.role)) {
+      throw new Error('FORBIDDEN_ROLE_ASSIGNMENT');
+    }
+
     if ((input.role === 'gestor' || input.role === 'usuario') && !input.microregionId) {
       throw new Error('MICROREGION_REQUIRED');
     }
@@ -52,8 +60,12 @@ export class UsersService {
       throw new Error('NOT_FOUND');
     }
 
-    if (current.role === 'superadmin' && actor.role !== 'superadmin' && actor.id !== userId) {
-      throw new Error('FORBIDDEN_SUPERADMIN_TARGET');
+    if (!canActorManageTargetUser(actor.role, current.role)) {
+      throw new Error('FORBIDDEN_PRIVILEGED_TARGET');
+    }
+
+    if (input.role && !canActorAssignUserRole(actor.role, input.role)) {
+      throw new Error('FORBIDDEN_ROLE_ASSIGNMENT');
     }
 
     return this.repository.update(userId, input);
@@ -99,6 +111,10 @@ export class UsersService {
 
     if (current.role === 'superadmin' && actor.id !== userId) {
       throw new Error('FORBIDDEN_SUPERADMIN_TARGET');
+    }
+
+    if (!canActorManageTargetUser(actor.role, current.role)) {
+      throw new Error('FORBIDDEN_PRIVILEGED_TARGET');
     }
 
     const changed = await this.repository.resetPassword(userId, input);

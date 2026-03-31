@@ -1,3 +1,4 @@
+import { MICROREGIOES } from '../../data/microregioes';
 import { getPlatformClient } from '../platformClient';
 import type {
   PendingRegistrationRow,
@@ -24,7 +25,7 @@ export async function fetchMicroNameById(id: string): Promise<string> {
     throw new Error(error.message || 'Falha ao carregar nome da microrregiao');
   }
 
-  return data?.nome || id;
+  return data?.nome || MICROREGIOES.find((m) => m.id === id)?.nome || id;
 }
 
 export async function listAdminIds(): Promise<string[]> {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface TooltipProps {
-  content: string;
+  content: React.ReactNode;
   children: React.ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
   delay?: number;
@@ -65,7 +65,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           className={`absolute z-50 ${positionClasses[position]} pointer-events-none`}
           role="tooltip"
         >
-          <div className="bg-slate-800 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-md shadow-lg whitespace-nowrap max-w-[200px]">
+          <div className="max-w-[280px] rounded-md bg-slate-800 px-3 py-2 text-[11px] font-medium leading-5 text-white shadow-lg whitespace-normal">
             {content}
             <div className={`absolute border-4 ${arrowClasses[position]}`} />
           </div>

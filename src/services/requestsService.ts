@@ -14,8 +14,9 @@ import {
   buildCreateRequestBatchPayload,
   buildCreateRequestPayload,
   buildUpdateRequestPayload,
-  getUniqueRequestUserIds,
+  getUniqueRequestProfileIds,
   mergeRequestsWithProfiles,
+  shouldCreateOwnRequestViaBackend,
 } from './requests/requestsService.helpers';
 import {
   countManagedRequests,
@@ -43,11 +44,13 @@ import type {
   UserRequest,
 } from './requests/requestsService.types';
 import { shouldUseBackendRequestsApi } from './apiClient';
+import { getCurrentUserId } from './sessionService';
 
 export type {
   CreateUserRequestInput,
   LoadManagedRequestsOptions,
   LoadManagedRequestsResult,
+  ManagedStatusFilter,
   LoadNotificationRequestsOptions,
   LoadRequestsOptions,
   RequestStatus,
@@ -64,7 +67,7 @@ async function enrichRequestsWithProfiles(
     return requests;
   }
 
-  const profilesMap = await fetchProfilesMap(getUniqueRequestUserIds(requests));
+  const profilesMap = await fetchProfilesMap(getUniqueRequestProfileIds(requests));
   return mergeRequestsWithProfiles(requests, profilesMap);
 }
 
@@ -186,8 +189,17 @@ export async function createUserRequest(
   content: string
 ): Promise<{ data: UserRequest | null; error?: string }> {
   try {
-    if (shouldUseBackendRequestsApi()) {
-      const data = await createUserRequestViaBackendApi({ userId, requestType, content });
+    const backendRequestsEnabled = shouldUseBackendRequestsApi();
+    const currentUserId = backendRequestsEnabled ? await getCurrentUserId() : null;
+
+    if (
+      shouldCreateOwnRequestViaBackend({
+        backendRequestsEnabled,
+        currentUserId,
+        targetUserId: userId,
+      })
+    ) {
+      const data = await createUserRequestViaBackendApi({ requestType, content });
       return { data };
     }
     const data = await insertRequestRecord(buildCreateRequestPayload(userId, requestType, content));

@@ -120,8 +120,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
           transition={{ delay: 0.8 }}
           className="fixed bottom-4 left-0 right-0 text-center pointer-events-none"
         >
-          <span className="text-xs text-white/50">
+          <span className="hidden sm:inline text-xs text-white/50">
             Pressione <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-white/70">Esc</kbd> para pular
+          </span>
+          <span className="sm:hidden text-xs text-white/50">
+            Toque em <span className="px-1.5 py-0.5 bg-white/10 rounded text-white/70">×</span> para pular
           </span>
         </motion.div>
 

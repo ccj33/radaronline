@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ClipboardList, LayoutDashboard, MapPin, Megaphone, Search, Trophy, Users } from 'lucide-react';
+import { Activity, ClipboardList, LayoutDashboard, MapPin, Megaphone, Newspaper, Search, Trophy, Users } from 'lucide-react';
 import { getMacrorregioes, getMicroregioesByMacro } from '../../../data/microregioes';
 import { SidebarItem } from './SidebarItem';
 import { SidebarSectionTitle } from './SidebarSectionTitle';
@@ -205,6 +205,13 @@ export function SidebarAdminNavigation({
         label="Mural"
         isActive={adminActiveTab === 'communication'}
         onClick={() => onAdminTabChange('communication')}
+        collapsed={!isOpen}
+      />
+      <SidebarItem
+        icon={Newspaper}
+        label="Eventos"
+        isActive={adminActiveTab === 'mural-eventos'}
+        onClick={() => onAdminTabChange('mural-eventos')}
         collapsed={!isOpen}
       />
     </>

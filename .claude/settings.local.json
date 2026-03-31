@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\" -type f -name \"*.ts\" -o -name \"*.tsx\")",
+      "Bash(ls -la \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\")",
+      "Bash(find \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\" -path \"*/node_modules\" -prune -o -type f -name \"*.ts\" -o -name \"*.tsx\")",
+      "Bash(find \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\" -path \"*/node_modules\" -prune -o -type f -name \"*microregio*\" -o -name \"*microrregiao*\")",
+      "Bash(ls -la \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\\\\apps\\\\api\\\\src\\\\modules\\\\teams\")",
+      "Bash(find \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\\\\src\" -type f -name \"*route*\" -o -name \"*nav*\" -o -name \"*Router*\")",
+      "Bash(find \"c:\\\\Users\\\\clevi\\\\Desktop\\\\radar 2.0 - Copia \\(2\\)\\\\src\" -type f \\\\\\( -name \"*Admin*\" -o -name \"*admin*\" \\\\\\))",
+      "Bash(find \"/c/Users/clevi/Desktop/radar 2.0 - Copia \\(2\\)\" -type f -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.json\")",
+      "Bash(ls -la '/c/Users/clevi/Desktop/radar 2.0 - Copia \\(2\\)/src/')",
+      "Bash(ls -la \"/c/Users/clevi/Desktop/radar 2.0 - Copia \\(2\\)/src/features/admin/dashboard/\")",
+      "Bash(ls -la \"/c/Users/clevi/Desktop/radar 2.0 - Copia \\(2\\)/src/features/dashboard/\")",
+      "Bash(find \"/c/Users/clevi/Desktop/radar 2.0 - Copia \\(2\\)/src\" -name \"OptimizedView.tsx\" -o -name \"optimizedView*\")"
+    ]
+  }
+}

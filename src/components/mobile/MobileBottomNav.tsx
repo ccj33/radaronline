@@ -1,25 +1,23 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  Calendar,
-  CalendarDays,
-  FolderOpen,
-  GraduationCap,
   LayoutDashboard,
   LayoutGrid,
   List,
-  MessagesSquare,
-  Users,
-  Zap,
+  Menu,
 } from 'lucide-react';
 
+type AppNav = 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
+type Workspace = 'planning' | 'community';
+type ViewMode = 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
+
 interface MobileBottomNavProps {
-  currentNav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository';
-  currentWorkspace: 'planning' | 'community';
-  viewMode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar';
-  onNavChange: (nav: 'strategy' | 'home' | 'settings' | 'dashboard' | 'news' | 'hub' | 'forums' | 'mentorship' | 'education' | 'repository') => void;
-  onViewModeChange: (mode: 'table' | 'gantt' | 'team' | 'optimized' | 'calendar') => void;
-  showTeamOption?: boolean;
+  currentNav: AppNav;
+  currentWorkspace: Workspace;
+  onNavChange: (nav: AppNav) => void;
+  onViewModeChange: (mode: ViewMode) => void;
+  onWorkspaceSelect: (workspace: Workspace) => void;
+  onMenuOpen: () => void;
 }
 
 interface NavItemProps {
@@ -35,7 +33,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, isActive, onClick, badge
     onClick={onClick}
     className={`
       relative flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5
-      transition-all duration-200 min-h-[52px] max-w-[64px]
+      transition-all duration-200 min-h-[52px] max-w-[92px]
       ${isActive
         ? 'text-teal-600 dark:text-teal-400'
         : 'text-slate-400 dark:text-slate-500 active:text-slate-600 dark:active:text-slate-300'
@@ -72,103 +70,35 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, isActive, onClick, badge
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   currentNav,
   currentWorkspace,
-  viewMode,
   onNavChange,
   onViewModeChange,
-  showTeamOption = false,
+  onWorkspaceSelect,
+  onMenuOpen,
 }) => {
-  const planningNav = (
-    <>
-      <NavItem
-        icon={<LayoutDashboard size={18} strokeWidth={2.2} />}
-        label="Painel"
-        isActive={currentNav === 'home'}
-        onClick={() => onNavChange('home')}
-      />
-      <NavItem
-        icon={<List size={18} strokeWidth={2.2} />}
-        label="Acoes"
-        isActive={currentNav === 'strategy' && viewMode === 'table'}
-        onClick={() => {
-          onNavChange('strategy');
-          onViewModeChange('table');
-        }}
-      />
-      <NavItem
-        icon={<CalendarDays size={18} strokeWidth={2.2} />}
-        label="Agenda"
-        isActive={currentNav === 'strategy' && viewMode === 'calendar'}
-        onClick={() => {
-          onNavChange('strategy');
-          onViewModeChange('calendar');
-        }}
-      />
-      <NavItem
-        icon={<Calendar size={18} strokeWidth={2.2} />}
-        label="Gantt"
-        isActive={currentNav === 'strategy' && viewMode === 'gantt'}
-        onClick={() => {
-          onNavChange('strategy');
-          onViewModeChange('gantt');
-        }}
-      />
-      {showTeamOption && (
-        <NavItem
-          icon={<Users size={18} strokeWidth={2.2} />}
-          label="Equipe"
-          isActive={currentNav === 'strategy' && viewMode === 'team'}
-          onClick={() => {
-            onNavChange('strategy');
-            onViewModeChange('team');
-          }}
-        />
-      )}
-      <NavItem
-        icon={<Zap size={18} strokeWidth={2.2} />}
-        label="Rapida"
-        isActive={currentNav === 'strategy' && viewMode === 'optimized'}
-        onClick={() => {
-          onNavChange('strategy');
-          onViewModeChange('optimized');
-        }}
-      />
-    </>
-  );
+  const isPanelActive =
+    currentWorkspace === 'planning' &&
+    (currentNav === 'home' || currentNav === 'news' || currentNav === 'dashboard');
+  const isActionsActive = currentWorkspace === 'planning' && currentNav === 'strategy';
+  const isCommunityActive = currentWorkspace === 'community';
 
-  const communityNav = (
-    <>
-      <NavItem
-        icon={<LayoutGrid size={18} strokeWidth={2.2} />}
-        label="Hub"
-        isActive={currentNav === 'hub'}
-        onClick={() => onNavChange('hub')}
-      />
-      <NavItem
-        icon={<MessagesSquare size={18} strokeWidth={2.2} />}
-        label="Foruns"
-        isActive={currentNav === 'forums'}
-        onClick={() => onNavChange('forums')}
-      />
-      <NavItem
-        icon={<Users size={18} strokeWidth={2.2} />}
-        label="Mentoria"
-        isActive={currentNav === 'mentorship'}
-        onClick={() => onNavChange('mentorship')}
-      />
-      <NavItem
-        icon={<GraduationCap size={18} strokeWidth={2.2} />}
-        label="Cursos"
-        isActive={currentNav === 'education'}
-        onClick={() => onNavChange('education')}
-      />
-      <NavItem
-        icon={<FolderOpen size={18} strokeWidth={2.2} />}
-        label="Acervo"
-        isActive={currentNav === 'repository'}
-        onClick={() => onNavChange('repository')}
-      />
-    </>
-  );
+  const handleOpenPanel = () => {
+    onWorkspaceSelect('planning');
+    onNavChange('home');
+  };
+
+  const handleOpenActions = () => {
+    const shouldResetMode = currentWorkspace !== 'planning' || currentNav !== 'strategy';
+    onWorkspaceSelect('planning');
+    onNavChange('strategy');
+    if (shouldResetMode) {
+      onViewModeChange('table');
+    }
+  };
+
+  const handleOpenCommunity = () => {
+    onWorkspaceSelect('community');
+    onNavChange('hub');
+  };
 
   return (
     <motion.nav
@@ -179,7 +109,30 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       aria-label="Navegacao principal"
     >
       <div className="flex items-stretch justify-around max-w-lg mx-auto px-1">
-        {currentWorkspace === 'community' ? communityNav : planningNav}
+        <NavItem
+          icon={<LayoutDashboard size={18} strokeWidth={2.2} />}
+          label="Painel"
+          isActive={isPanelActive}
+          onClick={handleOpenPanel}
+        />
+        <NavItem
+          icon={<List size={18} strokeWidth={2.2} />}
+          label="Acoes"
+          isActive={isActionsActive}
+          onClick={handleOpenActions}
+        />
+        <NavItem
+          icon={<LayoutGrid size={18} strokeWidth={2.2} />}
+          label="Comunidade"
+          isActive={isCommunityActive}
+          onClick={handleOpenCommunity}
+        />
+        <NavItem
+          icon={<Menu size={18} strokeWidth={2.2} />}
+          label="Menu"
+          isActive={false}
+          onClick={onMenuOpen}
+        />
       </div>
 
       <div className="h-safe-area-inset-bottom bg-white/98 dark:bg-slate-800/98" />

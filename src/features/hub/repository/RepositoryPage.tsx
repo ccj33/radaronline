@@ -303,7 +303,7 @@ export const RepositoryPage: React.FC<RepositoryPageProps> = React.memo(({ userI
   const [categoryFilter, setCategoryFilter] = useState<MaterialCategory | 'all'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const { materials, loading, error, addMaterial } = useRepository();
+  const { materials, loading, error, isFallback, addMaterial } = useRepository();
 
   const filteredMaterials = useMemo(() => {
     return materials.filter((material) => {
@@ -373,6 +373,13 @@ export const RepositoryPage: React.FC<RepositoryPageProps> = React.memo(({ userI
             </button>
           </div>
         </div>
+
+        {isFallback ? (
+          <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/20 dark:text-sky-100">
+            Biblioteca em modo local: os materiais adicionados aqui ficam salvos no navegador ate
+            a trilha definitiva do Hub ficar pronta.
+          </div>
+        ) : null}
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">

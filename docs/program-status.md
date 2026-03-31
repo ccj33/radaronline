@@ -31,6 +31,19 @@ Data de referencia: 2026-03-23
 - flyout de `Microrregioes` na sidebar admin agora fecha com atraso curto e sem vao lateral, reduzindo perda de contexto na selecao por hover e preservando a usabilidade antes do handover
 - teste de regressao adicionado para o hover da sidebar em `src/components/layout/sidebar/SidebarAdminNavigation.test.tsx`
 - `MainViewContentSwitch` agora repassa `filteredObjectives` e `filteredActivities` para a `Visao Rapida` e o calendario, evitando vazamento de objetivos e atividades de outras microrregioes quando o admin entra no modo de contexto local
+- `src/features/admin/dashboard/MicroDetailModal.tsx` deixou de ser apenas inventario e passou a oferecer leitura executiva da microrregiao, com score de saude, tendencia recente, alertas automaticos, benchmark da macrorregiao, proximas entregas, destaque operacional e relatorio de impressao no mesmo formato
+- `src/lib/microInsights.ts` agora centraliza a leitura executiva da microrregiao em funcoes puras e testadas, permitindo reaproveitar score, tendencia, alertas e recomendacao tanto no modal admin quanto na aba `Indicadores`
+- a aba `Indicadores` da propria microrregiao ganhou um bloco executivo no topo, com score de saude, recomendacao imediata, tendencia, alertas automáticos, metadados da micro e uma `Carteira em foco` mais acionavel no lugar da antiga leitura por carga de membro
+- os blocos antigos de KPI e graficos da aba `Indicadores` foram reincorporados no novo visual, mantendo os mesmos dados e cliques mas com cards, donuts, barras e resumos no mesmo idioma visual da leitura executiva
+- micros sem carteira agora preservam o topo executivo e os indicadores de prontidao na aba `Indicadores`, usando o estado vazio orientado a acao como complemento da leitura, e nao como substituicao total da tela
+- a faixa de KPIs da aba `Indicadores` passou por um corte de cromia e escala: os quatro cards perderam o fundo chapado, ganharam superficies claras com acento discreto e ordem mais operacional (`Total`, `Ritmo`, `Entrega`, `Risco`)
+- o dashboard da micro ficou ainda mais seco nesta rodada: os quatro KPIs perderam titulo auxiliar e rodape explicativo, o card lateral de recomendacao foi removido e o estado vazio narrativo da carteira deixou de ser renderizado
+- o topo executivo da micro trocou placeholders vagos por leitura gerencial concreta: cobertura de objetivos, equipe pronta, acoes sem responsavel, atrasos sem dono e janela de prazo agora aparecem como dados operacionais no lugar de textos genericos
+- a nomenclatura da aba `Indicadores` foi enxugada mais um pouco: o titulo principal ficou direto, o primeiro KPI passou de `Carteira` para `Total` e o selo da micro passou a explicitar a microrregiao analisada pelo nome atual
+- a aba `Indicadores` agora usa explicitamente a microrregiao em foco na sessao para nome e calculo do topo executivo, evitando fallback generico e impedindo que score, tendencia e benchmark sejam calculados com a micro errada
+- o score da leitura executiva passou a explicar a propria formula no hover, mostrando pesos de conclusao, progresso, prazo sem atraso e cobertura com responsavel; na mesma rodada, os estados criticos e de atraso migraram de vermelho/rosa para laranja em KPIs, score, alertas e recortes do dashboard
+- o painel `Proximos prazos` da aba `Indicadores` agora ganhou abas de janela `7d`, `15d` e `30d`, recalculadas direto sobre as acoes da micro para variar o recorte sem depender de cards estaticos
+- o painel administrativo de solicitacoes voltou a enriquecer nome de usuario e respondente pelo proprio select relacional do Supabase, preservando os nomes mesmo quando o lookup auxiliar de `profiles` nao retorna dados completos
 - cards do `Mural da Rede` deixam de esticar a mesma linha do grid ao expandir um comunicado, eliminando o efeito visual de "abrir dois" ao usar `Ler mais`
 - `NewsFeed` agora respeita `viewingMicroregiaoId` quando houver contexto de microrregiao selecionado, alinhando o mural ao mesmo escopo de navegacao do planejamento
 - teste de regressao adicionado para garantir que a `Visao Rapida` receba apenas objetivos e atividades filtrados em `src/components/main/MainViewContentSwitch.test.tsx`
@@ -73,6 +86,16 @@ Data de referencia: 2026-03-23
 - frontend agora tem cliente HTTP em `src/services/apiClient.ts`
 - administracao de usuarios do frontend pode ser desviada para a API por feature flag
 - o runtime do frontend agora pode bloquear fallback silencioso para `supabase-functions/*` via `VITE_DISABLE_LEGACY_SUPABASE_ADMIN_FLOW=true`
+
+### Provisionamento administrativo em lote
+
+- `POST /v1/users/import/preview` e `POST /v1/users/import/commit` agora existem no `apps/api` para validar e criar usuarios em lote com retorno operacional
+- o backend passou a resolver microrregioes com normalizacao de caixa, acento, codigo oficial e aliases exatos, sem aplicar chute silencioso para entradas ambiguas
+- entradas com typo aproximado ficam em `review` na previa; somente linhas `ready` seguem para criacao no commit
+- o commit gera senha temporaria forte por usuario e devolve CSV de retorno com `login_url`, `senha_temporaria` e observacoes para disparo manual por email
+- o admin do frontend agora tem modal de importacao por colagem de planilha, no mesmo espirito do import de acoes, com previa e download automatico do CSV de retorno
+- enquanto o backend administrativo nao estiver ativo no ambiente, o mesmo modal faz fallback controlado para o fluxo legado de criacao via Supabase/edge function, preservando a operacao atual sem bloquear o lote
+- a hierarquia administrativa foi endurecida: `admin` agora so pode criar/editar/importar `gestor` e `usuario`, enquanto `superadmin` segue autorizado a criar `admin` e outro `superadmin`
 
 ### Perfil autenticado e sessao backend-first
 
@@ -168,6 +191,11 @@ Data de referencia: 2026-03-23
 - consolidar a decisao de produto removendo do schema autoritativo e da documentacao legado o que ainda sobrar de analytics de uso e `user_sessions`, mantendo `activity_logs` apenas enquanto suporte a auditoria minima de acoes
 - validar em banco real a integridade entre `actions.activity_id` e `activities.id` e promover qualquer correcao remanescente para `supabase/migrations/`, sem depender de scripts legados fora da trilha autoritativa
 - revisar outros flyouts e overlays do admin para garantir o mesmo padrao de tolerancia de hover e evitar regressao visual no merge
+- levar a mesma leitura executiva da micro para o `StrategicReportGenerator` e para exports da aba `Indicadores`, evitando que o PDF ainda saia mais pobre do que a leitura em tela
+- aplicar o mesmo corte de cromia, escala e explicacao curta de calculo nos blocos secundarios da aba `Indicadores`, para que graficos e paineis mantenham a mesma linguagem minimalista dos novos KPIs
+- revisar se os cards estatisticos do topo executivo ainda podem perder mais texto auxiliar sem sacrificar interpretacao
+- avaliar se o `overview` deve ganhar um segundo recorte de gestao por objetivo, para mostrar quais objetivos ainda estao sem carteira e quais concentram atraso
+- revisar outras grades administrativas que ainda usam placeholders genericos (`Usuario`, `Administrador`) para garantir o mesmo enriquecimento relacional antes do cutover completo
 - revisar outras telas que ainda consumam colecoes globais no `MainViewContentSwitch` para garantir que qualquer modo contextualizado por microrregiao receba sempre datasets ja escopados
 - aprofundar o redesign do Hub nos modulos internos (`forums`, `mentorship`, `education` e `repository`) usando a nova Home como shell de referencia e fechar contratos de dominio antes da modelagem definitiva do banco
 - aplicar o mesmo corte de minimalismo nos interiores de `mentorship`, `education` e `repository`, removendo KPIs redundantes, tabs excessivas e chrome de dashboard para aproximar a experiencia de feed, lista e continuidade
@@ -181,8 +209,9 @@ Data de referencia: 2026-03-23
 2. ativar `VITE_DISABLE_LEGACY_SUPABASE_ADMIN_FLOW=true` no ambiente de homologacao apos validar `users`, `auth profile` e `first-access`
 3. conectar `AUTH_PROVIDER=entra-jwt` a um tenant real e validar `GET /v1/auth/session` e `GET /v1/auth/profile`
 4. substituir o caminho produtivo de `create-user`, `delete-user` e `update-user-password` pela API
-5. validar `deploy-infra`, `deploy-api` e `deploy-web` em Azure real
-6. consolidar scripts legados de `database/migrations` e `database/fixes` na trilha autoritativa
+5. homologar a importacao em lote de usuarios com planilha real, nomes de microrregiao ruidosos e disparo manual de email a partir do CSV de retorno
+6. validar `deploy-infra`, `deploy-api` e `deploy-web` em Azure real
+7. consolidar scripts legados de `database/migrations` e `database/fixes` na trilha autoritativa
 
 ## Riscos mais importantes
 
@@ -191,6 +220,31 @@ Data de referencia: 2026-03-23
 3. migrar auth sem plano de provisionamento de perfil
 4. manter scripts de schema fora da trilha autoritativa
 5. assumir IaC e CD sem validacao real de deploy
+
+## Auditoria de seguranca 2026-03-30
+
+- `docs/security-audit-2026-03-30.md` consolida o relato do Luis, os audios enviados e a inspecao tecnica do repositorio
+- o print de rede nao indicou `service_role` no frontend; a `apikey` observada e consistente com a anon key publica do Supabase e o `Authorization` observado e consistente com bearer token de sessao
+- os requests quebrando do Hub sao coerentes com chamadas diretas para `forums`, `mentors`, `mentorship_matches`, `courses`, `trails` e `materials`, entidades que nao aparecem na trilha autoritativa em `supabase/migrations/`
+- a API bridge ainda tem gaps criticos de seguranca: fallback para `DevHeaderAuthProvider` sem auth real, spoof de `userId` em `POST /v1/requests` e mutacoes globais em `tags` sem role administrativa
+- a API nova tambem precisa endurecer authorization por escopo de microrregiao antes de depender do backend bridge com `service_role`
+- a varredura completa do workspace confirmou mais lacunas de hardening: BOLA/IDOR por microrregiao, ausencia de rate limiting/headers de seguranca, edge functions com excesso de logs/debug e IaC ainda com rede publica e WAF nao anexado por padrao
+- as correcoes desta rodada fecharam o fallback inseguro de auth, o spoof de `userId`, o controle de escopo em `actions/objectivesActivities/teams/tags/comments/announcements`, o hardening basico de CORS/headers/rate limiting e a sanitizacao de HTML nos relatórios
+- o frontend agora prefere `sessionStorage` para a sessao Supabase, publica CSP basica no `index.html` e consegue bloquear os modulos legados do Hub em `production`, por feature flag ou automaticamente quando `VITE_BACKEND_API_URL` estiver configurada
+- os dominios ja migrados (`users`, `actions`, `requests`, `announcements`, `comments`, `tags`, `teams`, `objectives` e `activities`) agora passam a preferir a API propria por default quando o backend estiver configurado, com opt-out explicito so para compatibilidade pontual
+- a criacao de `requests` foi ajustada para usar backend apenas no caso self-service do ator autenticado, preservando temporariamente no Supabase apenas os fluxos de notificacao para terceiros e batches que ainda nao possuem endpoint administrativo equivalente
+- o Hub agora consegue operar sem backend novo nas trilhas de `forums`, `mentorship`, `education` e `repository`: quando as tabelas nao existem no Supabase atual, a UI cai para stores locais persistidos no navegador e passa a sinalizar claramente o modo local
+- `apps/api` tambem teve atualizacao de dependencias com `npm --prefix apps/api audit --omit=dev --json` retornando `0` vulnerabilidades
+- as validacoes locais desta rodada ficaram verdes: `npm run lint`, `npm run test:run`, `npm run build` e `npm --prefix apps/api run build`
+
+## Proximo corte de seguranca
+
+1. decidir se o modo local do Hub sera mantido como cache transitivo ou substituido por trilha autoritativa definitiva no Supabase
+2. criar endpoint administrativo para notificacoes e lotes em `requests`, removendo a ultima escrita direta do frontend nesse dominio
+3. retirar `supabase-functions/*` do fluxo administrativo produtivo
+4. validar `AUTH_PROVIDER=entra-jwt` com tenant real e claims de microrregiao
+5. endurecer rede e anexacao de WAF em `infra/bicep`
+6. reduzir residuos de supply chain/runtime (`new Function`, Docker root, GitHub Actions por SHA)
 
 ## Instrucao para o proximo agente
 
@@ -201,9 +255,10 @@ Comecar por:
 1. homologacao real do backend com feature flags e `VITE_DISABLE_LEGACY_SUPABASE_ADMIN_FLOW=true`
 2. validacao de `AUTH_PROVIDER=entra-jwt` com tenant real
 3. retirada efetiva de `supabase-functions/*` do fluxo administrativo
+4. endurecimento de auth/authz do `apps/api` conforme `docs/security-audit-2026-03-30.md`
 
 Depois:
 
-4. validacao real de `infra/bicep` e workflows de deploy
-5. consolidacao das migrations legadas
-6. preparacao do cutover de identidade
+5. validacao real de `infra/bicep` e workflows de deploy
+6. consolidacao das migrations legadas
+7. preparacao do cutover de identidade

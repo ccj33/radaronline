@@ -21,6 +21,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+type BrowserStorageTarget = 'sessionStorage' | 'localStorage';
 
 function createInMemoryStorage(): StorageLike {
   const store = new Map<string, string>();
@@ -35,16 +36,23 @@ function createInMemoryStorage(): StorageLike {
   };
 }
 
-function getSafeBrowserStorage(): StorageLike {
+function resolvePreferredStorageTarget(): BrowserStorageTarget {
+  return import.meta.env.VITE_SUPABASE_SESSION_STORAGE === 'local'
+    ? 'localStorage'
+    : 'sessionStorage';
+}
+
+function getSafeBrowserStorage(target: BrowserStorageTarget): StorageLike {
   if (typeof window === 'undefined') {
     return createInMemoryStorage();
   }
 
   try {
     const key = '__radar_storage_test__';
-    window.localStorage.setItem(key, '1');
-    window.localStorage.removeItem(key);
-    return window.localStorage;
+    const storage = window[target];
+    storage.setItem(key, '1');
+    storage.removeItem(key);
+    return storage;
   } catch {
     // Fallback for private mode / blocked storage.
     return createInMemoryStorage();
@@ -57,7 +65,7 @@ const auth =
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storage: getSafeBrowserStorage(),
+        storage: getSafeBrowserStorage(resolvePreferredStorageTarget()),
       }
     : {
         persistSession: false,

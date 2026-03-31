@@ -31,9 +31,9 @@ export function useDashboardMetrics({ actions, activities, objectives, team, use
         const summary = summarizeActionPortfolio(actions);
 
         const statusData = [
-            { color: DASHBOARD_COLORS.concluido, name: "Concluído", value: summary.completed },
+            { color: DASHBOARD_COLORS.concluido, name: "Conclu\u00eddo", value: summary.completed },
             { color: DASHBOARD_COLORS.emAndamento, name: "Em Andamento", value: summary.inProgress },
-            { color: DASHBOARD_COLORS.naoIniciado, name: "Não Iniciado", value: summary.notStarted },
+            { color: DASHBOARD_COLORS.naoIniciado, name: "N\u00e3o Iniciado", value: summary.notStarted },
             { color: DASHBOARD_COLORS.atrasado, name: "Atrasado", value: summary.late },
         ].filter((item) => item.value > 0);
 
@@ -58,7 +58,7 @@ export function useDashboardMetrics({ actions, activities, objectives, team, use
             .map((member) => {
                 const count = actions.filter((action) => {
                     return action.raci.some((entry: { name: string; role: string }) => entry.name === member.name && entry.role === "R")
-                        && getDerivedActionStatus(action) !== "Concluído";
+                        && getDerivedActionStatus(action) !== "Conclu\u00eddo";
                 }).length;
 
                 return {

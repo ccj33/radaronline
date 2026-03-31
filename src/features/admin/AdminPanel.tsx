@@ -31,7 +31,6 @@ export function AdminPanel(props: AdminPanelProps) {
         <AdminMobileLayout
           actions={actions}
           activeTab={controller.activeTab}
-          dashboardFilters={controller.dashboardFilters}
           expandedUserId={controller.expandedUserId}
           filteredUsers={controller.filteredUsers}
           getRoleBadge={controller.getRoleBadge}
@@ -40,19 +39,18 @@ export function AdminPanel(props: AdminPanelProps) {
           onCreatePendingUser={controller.handleOpenPendingUserCreation}
           onCreateUser={controller.handleCreateUser}
           onEditUser={(user) => {
-            controller.setEditingUser(user);
-            controller.setShowUserModal(true);
+            controller.handleEditUser(user);
             controller.setExpandedUserId(null);
           }}
-          onMapMicroSelect={controller.setSelectedMobileMicroId}
           onOpenMicroSelector={() => controller.setShowMicroSelector(true)}
+          onOpenUserImport={controller.handleOpenUserImport}
           onRefreshUsers={controller.loadUsers}
           onRequestDeleteUser={(user) => {
-            controller.setConfirmDelete({ open: true, user });
+            controller.handleRequestDesktopUserDelete(user);
             controller.setExpandedUserId(null);
           }}
           onRequestToggleUserStatus={(user) => {
-            controller.setConfirmToggle({ open: true, user, nextStatus: user.ativo === false });
+            void controller.handleToggleUserStatus(user.id);
             controller.setExpandedUserId(null);
           }}
           onSearchTermChange={controller.setSearchTerm}
@@ -64,7 +62,6 @@ export function AdminPanel(props: AdminPanelProps) {
           onViewMicrorregiao={controller.handleViewMicrorregiao}
           pendingRegistrations={controller.pendingRegistrations}
           searchTerm={controller.searchTerm}
-          setDashboardFilters={controller.setDashboardFilters}
           userFilterMacro={controller.userFilterMacro}
           users={controller.users}
         />
@@ -72,8 +69,10 @@ export function AdminPanel(props: AdminPanelProps) {
           actions={actions}
           confirmDelete={controller.confirmDelete}
           confirmToggle={controller.confirmToggle}
+          currentUserRole={controller.currentUser?.role}
           dashboardSelectedMicroId={controller.dashboardFilters.selectedMicroId}
           editingUser={controller.editingUser}
+          showUserImportModal={controller.showUserImportModal}
           isSavingUser={controller.actionLoadingId === 'save-user'}
           isSettingsModalOpen={controller.isSettingsModalOpen}
           onCloseConfirmDelete={() => controller.setConfirmDelete({ open: false })}
@@ -82,6 +81,7 @@ export function AdminPanel(props: AdminPanelProps) {
           onCloseMobileMicro={() => controller.setSelectedMobileMicroId(null)}
           onCloseSettings={() => controller.setIsSettingsModalOpen(false)}
           onCloseUserModal={controller.handleCloseUserModal}
+          onCloseUserImportModal={controller.handleCloseUserImportModal}
           onConfirmDelete={controller.handleConfirmDeleteUser}
           onConfirmToggle={controller.handleConfirmToggleStatus}
           onOpenMobileMicroPanel={(microId) => {
@@ -89,6 +89,7 @@ export function AdminPanel(props: AdminPanelProps) {
             controller.setSelectedMobileMicroId(null);
           }}
           onSaveUser={controller.handleSaveUserFromModal}
+          onUsersImported={controller.handleUsersImported}
           onSelectMicroregion={controller.handleViewMicrorregiao}
           pendingUserData={controller.pendingUserData}
           selectedMobileMicroId={controller.selectedMobileMicroId}
@@ -171,6 +172,7 @@ export function AdminPanel(props: AdminPanelProps) {
           microregionsFilterMacro={controller.filterMacro}
           onCreatePendingUser={controller.handleOpenPendingUserCreation}
           onCreateUser={controller.handleCreateUser}
+          onOpenUserImport={controller.handleOpenUserImport}
           onDeletePendingRegistration={controller.handleDeletePendingRegistrationRequest}
           onEditUser={controller.handleEditDesktopUser}
           onFilterRoleChange={controller.setFilterRole}
@@ -199,7 +201,9 @@ export function AdminPanel(props: AdminPanelProps) {
           actions={actions}
           confirmDelete={controller.confirmDelete}
           confirmToggle={controller.confirmToggle}
+          currentUserRole={controller.currentUser?.role}
           editingUser={controller.editingUser}
+          showUserImportModal={controller.showUserImportModal}
           isSavingUser={controller.actionLoadingId === 'save-user'}
           isSettingsModalOpen={controller.isSettingsModalOpen}
           onCloseConfirmDelete={() => controller.setConfirmDelete({ open: false })}
@@ -207,9 +211,11 @@ export function AdminPanel(props: AdminPanelProps) {
           onCloseExpandedUserOverlay={() => controller.setExpandedUserId(null)}
           onCloseSettings={() => controller.setIsSettingsModalOpen(false)}
           onCloseUserModal={controller.handleCloseUserModal}
+          onCloseUserImportModal={controller.handleCloseUserImportModal}
           onConfirmDelete={controller.handleConfirmDeleteUser}
           onConfirmToggle={controller.handleConfirmToggleStatus}
           onSaveUser={controller.handleSaveUserFromModal}
+          onUsersImported={controller.handleUsersImported}
           pendingUserData={controller.pendingUserData}
           settingsInitialTab={controller.settingsInitialTab}
           settingsMode={controller.settingsMode}
@@ -222,5 +228,3 @@ export function AdminPanel(props: AdminPanelProps) {
     </div>
   );
 }
-
-

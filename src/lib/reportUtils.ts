@@ -65,6 +65,27 @@ export interface ReportData {
   footer?: string;
 }
 
+export function escapeHtml(value: string | number | null | undefined): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function sanitizeCssColor(value: string | null | undefined, fallback = '#0f766e'): string {
+  const normalized = String(value ?? '').trim();
+  if (
+    normalized &&
+    /^(#[0-9a-fA-F]{3,8}|(?:rgb|rgba|hsl|hsla)\([0-9.,%\s]+\)|[a-zA-Z]+)$/.test(normalized)
+  ) {
+    return normalized;
+  }
+
+  return fallback;
+}
+
 /**
  * Cria uma nova janela com o conteúdo do relatório para impressão
  */
@@ -85,7 +106,7 @@ export function printReport(contentElement: HTMLElement, reportTitle: string = '
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${reportTitle}</title>
+      <title>${escapeHtml(reportTitle)}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -459,21 +480,21 @@ export function printReport(contentElement: HTMLElement, reportTitle: string = '
 export function generateReportHTML(data: ReportData): string {
   const metricsHTML = data.metrics?.map(m => `
     <div class="metric-card${m.color ? ' highlight' : ''}">
-      <div class="metric-value">${m.value}</div>
-      <div class="metric-label">${m.label}</div>
+      <div class="metric-value">${escapeHtml(m.value)}</div>
+      <div class="metric-label">${escapeHtml(m.label)}</div>
     </div>
   `).join('') || '';
 
   const sectionsHTML = data.sections?.map(section => `
     <div class="report-section">
-      <h3 class="section-title">${section.title}</h3>
+      <h3 class="section-title">${escapeHtml(section.title)}</h3>
       ${section.items.map(item => `
         <div class="progress-item">
-          <span class="progress-label">${item.label}</span>
+          <span class="progress-label">${escapeHtml(item.label)}</span>
           <div class="progress-bar-container">
             <div class="progress-bar" style="width: ${item.percentage || 0}%"></div>
           </div>
-          <span class="progress-value">${item.value}${item.percentage !== undefined ? ` (${item.percentage}%)` : ''}</span>
+          <span class="progress-value">${escapeHtml(item.value)}${item.percentage !== undefined ? ` (${item.percentage}%)` : ''}</span>
         </div>
       `).join('')}
     </div>
@@ -490,14 +511,14 @@ export function generateReportHTML(data: ReportData): string {
           </div>
         </div>
         <div class="report-meta">
-          <p><strong>Data:</strong> ${formatReportDate(data.generatedAt)}</p>
-          <p><strong>Período:</strong> ${data.period || formatReportPeriod(data.generatedAt)}</p>
+          <p><strong>Data:</strong> ${escapeHtml(formatReportDate(data.generatedAt))}</p>
+          <p><strong>Período:</strong> ${escapeHtml(data.period || formatReportPeriod(data.generatedAt))}</p>
         </div>
       </header>
 
       <div class="report-title-section">
-        <h2 class="report-title">${data.title}</h2>
-        ${data.subtitle ? `<p class="report-subtitle">${data.subtitle}</p>` : ''}
+        <h2 class="report-title">${escapeHtml(data.title)}</h2>
+        ${data.subtitle ? `<p class="report-subtitle">${escapeHtml(data.subtitle)}</p>` : ''}
       </div>
 
       ${metricsHTML ? `<div class="metrics-grid">${metricsHTML}</div>` : ''}
@@ -505,7 +526,7 @@ export function generateReportHTML(data: ReportData): string {
       ${sectionsHTML}
 
       <footer class="report-footer">
-        <span>${data.footer || 'Relatório gerado automaticamente pelo sistema RADAR'}</span>
+        <span>${escapeHtml(data.footer || 'Relatório gerado automaticamente pelo sistema RADAR')}</span>
         <span>Página 1 de 1</span>
       </footer>
     </div>

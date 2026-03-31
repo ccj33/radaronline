@@ -30,6 +30,33 @@ function toRoleCandidate(value: unknown): string[] {
   return [];
 }
 
+function extractMicroregionIds(payload: JWTPayload): { primary: string | null; all: string[] } {
+  const claimKeys = ['microregionIds', 'microregionId', 'microregion_id', 'microregiao_id'];
+
+  for (const key of claimKeys) {
+    const rawValue = payload[key];
+
+    if (Array.isArray(rawValue)) {
+      const ids = rawValue
+        .filter((v): v is string => typeof v === 'string')
+        .map((v) => v.trim())
+        .filter((v) => v && v !== 'all');
+      if (ids.length > 0) return { primary: ids[0], all: ids };
+      continue;
+    }
+
+    if (typeof rawValue === 'string') {
+      const ids = rawValue
+        .split(',')
+        .map((v) => v.trim())
+        .filter((v) => v && v !== 'all');
+      if (ids.length > 0) return { primary: ids[0], all: ids };
+    }
+  }
+
+  return { primary: null, all: [] };
+}
+
 export function extractRoleFromClaims(
   payload: JWTPayload,
   roleClaim: string
@@ -71,11 +98,15 @@ export function mapEntraPayloadToSessionUser(
       ? payload.name
       : email || 'Usuario';
 
+  const { primary, all } = extractMicroregionIds(payload);
+
   return {
     id,
     email,
     name,
     role: extractRoleFromClaims(payload, roleClaim),
+    microregionId: primary,
+    microregionIds: all,
   };
 }
 

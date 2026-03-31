@@ -1,8 +1,10 @@
 export type AutomatedEventType =
-  | 'plan_completed'
-  | 'goal_reached'
-  | 'new_user'
-  | 'system_milestone';
+  | 'plan_completed'       // ação individual concluída
+  | 'activity_completed'  // todas as ações de uma atividade concluídas
+  | 'progress_milestone'  // microrregião atingiu 25/50/75/100% do plano
+  | 'goal_reached'        // objetivo estratégico concluído
+  | 'new_user'            // novo membro entrou na equipe
+  | 'system_milestone';   // marco do sistema (primeiros acessos, etc.)
 
 export interface AutomatedEvent {
   id: string;
@@ -15,6 +17,7 @@ export interface AutomatedEvent {
   footerContext?: string;
   timestamp: string;
   created_at: string;
+  isActive: boolean;
 }
 
 export interface AutomatedEventRow {
@@ -27,9 +30,10 @@ export interface AutomatedEventRow {
   likes: number;
   footer_context: string | null;
   created_at: string;
+  is_active?: boolean | null;
 }
 
 export type RecordAutomatedEventInput = Omit<
   AutomatedEvent,
-  'id' | 'timestamp' | 'created_at' | 'likes'
+  'id' | 'timestamp' | 'created_at' | 'likes' | 'isActive'
 >;

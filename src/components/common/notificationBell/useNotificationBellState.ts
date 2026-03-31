@@ -16,6 +16,29 @@ import {
   saveReadNotifications,
 } from './notificationBell.utils';
 
+const ADMIN_ACTIONABLE_NOTIFICATION_TYPES = new Set([
+  'request',
+  'feedback',
+  'support',
+  'system',
+]);
+const PERSONAL_PENDING_NOTIFICATION_TYPES = new Set([
+  'mention',
+  'announcement',
+  'system',
+]);
+
+function dedupeRequestsById(items: UserRequest[]): UserRequest[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
+}
+
 interface UseNotificationBellStateParams {
   isOpen: boolean;
 }
@@ -37,15 +60,17 @@ export function useNotificationBellState({ isOpen }: UseNotificationBellStatePar
     if (readIds.has(readKey)) return false;
 
     if (isAdmin) {
-      return request.status === 'pending';
+      const isActionable = ADMIN_ACTIONABLE_NOTIFICATION_TYPES.has(request.request_type);
+      const isPersonal = request.user_id === user?.id;
+      return request.status === 'pending' && (isActionable || isPersonal);
     }
 
     if (request.status === 'pending') {
-      return request.request_type === 'mention' || request.request_type === 'announcement';
+      return PERSONAL_PENDING_NOTIFICATION_TYPES.has(request.request_type);
     }
 
     return true;
-  }, [isAdmin, readIds]);
+  }, [isAdmin, readIds, user?.id]);
 
   const markAsRead = useCallback((request: UserRequest) => {
     const nextReadIds = new Set(readIds);
@@ -82,7 +107,7 @@ export function useNotificationBellState({ isOpen }: UseNotificationBellStatePar
         limit: 20,
         includeProfileDetails: true,
       });
-      setRequests(data);
+      setRequests(dedupeRequestsById(data));
     } catch {
       setRequests([]);
     } finally {

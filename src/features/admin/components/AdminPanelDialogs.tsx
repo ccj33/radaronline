@@ -4,6 +4,7 @@ import { MicroregionSelector } from '../../../components/common/MicroregionSelec
 import { ConfirmModal } from '../../../components/common/ConfirmModal';
 import { UserSettingsModal } from '../../settings/UserSettingsModal';
 import MicroDetailModal from '../dashboard/MicroDetailModal';
+import { UserImportModal } from '../UserImportModal';
 import { UserFormModal } from '../UserFormModal';
 import {
   AdminDeleteState,
@@ -11,10 +12,13 @@ import {
   AdminUserPayload,
   PendingUserData,
 } from '../adminPanel.types';
+import type { UserImportCommitResponse } from '../../../services/adminUsersApi';
 
 interface AdminPanelDialogsProps {
   variant: 'mobile' | 'desktop';
+  currentUserRole?: User['role'];
   showUserModal: boolean;
+  showUserImportModal: boolean;
   editingUser: User | null;
   pendingUserData: PendingUserData | null;
   isSavingUser: boolean;
@@ -30,6 +34,8 @@ interface AdminPanelDialogsProps {
   users?: User[];
   showExpandedUserOverlay?: boolean;
   onCloseUserModal: () => void;
+  onCloseUserImportModal: () => void;
+  onUsersImported: (result: UserImportCommitResponse) => Promise<void> | void;
   onSaveUser: (userData: AdminUserPayload) => Promise<void>;
   onCloseConfirmToggle: () => void;
   onConfirmToggle: () => Promise<void>;
@@ -45,7 +51,9 @@ interface AdminPanelDialogsProps {
 
 export function AdminPanelDialogs({
   variant,
+  currentUserRole,
   showUserModal,
+  showUserImportModal,
   editingUser,
   pendingUserData,
   isSavingUser,
@@ -61,6 +69,8 @@ export function AdminPanelDialogs({
   users = [],
   showExpandedUserOverlay = false,
   onCloseUserModal,
+  onCloseUserImportModal,
+  onUsersImported,
   onSaveUser,
   onCloseConfirmToggle,
   onConfirmToggle,
@@ -99,8 +109,17 @@ export function AdminPanelDialogs({
           isSaving={isSavingUser}
           fullScreen={variant === 'mobile'}
           initialData={pendingUserData || undefined}
+          currentUserRole={currentUserRole}
         />
       )}
+
+      <UserImportModal
+        isOpen={showUserImportModal}
+        onClose={onCloseUserImportModal}
+        onImported={onUsersImported}
+        fullScreen={variant === 'mobile'}
+        currentUserRole={currentUserRole}
+      />
 
       <ConfirmModal
         isOpen={confirmToggle.open}

@@ -60,7 +60,7 @@ export const DELIVERY_CARD_ITEMS: DeliveryCardItem[] = [
     {
         id: "bi",
         title: "BI e monitoramento",
-        desc: "Painéis para evidência, priorização e cobrança de execução.",
+        desc: "Painel consolidado com informações do programa e o Índice de Maturidade Digital.",
         icon: BarChart3,
         tag: "Evidência",
     },
@@ -139,18 +139,18 @@ export const DELIVERY_CONTENT_BY_ID: Record<DeliveryId, DeliveryContent> = {
     },
     bi: {
         id: "bi",
-        title: "Do plano para o resultado",
+        title: "Panorama e Maturidade Digital",
         icon: BarChart3,
-        subtitle: "Radar fecha o ciclo, mostra evolução e orienta correção de rota com dados.",
+        subtitle: "Visão consolidada com informações iniciais do programa e o Índice de Maturidade Digital do seu município.",
         bullets: [
-            "Dá visibilidade para gestão local e regional, apoiando tomada de decisão.",
-            "Permite acompanhar execução, maturidade e gargalos, com linguagem de gestão.",
-            "Fecha o ciclo: planejar, executar, medir, ajustar, repetir.",
+            "Traz o panorama inicial do programa SUS Digital para nivelar o conhecimento da gestão.",
+            "Apresenta o Índice Nacional de Maturidade em Saúde Digital (INMSD) do seu território.",
+            "Mapeia o cenário atual, servindo como ponto de partida antes de planejar novas ações.",
         ],
         howToUse: [
-            "Abrir painéis para diagnóstico rápido e definição de prioridade.",
-            "Acompanhar indicadores ao longo do plano, com revisão periódica.",
-            "Usar evidência no diálogo com equipe, regional e liderança.",
+            "Acessar o painel para conhecer os dados gerais da saúde digital no estado.",
+            "Consultar o nível de maturidade do seu município para embasar o diagnóstico.",
+            "Utilizar as informações consolidadas como referência para as oficinas de planejamento.",
         ],
         badge: "Evidência",
         highlight: {

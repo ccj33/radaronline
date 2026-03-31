@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isToday } from "date-fns";
 
 import type { Action, Activity, Objective } from "../../../types";
@@ -7,7 +7,7 @@ import { getActionDisplayId, getCorrectActionDisplayId, findObjectiveIdByActivit
 import { createActivityToObjectiveMap, filterOrphanedActions, hasValidDate } from "../../../lib/actionValidation";
 import { LinearCalendarActionModal } from "./linearCalendar/LinearCalendarActionModal";
 import { LinearCalendarDayModal } from "./linearCalendar/LinearCalendarDayModal";
-import { LinearCalendarHeader, type ViewType } from "./linearCalendar/LinearCalendarHeader";
+import { LinearCalendarHeader, type DensityMode, type ViewType } from "./linearCalendar/LinearCalendarHeader";
 import {
     MONTH_NAMES_SHORT,
     OBJECTIVE_COLORS,
@@ -22,21 +22,38 @@ interface LinearCalendarProps {
     microId?: string | null;
 }
 
+const MIN_CALENDAR_ZOOM = 0.7;
+const MAX_CALENDAR_ZOOM = 1.5;
+
 export function LinearCalendar({ actions, activities, objectives, microId }: LinearCalendarProps) {
     const [selectedMicro, setSelectedMicro] = useState<string | null>(microId || null);
     const [selectedObjective, setSelectedObjective] = useState<number | "all">("all");
     const [viewType, setViewType] = useState<ViewType>("year");
     const [focusDate, setFocusDate] = useState(new Date(2026, 0, 1));
+    const [densityMode, setDensityMode] = useState<DensityMode>("default");
     const [zoomLevel, setZoomLevel] = useState(1);
-    const [hoveredActionId, setHoveredActionId] = useState<string | null>(null);
+    const [isFocusMode, setIsFocusMode] = useState(false);
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [selectedDay, setSelectedDay] = useState<{ dateKey: string; dateObj: Date } | null>(null);
+    const calendarScrollRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (microId !== undefined) {
             setSelectedMicro(microId);
         }
     }, [microId]);
+
+    useEffect(() => {
+        const container = calendarScrollRef.current;
+        if (!container) {
+            return;
+        }
+
+        if (zoomLevel <= MIN_CALENDAR_ZOOM + 0.001) {
+            const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+            container.scrollLeft = maxScrollLeft / 2;
+        }
+    }, [zoomLevel, viewType]);
 
     const activityToObjective = useMemo(() => createActivityToObjectiveMap(activities), [activities]);
     const validActions = useMemo(() => filterOrphanedActions(actions, activities), [actions, activities]);
@@ -107,6 +124,35 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
         return `${date.getFullYear()}-${month}-${day}`;
     }, []);
 
+    const densityConfig = useMemo(() => {
+        if (densityMode === "compact") {
+            return {
+                regularSlots: 8,
+                daySlots: 56,
+                barHeight: 16,
+                barStep: 18,
+            };
+        }
+
+        if (densityMode === "comfortable") {
+            return {
+                regularSlots: 5,
+                daySlots: 40,
+                barHeight: 20,
+                barStep: 24,
+            };
+        }
+
+        return {
+            regularSlots: 6,
+            daySlots: 50,
+            barHeight: 18,
+            barStep: 20,
+        };
+    }, [densityMode]);
+
+    const maxSlotsPerCell = viewType === "day" ? densityConfig.daySlots : densityConfig.regularSlots;
+
     const handleNavigate = (direction: number) => {
         const nextDate = new Date(focusDate);
         if (viewType === "year") nextDate.setFullYear(nextDate.getFullYear() + direction);
@@ -115,6 +161,33 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
         else nextDate.setDate(nextDate.getDate() + direction);
         setFocusDate(nextDate);
     };
+
+    const handleGoToToday = useCallback(() => {
+        setFocusDate(new Date());
+    }, []);
+
+    const isTodayContext = useMemo(() => {
+        const today = new Date();
+
+        if (viewType === "year") {
+            return focusDate.getFullYear() === today.getFullYear();
+        }
+
+        if (viewType === "month") {
+            return focusDate.getFullYear() === today.getFullYear() && focusDate.getMonth() === today.getMonth();
+        }
+
+        if (viewType === "week") {
+            const start = new Date(focusDate);
+            start.setDate(start.getDate() - start.getDay());
+            const end = new Date(start);
+            end.setDate(end.getDate() + 6);
+            const todayKey = toDateKey(today);
+            return toDateKey(start) <= todayKey && toDateKey(end) >= todayKey;
+        }
+
+        return toDateKey(focusDate) === toDateKey(today);
+    }, [focusDate, toDateKey, viewType]);
 
     const getNavTitle = () => {
         const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -226,7 +299,7 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
             }
 
             let chosenSlot = -1;
-            const maxSlots = viewType === "day" ? 50 : 6;
+            const maxSlots = maxSlotsPerCell;
 
             for (let slot = 0; slot < maxSlots; slot += 1) {
                 let isFree = true;
@@ -265,7 +338,7 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
         });
 
         return { actionsPerDay: map, ganttSlotsMap: slots };
-    }, [filteredActions, gridData, viewType]);
+    }, [filteredActions, gridData, maxSlotsPerCell]);
 
     const getObjectiveDisplayNumber = (action: Action): number => {
         const objectiveDbId = activityToObjective[action.activityId];
@@ -278,10 +351,27 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
     };
 
     const getCellHeight = () => {
-        if (viewType === "year") return "min-h-[140px]";
-        if (viewType === "month") return "min-h-[140px]";
-        if (viewType === "week") return "min-h-[400px]";
+        if (viewType === "year" || viewType === "month") {
+            if (densityMode === "compact") return "min-h-[120px]";
+            if (densityMode === "comfortable") return "min-h-[160px]";
+            return "min-h-[140px]";
+        }
+
+        if (viewType === "week") {
+            if (densityMode === "compact") return "min-h-[340px]";
+            if (densityMode === "comfortable") return "min-h-[480px]";
+            return "min-h-[400px]";
+        }
+
+        if (densityMode === "compact") return "min-h-[520px]";
+        if (densityMode === "comfortable") return "min-h-[720px]";
         return "min-h-[600px]";
+    };
+
+    const getCellPadding = () => {
+        if (densityMode === "compact") return "p-0.5";
+        if (densityMode === "comfortable") return "p-1.5";
+        return "p-1";
     };
 
     return (
@@ -293,17 +383,26 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
                 viewType={viewType}
                 filteredObjectives={filteredObjectives}
                 selectedObjective={selectedObjective}
+                densityMode={densityMode}
                 zoomLevel={zoomLevel}
+                isFocusMode={isFocusMode}
+                isTodayContext={isTodayContext}
                 onNavigate={handleNavigate}
+                onGoToToday={handleGoToToday}
                 onViewChange={(nextView) => {
                     setViewType(nextView);
                     setZoomLevel(1);
                 }}
+                onDensityModeChange={setDensityMode}
+                onToggleFocusMode={() => setIsFocusMode((previous) => !previous)}
                 onObjectiveChange={setSelectedObjective}
-                onZoomLevelChange={setZoomLevel}
+                onZoomLevelChange={(nextZoom) => {
+                    const clampedZoom = Math.max(MIN_CALENDAR_ZOOM, Math.min(MAX_CALENDAR_ZOOM, nextZoom));
+                    setZoomLevel(clampedZoom);
+                }}
             />
 
-            <div className="flex-1 w-full overflow-auto bg-slate-100/50 dark:bg-slate-900 p-4 flex justify-center custom-scrollbar">
+            <div ref={calendarScrollRef} className="flex-1 w-full overflow-auto bg-slate-100/50 dark:bg-slate-900 p-4 flex justify-center custom-scrollbar">
                 <div
                     className="bg-white dark:bg-slate-800 shadow-xl transition-transform duration-200 origin-top border border-slate-200 dark:border-slate-700 rounded-lg"
                     style={{
@@ -329,7 +428,7 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
                             <div
                                 key={day.dateKey}
                                 onClick={() => setSelectedDay({ dateKey: day.dateKey, dateObj: day.dateObj })}
-                                className={`relative ${getCellHeight()} p-1 flex flex-col group cursor-pointer transition-colors ${day.isWeekend ? "bg-slate-50/60 dark:bg-slate-800/60" : "bg-white dark:bg-slate-800"} ${day.isFirstDay && viewType !== "week" && viewType !== "day" ? "border-l-2 border-slate-600 dark:border-slate-400" : ""} ${isDimmed ? "opacity-40 bg-slate-100 dark:bg-slate-900" : "hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10"} ${isTodayCell ? "ring-2 ring-inset ring-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/20" : ""}`}
+                                className={`relative ${getCellHeight()} ${getCellPadding()} flex flex-col group cursor-pointer transition-colors ${day.isWeekend ? "bg-slate-50/60 dark:bg-slate-800/60" : "bg-white dark:bg-slate-800"} ${day.isFirstDay && viewType !== "week" && viewType !== "day" ? "border-l-2 border-slate-600 dark:border-slate-400" : ""} ${isDimmed ? "opacity-40 bg-slate-100 dark:bg-slate-900" : "hover:ring-1 hover:ring-inset hover:ring-slate-300/70 dark:hover:ring-slate-600/70"} ${isTodayCell ? "ring-2 ring-inset ring-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/20" : ""}`}
                             >
                                 <div className="flex justify-between items-start mb-1 select-none pointer-events-none z-0">
                                     {day.isFirstDay || day.index === 0 ? (
@@ -370,35 +469,27 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
                                             {count > 20 ? <div className="col-span-4 text-[9px] text-slate-400 text-center">+{count - 20}</div> : null}
                                         </div>
                                     ) : (
-                                        Array.from({ length: viewType === "day" ? 50 : 6 }).map((_, index) => {
+                                        Array.from({ length: maxSlotsPerCell }).map((_, index) => {
                                             const slots = ganttSlotsMap[day.dateKey] || [];
                                             const action = slots[index];
                                             if (!action) {
                                                 return null;
                                             }
 
-                                            const isHovered = hoveredActionId === action.uid;
                                             const objectiveId = getObjectiveDisplayNumber(action);
                                             const statusColor = STATUS_COLORS[action.status] || "bg-slate-400";
 
                                             return (
                                                 <div
                                                     key={index}
-                                                    onMouseEnter={(event) => {
-                                                        event.stopPropagation();
-                                                        setHoveredActionId(action.uid);
-                                                    }}
-                                                    onMouseLeave={(event) => {
-                                                        event.stopPropagation();
-                                                        setHoveredActionId(null);
-                                                    }}
                                                     onClick={(event) => {
                                                         event.stopPropagation();
                                                         setSelectedAction(action);
                                                     }}
-                                                    className={`absolute left-0 right-0 h-[18px] mb-[2px] rounded-[2px] cursor-pointer ${statusColor} transition-all duration-150 ${hoveredActionId && !isHovered ? "opacity-20 grayscale" : "opacity-90"} ${isHovered ? "z-50 shadow-lg ring-1 ring-white scale-y-110" : "z-10"}`}
+                                                    className={`absolute left-0 right-0 rounded-[2px] cursor-pointer ${statusColor} opacity-90 z-10`}
                                                     style={{
-                                                        top: `${index * 20}px`,
+                                                        top: index * densityConfig.barStep,
+                                                        height: densityConfig.barHeight,
                                                         borderRadius: action.isStart ? "4px 0 0 4px" : action.isEnd ? "0 4px 4px 0" : "0",
                                                         borderTopLeftRadius: !action.isStart && action.isVisualStart ? "0" : undefined,
                                                         borderBottomLeftRadius: !action.isStart && action.isVisualStart ? "0" : undefined,
@@ -408,8 +499,11 @@ export function LinearCalendar({ actions, activities, objectives, microId }: Lin
                                                             : undefined,
                                                     }}
                                                 >
-                                                    {action.isVisualStart || isHovered ? (
-                                                        <span className="text-[9px] text-white font-bold px-1 truncate block leading-[18px] drop-shadow-md select-none">
+                                                    {action.isVisualStart ? (
+                                                        <span
+                                                            className="text-[9px] text-white font-bold px-1 truncate block drop-shadow-md select-none"
+                                                            style={{ lineHeight: `${densityConfig.barHeight}px` }}
+                                                        >
                                                             {action.title}
                                                         </span>
                                                     ) : null}

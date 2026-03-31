@@ -60,11 +60,6 @@ export function useAppShellHandlers({
     setViewMode('table');
   }, [setCurrentNav, setViewMode]);
 
-  const handleGoToStrategyCalendar = useCallback(() => {
-    setCurrentNav('strategy');
-    setViewMode('calendar');
-  }, [setCurrentNav, setViewMode]);
-
   const handleCloseSettingsModal = useCallback(() => {
     setIsSettingsModalOpen(false);
   }, [setIsSettingsModalOpen]);
@@ -92,7 +87,6 @@ export function useAppShellHandlers({
     handleHeaderMenuClick,
     handleCloseMobileDrawer,
     handleGoToStrategyTable,
-    handleGoToStrategyCalendar,
     handleCloseSettingsModal,
     handleToggleEditMode,
     handleOpenSettingsPanel,

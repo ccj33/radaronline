@@ -153,13 +153,22 @@ export class SupabaseTeamsRepository implements TeamsRepository {
     return mergeProfilesAndTeams((profiles as ProfileRow[] | null) || [], (teams as TeamRow[] | null) || []);
   }
 
-  async getUserTeamStatus(email: string): Promise<{ exists: boolean; municipality: string | null }> {
+  async getUserTeamStatus(
+    email: string,
+    microregionId?: string
+  ): Promise<{ exists: boolean; municipality: string | null }> {
     const normalized = normalizeEmail(email);
-    const { data, error } = await this.client
+    let query = this.client
       .from('teams')
       .select('municipio')
       .eq('email', normalized)
       .limit(1);
+
+    if (microregionId && microregionId !== 'all') {
+      query = query.eq('microregiao_id', microregionId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(error.message || 'Failed to load team status');
@@ -170,6 +179,62 @@ export class SupabaseTeamsRepository implements TeamsRepository {
       exists: !!record,
       municipality: record?.municipio || null,
     };
+  }
+
+  async getTeamMemberById(memberId: string): Promise<TeamMemberRecord | null> {
+    const { data: teamData, error: teamError } = await this.client
+      .from('teams')
+      .select('id, microregiao_id, name, cargo, email, municipio, profile_id')
+      .eq('id', memberId)
+      .maybeSingle();
+
+    if (teamError) {
+      throw new Error(teamError.message || 'Failed to load team member');
+    }
+
+    if (teamData) {
+      return mapTeamRow(teamData as TeamRow);
+    }
+
+    const { data: profileData, error: profileError } = await this.client
+      .from('profiles')
+      .select('id, nome, email, municipio, microregiao_id, role')
+      .eq('id', memberId)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error(profileError.message || 'Failed to load profile team member');
+    }
+
+    const profile = profileData as ProfileRow | null;
+    if (!profile) {
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      microregionId: profile.microregiao_id || 'unassigned',
+      name: profile.nome,
+      role: profile.role || 'Membro',
+      email: profile.email || '',
+      municipality: profile.municipio || 'Sede/Remoto',
+      isRegistered: true,
+    };
+  }
+
+  async getPendingRegistrationById(id: string): Promise<PendingRegistrationRecord | null> {
+    const { data, error } = await this.client
+      .from('teams')
+      .select('id, name, email, municipio, microregiao_id, cargo, created_at')
+      .eq('id', id)
+      .is('profile_id', null)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message || 'Failed to load pending registration');
+    }
+
+    return data ? mapPendingRow(data as PendingRow) : null;
   }
 
   async saveUserMunicipality(input: SaveUserMunicipalityInput): Promise<void> {
@@ -287,9 +352,17 @@ export class SupabaseTeamsRepository implements TeamsRepository {
   }
 
   async removeTeamMember(memberId: string): Promise<void> {
-    const { error } = await this.client.from('teams').delete().eq('id', memberId);
+    const { data, error } = await this.client
+      .from('teams')
+      .delete()
+      .eq('id', memberId)
+      .select('id')
+      .maybeSingle();
     if (error) {
       throw new Error(error.message || 'Failed to remove team member');
+    }
+    if (!data) {
+      throw new Error('NOT_FOUND');
     }
   }
 
@@ -308,9 +381,17 @@ export class SupabaseTeamsRepository implements TeamsRepository {
   }
 
   async deletePendingRegistration(id: string): Promise<void> {
-    const { error } = await this.client.from('teams').delete().eq('id', id);
+    const { data, error } = await this.client
+      .from('teams')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
     if (error) {
       throw new Error(error.message || 'Failed to delete pending registration');
+    }
+    if (!data) {
+      throw new Error('NOT_FOUND');
     }
   }
 }

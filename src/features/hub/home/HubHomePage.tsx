@@ -142,20 +142,27 @@ export const HubHomePage: React.FC<HubHomePageProps> = React.memo(({
   currentMicroLabel,
   onNavigate,
 }) => {
-  const { forums, loading: forumsLoading, error: forumsError } = useForums();
-  const { mentors, loading: mentorsLoading, error: mentorsError } = useMentors({ verifiedOnly: true });
-  const { matches, loading: rawMentorshipLoading } = useMentorshipMatches(userId);
+  const { forums, loading: forumsLoading, error: forumsError, isFallback: forumsFallback } = useForums();
+  const {
+    mentors,
+    loading: mentorsLoading,
+    error: mentorsError,
+    isFallback: mentorsFallback,
+  } = useMentors({ verifiedOnly: true });
+  const { matches, loading: rawMentorshipLoading, isFallback: matchesFallback } = useMentorshipMatches(userId);
   const {
     courses,
     trails,
     enrolledCourses,
     loading: educationLoading,
     error: educationError,
+    isFallback: educationFallback,
   } = useEducacao();
   const {
     materials,
     loading: repositoryLoading,
     error: repositoryError,
+    isFallback: repositoryFallback,
   } = useRepository();
 
   const mentorshipLoading = userId ? rawMentorshipLoading : false;
@@ -172,6 +179,9 @@ export const HubHomePage: React.FC<HubHomePageProps> = React.memo(({
   const availabilityNotes = useMemo(() => {
     const notes: string[] = [];
 
+    if (forumsFallback || mentorsFallback || matchesFallback || educationFallback || repositoryFallback) {
+      notes.push('Hub rodando em modo local: os dados desta area estao salvos no navegador ate o banco definitivo ser provisionado.');
+    }
     if (forumsError) {
       notes.push('Foruns ainda dependem do backend definitivo do Hub.');
     }
@@ -186,7 +196,17 @@ export const HubHomePage: React.FC<HubHomePageProps> = React.memo(({
     }
 
     return notes;
-  }, [educationError, forumsError, mentorsError, repositoryError]);
+  }, [
+    educationError,
+    educationFallback,
+    forumsError,
+    forumsFallback,
+    matchesFallback,
+    mentorsError,
+    mentorsFallback,
+    repositoryError,
+    repositoryFallback,
+  ]);
 
   const moduleRows = [
     {

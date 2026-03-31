@@ -32,14 +32,14 @@ export function FirstAccessModalFlow({
   return (
     <MunicipalityOnboardingModal
       user={user}
-      onSave={async (municipio, novaSenha) => {
+      onSave={async (municipio, novaSenha, microregiaoId) => {
         try {
           await authService.completeFirstAccess(
             user.id,
             user.email,
             municipio,
             novaSenha,
-            user.microregiaoId
+            microregiaoId
           );
 
           if (authContext) {

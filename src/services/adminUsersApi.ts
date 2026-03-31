@@ -1,4 +1,5 @@
 import type { User, UserRole } from '../types/auth.types';
+import { parseMicroregiaoIds } from '../lib/authHelpers';
 
 import { apiRequest } from './apiClient';
 
@@ -14,12 +15,15 @@ type BackendUser = {
 };
 
 function mapBackendUser(user: BackendUser): User {
+  const ids = parseMicroregiaoIds(user.microregionId);
+
   return {
     id: user.id,
     nome: user.name,
     email: user.email,
     role: user.role,
-    microregiaoId: user.microregionId || 'all',
+    microregiaoId: ids[0] || 'all',
+    microregiaoIds: ids,
     ativo: user.active,
     lgpdConsentimento: false,
     avatarId: 'zg10',
@@ -27,6 +31,70 @@ function mapBackendUser(user: BackendUser): User {
     createdAt: user.createdAt,
   };
 }
+
+export type UserImportInputRow = {
+  rowNumber?: number;
+  name?: string;
+  email?: string;
+  role?: string;
+  microregions?: string;
+  municipality?: string;
+};
+
+export type UserImportMicroregionResolution = {
+  input: string;
+  status: 'exact-id' | 'exact-code' | 'exact-name' | 'exact-alias' | 'fuzzy' | 'ambiguous' | 'none';
+  id: string | null;
+  code: string | null;
+  name: string | null;
+  suggestions: string[];
+};
+
+export type UserImportPreviewRow = {
+  rowNumber: number;
+  name: string;
+  email: string;
+  roleInput: string;
+  role: UserRole | null;
+  microregionsInput: string;
+  municipality: string | null;
+  normalizedMicroregionIds: string[];
+  normalizedMicroregionNames: string[];
+  microregions: UserImportMicroregionResolution[];
+  status: 'ready' | 'review' | 'error' | 'duplicate';
+  issues: string[];
+  warnings: string[];
+};
+
+export type UserImportPreviewResponse = {
+  rows: UserImportPreviewRow[];
+  summary: {
+    total: number;
+    ready: number;
+    review: number;
+    error: number;
+    duplicate: number;
+  };
+};
+
+export type UserImportCommitRow = UserImportPreviewRow & {
+  result: 'created' | 'skipped' | 'failed';
+  userId: string | null;
+  temporaryPassword: string | null;
+  loginUrl: string | null;
+};
+
+export type UserImportCommitResponse = {
+  rows: UserImportCommitRow[];
+  summary: {
+    total: number;
+    created: number;
+    skipped: number;
+    failed: number;
+  };
+  csvFileName: string;
+  csvContent: string;
+};
 
 export async function listUsersViaBackendApi(): Promise<User[]> {
   const response = await apiRequest<{ items: BackendUser[] }>('/v1/users');
@@ -90,5 +158,27 @@ export async function updateUserViaBackendApi(
 export async function deleteUserViaBackendApi(userId: string): Promise<void> {
   await apiRequest<void>(`/v1/users/${userId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function previewUsersImportViaBackendApi(
+  rows: UserImportInputRow[]
+): Promise<UserImportPreviewResponse> {
+  return apiRequest<UserImportPreviewResponse>('/v1/users/import/preview', {
+    method: 'POST',
+    body: { rows },
+  });
+}
+
+export async function commitUsersImportViaBackendApi(args: {
+  rows: UserImportInputRow[];
+  loginUrl?: string;
+}): Promise<UserImportCommitResponse> {
+  return apiRequest<UserImportCommitResponse>('/v1/users/import/commit', {
+    method: 'POST',
+    body: {
+      rows: args.rows,
+      loginUrl: args.loginUrl,
+    },
   });
 }

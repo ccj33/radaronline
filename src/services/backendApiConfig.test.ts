@@ -4,8 +4,12 @@ import {
   getBackendApiBaseUrl,
   hasBackendApiConfig,
   isLegacySupabaseAdminFlowDisabled,
+  shouldDisableLegacyHubModules,
+  shouldUseBackendActionsApi,
   shouldUseBackendAdminUsersApi,
+  shouldUseBackendAuthSessionApi,
   shouldUseBackendAuthProfileApi,
+  shouldUseBackendRequestsApi,
 } from './backendApiConfig';
 
 describe('backendApiConfig', () => {
@@ -27,6 +31,23 @@ describe('backendApiConfig', () => {
     expect(shouldUseBackendAdminUsersApi()).toBe(true);
   });
 
+  it('prefers backend APIs by default but keeps requests on Supabase unless explicitly enabled', () => {
+    vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
+
+    expect(shouldUseBackendAdminUsersApi()).toBe(true);
+    expect(shouldUseBackendActionsApi()).toBe(true);
+    expect(shouldUseBackendRequestsApi()).toBe(false);
+    expect(shouldUseBackendAuthProfileApi()).toBe(true);
+    expect(shouldUseBackendAuthSessionApi()).toBe(true);
+  });
+
+  it('enables backend requests API only when explicit flag is true', () => {
+    vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
+    vi.stubEnv('VITE_USE_BACKEND_REQUESTS', 'true');
+
+    expect(shouldUseBackendRequestsApi()).toBe(true);
+  });
+
   it('forces backend admin flow when legacy cutover is enabled', () => {
     vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
     vi.stubEnv('VITE_DISABLE_LEGACY_SUPABASE_ADMIN_FLOW', 'true');
@@ -42,5 +63,35 @@ describe('backendApiConfig', () => {
     expect(hasBackendApiConfig()).toBe(false);
     expect(shouldUseBackendAdminUsersApi()).toBe(false);
     expect(shouldUseBackendAuthProfileApi()).toBe(false);
+  });
+
+  it('allows explicit opt-out back to legacy path for selected domains', () => {
+    vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
+    vi.stubEnv('VITE_USE_BACKEND_ACTIONS', 'false');
+    vi.stubEnv('VITE_USE_BACKEND_REQUESTS', 'false');
+    vi.stubEnv('VITE_USE_BACKEND_AUTH_SESSION', 'false');
+
+    expect(shouldUseBackendActionsApi()).toBe(false);
+    expect(shouldUseBackendRequestsApi()).toBe(false);
+    expect(shouldUseBackendAuthSessionApi()).toBe(false);
+    expect(shouldUseBackendAdminUsersApi()).toBe(true);
+  });
+
+  it('allows explicit shutdown of unsupported legacy hub modules', () => {
+    vi.stubEnv('VITE_DISABLE_UNSUPPORTED_HUB_MODULES', 'true');
+
+    expect(shouldDisableLegacyHubModules()).toBe(true);
+  });
+
+  it('allows explicit override to keep unsupported legacy hub modules enabled', () => {
+    vi.stubEnv('VITE_ALLOW_UNSUPPORTED_HUB_MODULES', 'true');
+
+    expect(shouldDisableLegacyHubModules()).toBe(false);
+  });
+
+  it('blocks unsupported legacy hub modules automatically when backend api is configured', () => {
+    vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
+
+    expect(shouldDisableLegacyHubModules()).toBe(true);
   });
 });

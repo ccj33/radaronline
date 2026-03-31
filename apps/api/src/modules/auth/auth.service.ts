@@ -16,7 +16,7 @@ export class AuthProfileService {
       email: actor.email,
       name: actor.name,
       role: actor.role,
-      microregionId: null,
+      microregionId: actor.microregionId,
       active: true,
       lgpdAccepted: false,
       lgpdAcceptedAt: null,

@@ -16,6 +16,7 @@ export const DEMO_USER: User = {
     email: 'visitante@demo.radar.mg.gov.br',
     role: 'usuario',
     microregiaoId: 'MR070', // Juiz de Fora como exemplo
+    microregiaoIds: ['MR070'],
     ativo: true,
     lgpdConsentimento: false, // Inicia sem LGPD para mostrar Landing Page primeiro
     lgpdConsentimentoData: undefined,

@@ -44,6 +44,10 @@ function mapObjectivesActivitiesError(reply: FastifyReply, error: unknown) {
   switch (message) {
     case 'FORBIDDEN':
       return problem(reply, 403, 'Forbidden', 'User cannot manage planning operations.');
+    case 'FORBIDDEN_SCOPE':
+      return problem(reply, 403, 'Forbidden', 'User cannot access planning data outside the allowed microregion.');
+    case 'MISMATCHED_MICROREGION':
+      return problem(reply, 400, 'Validation error', 'Objective, activity and action must belong to the same microregion.');
     case 'NOT_FOUND':
       return problem(reply, 404, 'Not found', 'Planning record was not found.');
     default:

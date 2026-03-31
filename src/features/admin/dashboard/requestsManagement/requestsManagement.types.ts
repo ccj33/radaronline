@@ -1,2 +1,10 @@
-export type StatusFilter = "all" | "pending" | "resolved" | "rejected";
-export type TypeFilter = "all" | "profile_change" | "mention" | "system";
+export type StatusFilter = "all" | "pending" | "resolved" | "rejected" | "answered";
+export type TypeFilter =
+	| "all"
+	| "request"
+	| "feedback"
+	| "support"
+	| "mention"
+	| "announcement"
+	| "system"
+	| "profile_change";

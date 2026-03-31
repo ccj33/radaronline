@@ -30,6 +30,8 @@ function mapActionsError(reply: FastifyReply, error: unknown) {
   switch (message) {
     case 'FORBIDDEN':
       return problem(reply, 403, 'Forbidden', 'User cannot manage actions.');
+    case 'FORBIDDEN_SCOPE':
+      return problem(reply, 403, 'Forbidden', 'User cannot access actions outside the allowed microregion.');
     case 'INVALID_ACTION_NUMBER':
       return problem(reply, 400, 'Validation error', 'actionNumber must be greater than zero.');
     case 'INVALID_PROGRESS':
@@ -51,8 +53,13 @@ export function registerActionRoutes(app: FastifyInstance) {
     }
 
     const microregionId = (request.query as { microregionId?: string }).microregionId;
-    const items = await actionsService.listActions(microregionId);
-    return { items };
+
+    try {
+      const items = await actionsService.listActions(actor, microregionId);
+      return { items };
+    } catch (error) {
+      return mapActionsError(reply, error);
+    }
   });
 
   app.get('/v1/actions/:actionUid', async (request, reply) => {
@@ -62,7 +69,10 @@ export function registerActionRoutes(app: FastifyInstance) {
     }
 
     try {
-      const item = await actionsService.getActionByUid((request.params as { actionUid: string }).actionUid);
+      const item = await actionsService.getActionByUid(
+        actor,
+        (request.params as { actionUid: string }).actionUid
+      );
       return item;
     } catch (error) {
       return mapActionsError(reply, error);

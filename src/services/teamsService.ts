@@ -194,10 +194,10 @@ export async function addTeamMember(input: {
     await recordAutomatedEvent({
       type: 'new_user',
       municipality: microName,
-      title: `${input.name} entrou para a equipe`,
-      details: `Novo refor\u00E7o para a gest\u00E3o da sa\u00FAde em ${microName}.`,
+      title: `${input.name} se juntou \u00E0 equipe de ${microName}`,
+      details: `A equipe cresce. Mais um colaborador engajado na transforma\u00E7\u00E3o digital da sa\u00FAde no territ\u00F3rio.`,
       imageGradient: 'from-emerald-600 to-teal-500',
-      footerContext: 'Expans\u00E3o da Rede de Colaboradores',
+      footerContext: 'Expans\u00E3o da Rede',
     });
 
     return newMember;

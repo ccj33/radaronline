@@ -1,4 +1,10 @@
 import { log, logError } from '../lib/logger';
+import {
+  canAssignAdminRole,
+  canManageAdminTarget,
+  getAdminRoleAssignmentError,
+  getAdminTargetManagementError,
+} from '../lib/adminRolePolicy';
 import { isValidEmail } from '../lib/validation';
 import { isAdminLike } from '../lib/authHelpers';
 import { getCurrentAuthUser, getCurrentUserId } from './sessionService';
@@ -146,8 +152,13 @@ export async function createUser(userData: {
       throw new Error('Apenas administradores podem criar usuarios');
     }
 
+    if (!canAssignAdminRole(currentUserRole ?? undefined, userData.role)) {
+      throw new Error(getAdminRoleAssignmentError(userData.role));
+    }
+
     const microregiaoId =
-      userData.microregiaoId === 'all' || (userData.role === 'admin' && !userData.microregiaoId)
+      userData.microregiaoId === 'all' ||
+      ((userData.role === 'admin' || userData.role === 'superadmin') && !userData.microregiaoId)
         ? null
         : userData.microregiaoId || null;
 
@@ -180,8 +191,7 @@ export async function createUser(userData: {
 
 export async function updateUser(
   userId: string,
-  updates: Partial<User> & { senha?: string },
-  _currentUserId?: string
+  updates: Partial<User> & { senha?: string }
 ): Promise<User> {
   try {
     if (shouldUseBackendAdminUsersApi()) {
@@ -191,14 +201,35 @@ export async function updateUser(
     assertLegacySupabaseAdminFlowEnabled('atualizacao administrativa de usuario');
 
     const { senha, ...userUpdates } = updates;
+    const {
+      data: { user: currentUser },
+      error: authError,
+    } = await getCurrentAuthUser();
+
+    if (authError || !currentUser) {
+      throw new Error('Nao autenticado. Faca login novamente.');
+    }
+
+    const currentUserRole = await fetchProfileRole(currentUser.id);
+    if (!isAdminLike(currentUserRole ?? undefined)) {
+      throw new Error('Apenas administradores podem atualizar usuarios');
+    }
+
+    const targetRole = await fetchProfileRole(userId);
+    if (targetRole && !canManageAdminTarget(currentUserRole ?? undefined, targetRole)) {
+      throw new Error(getAdminTargetManagementError(targetRole));
+    }
+
+    if (userUpdates.role && !canAssignAdminRole(currentUserRole ?? undefined, userUpdates.role)) {
+      throw new Error(getAdminRoleAssignmentError(userUpdates.role));
+    }
 
     if (senha) {
       if (senha.length < 6) {
         throw new Error('Senha deve ter no minimo 6 caracteres');
       }
 
-      const targetRole = await fetchProfileRole(userId);
-      if (targetRole === 'superadmin' && _currentUserId !== userId) {
+      if (targetRole === 'superadmin' && currentUser.id !== userId) {
         throw new Error(
           'Nao e possivel alterar a senha do Super Admin. Apenas ele mesmo pode altera-la.'
         );

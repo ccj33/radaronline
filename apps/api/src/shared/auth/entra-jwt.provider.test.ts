@@ -28,5 +28,7 @@ test('mapEntraPayloadToSessionUser maps identity claims into session user', () =
     email: 'user@example.gov.br',
     name: 'Example User',
     role: 'superadmin',
+    microregionId: null,
+    microregionIds: [],
   });
 });

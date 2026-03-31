@@ -5,8 +5,20 @@ import type {
   UserRequest,
 } from './requestsService.types';
 
-export function getUniqueRequestUserIds(requests: UserRequest[]): string[] {
-  return [...new Set(requests.map((request) => request.user_id).filter(Boolean))];
+export function getUniqueRequestProfileIds(requests: UserRequest[]): string[] {
+  const profileIds = new Set<string>();
+
+  requests.forEach((request) => {
+    if (request.user_id) {
+      profileIds.add(request.user_id);
+    }
+
+    if (request.resolved_by) {
+      profileIds.add(request.resolved_by);
+    }
+  });
+
+  return [...profileIds];
 }
 
 export function mergeRequestsWithProfiles(
@@ -14,20 +26,30 @@ export function mergeRequestsWithProfiles(
   profilesMap: Map<string, ProfileSummary>
 ): UserRequest[] {
   return requests.map((request) => {
-    const profile = profilesMap.get(request.user_id);
-    if (!profile) {
-      return request;
+    const requesterProfile = profilesMap.get(request.user_id);
+    const resolverProfile = request.resolved_by
+      ? profilesMap.get(request.resolved_by)
+      : undefined;
+
+    const resolvedByName = resolverProfile?.nome ?? request.resolved_by_name ?? null;
+
+    if (!requesterProfile) {
+      return {
+        ...request,
+        resolved_by_name: resolvedByName,
+      };
     }
 
     return {
       ...request,
+      resolved_by_name: resolvedByName,
       user: {
-        nome: profile.nome,
-        email: profile.email,
-        role: profile.role,
-        cargo: profile.cargo,
-        municipio: profile.municipio,
-        microregiao_id: profile.microregiao_id,
+        nome: requesterProfile.nome,
+        email: requesterProfile.email,
+        role: requesterProfile.role,
+        cargo: requesterProfile.cargo,
+        municipio: requesterProfile.municipio,
+        microregiao_id: requesterProfile.microregiao_id,
       },
     };
   });
@@ -83,4 +105,16 @@ export function buildCreateRequestBatchPayload(
     admin_notes: request.adminNotes ?? null,
     ...(request.createdAt ? { created_at: request.createdAt } : {}),
   }));
+}
+
+export function shouldCreateOwnRequestViaBackend(args: {
+  backendRequestsEnabled: boolean;
+  currentUserId: string | null;
+  targetUserId: string;
+}): boolean {
+  return (
+    args.backendRequestsEnabled &&
+    Boolean(args.currentUserId) &&
+    args.currentUserId === args.targetUserId
+  );
 }

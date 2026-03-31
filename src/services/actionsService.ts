@@ -107,10 +107,10 @@ export async function updateAction(
       await recordAutomatedEvent({
         type: 'plan_completed',
         municipality: microNome,
-        title: `${microNome} concluiu a acao: ${updatedAction.title}`,
-        details: 'Acao estrategica finalizada com sucesso, contribuindo para o plano regional.',
+        title: `${microNome} concluiu mais uma a\u00E7\u00E3o do plano`,
+        details: updatedAction.title,
         imageGradient: 'from-blue-600 to-cyan-500',
-        footerContext: 'Marco de Execucao',
+        footerContext: 'Marco de Execu\u00E7\u00E3o',
       });
     }
 

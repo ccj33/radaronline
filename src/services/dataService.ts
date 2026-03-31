@@ -299,7 +299,7 @@ export async function loadAutomatedEvents(limit: number = 6) {
 }
 
 export async function recordAutomatedEvent(
-  event: Omit<AutomatedEventModel, 'id' | 'timestamp' | 'created_at' | 'likes'>
+  event: Omit<AutomatedEventModel, 'id' | 'timestamp' | 'created_at' | 'likes' | 'isActive'>
 ): Promise<void> {
   return automatedEventsService.recordAutomatedEvent(event);
 }

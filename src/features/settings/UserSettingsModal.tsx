@@ -11,6 +11,11 @@ import {
   unsubscribeFromUserRequests,
   type UserRequest,
 } from '../../services/requestsService';
+import {
+  getReadKey,
+  getReadNotifications,
+  saveReadNotifications,
+} from '../../components/common/notificationBell/notificationBell.utils';
 import { updateUserAvatar } from '../../services/profileService';
 import { AVATAR_LIST } from './avatarUtils';
 import { MOCK_SUGGESTIONS } from './userSettings.constants';
@@ -24,6 +29,17 @@ interface UserSettingsModalProps {
   onClose: () => void;
   initialTab?: UserSettingsTab;
   mode?: 'settings' | 'avatar';
+}
+
+function dedupeRequestsById(items: UserRequest[]): UserRequest[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
 }
 
 export function UserSettingsModal({
@@ -49,19 +65,7 @@ export function UserSettingsModal({
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const readNotificationsKey = 'radar_read_notifications';
-  const [readIds, setReadIds] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem(readNotificationsKey);
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  const saveReadNotifications = (ids: Set<string>) => {
-    localStorage.setItem(readNotificationsKey, JSON.stringify([...ids]));
-  };
+  const [readIds, setReadIds] = useState<Set<string>>(getReadNotifications);
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -78,18 +82,15 @@ export function UserSettingsModal({
   const isAdmin = isAdminLike(user?.role);
 
   const isUnread = useCallback((request: UserRequest): boolean => {
-    if (readIds.has(request.id)) return false;
+    const readKey = getReadKey(request.id, request.status);
+    if (readIds.has(readKey)) return false;
 
-    if (isAdmin) {
-      return request.status === 'pending' && request.request_type !== 'mention';
+    if (request.status === 'pending') {
+      return request.request_type === 'mention' || request.request_type === 'announcement' || request.request_type === 'system';
     }
 
-    if (request.request_type === 'mention') {
-      return request.status === 'pending';
-    }
-
-    return !!(request.admin_notes && request.status !== 'pending');
-  }, [readIds, isAdmin]);
+    return true;
+  }, [readIds]);
 
   const loadRequests = useCallback(async () => {
     if (!user) return;
@@ -98,19 +99,24 @@ export function UserSettingsModal({
     try {
       const data = await loadUserRequests({
         userId: user.id,
-        isAdmin,
+        isAdmin: false,
         limit: 20,
         includeProfileDetails: true,
       });
-      setRequests(data);
+      setRequests(dedupeRequestsById(data));
     } finally {
       setLoadingNotifications(false);
     }
-  }, [user, isAdmin]);
+  }, [user]);
 
   const markAsRead = (requestId: string) => {
+    const request = requests.find((item) => item.id === requestId);
+    if (!request) {
+      return;
+    }
+
     const nextReadIds = new Set(readIds);
-    nextReadIds.add(requestId);
+    nextReadIds.add(getReadKey(request.id, request.status));
     setReadIds(nextReadIds);
     saveReadNotifications(nextReadIds);
   };
@@ -132,7 +138,7 @@ export function UserSettingsModal({
     const channel = subscribeToUserRequests({
       channelName: 'user_requests_modal_changes',
       userId: user.id,
-      isAdmin,
+      isAdmin: false,
       onChange: () => {
         void loadRequestsRef.current();
       },
@@ -141,7 +147,7 @@ export function UserSettingsModal({
     return () => {
       unsubscribeFromUserRequests(channel);
     };
-  }, [user?.id, isAdmin]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -204,7 +210,7 @@ export function UserSettingsModal({
   };
 
   const handleSendRequest = async () => {
-    if (!changeRequest.trim()) return;
+    if (isSendingRequest || !changeRequest.trim()) return;
 
     setIsSendingRequest(true);
     try {
@@ -219,7 +225,7 @@ export function UserSettingsModal({
       }
 
       if (data) {
-        setRequests((currentRequests) => [data, ...currentRequests]);
+        setRequests((currentRequests) => dedupeRequestsById([data, ...currentRequests]));
       }
 
       showToast('Solicitacao enviada!', 'success');

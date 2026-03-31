@@ -28,6 +28,7 @@ describe('authService.mappers', () => {
       email: 'maria@example.com',
       role: 'gestor',
       microregiaoId: 'all',
+      microregiaoIds: [],
       ativo: true,
       avatarId: 'zg10',
       lgpdConsentimento: false,

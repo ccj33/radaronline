@@ -1,3 +1,4 @@
+import { MICROREGIOES } from '../../data/microregioes';
 import type { ActionTag, RaciMember } from '../../types';
 import { getPlatformClient } from '../platformClient';
 import type {
@@ -160,7 +161,7 @@ export async function fetchMicroregiaoName(microregiaoId: string): Promise<strin
     throw new Error(error.message || 'Falha ao carregar microrregiao');
   }
 
-  return data?.nome || null;
+  return data?.nome || MICROREGIOES.find((m) => m.id === microregiaoId)?.nome || null;
 }
 
 export async function syncActionRaci(actionDbId: string, raciMembers: RaciMember[]): Promise<void> {

@@ -21,6 +21,17 @@ import { RequestsManagementPagination } from "./requestsManagement/RequestsManag
 import { RequestsManagementTable } from "./requestsManagement/RequestsManagementTable";
 import type { StatusFilter, TypeFilter } from "./requestsManagement/requestsManagement.types";
 
+function dedupeRequestsById(items: UserRequest[]): UserRequest[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export function RequestsManagement() {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -61,7 +72,7 @@ export function RequestsManagement() {
         return;
       }
 
-      setRequests(data);
+      setRequests(dedupeRequestsById(data));
       setTotalCount(count);
     } catch {
       showToast("Erro inesperado ao carregar solicitações", "error");
@@ -197,7 +208,7 @@ export function RequestsManagement() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 overflow-hidden">
+    <div className="flex flex-col h-full min-h-[60vh] bg-slate-50 dark:bg-slate-900 overflow-visible md:overflow-hidden">
       <RequestsManagementHeader pendingCount={pendingCount} resolvedCount={resolvedCount} totalCount={totalCount} />
 
       <RequestsManagementFilters

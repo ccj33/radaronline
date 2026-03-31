@@ -146,11 +146,51 @@ export function LandingDeliveries() {
                     className="flex items-center justify-center gap-2 mt-8 text-sm font-bold uppercase tracking-widest opacity-50"
                 >
                     <MousePointerClick size={16} />
-                    <span>Selecione abaixo para ver detalhes</span>
+                    <span className="hidden md:inline">Selecione abaixo para ver detalhes</span>
+                    <span className="md:hidden">Toque nas opções para explorar</span>
                 </motion.div>
 
                 <div className="mt-8 grid md:grid-cols-2 gap-6 md:gap-8 items-start">
-                    <div className="grid gap-4">
+                    <div>
+                        <div className="md:hidden mb-6">
+                            <div className="grid grid-cols-2 gap-3">
+                                {DELIVERY_CARD_ITEMS.map((item) => {
+                                    const Icon = item.icon;
+                                    const active = activeId === item.id;
+
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            type="button"
+                                            onClick={() => setActiveId(item.id)}
+                                            aria-pressed={active}
+                                            className="relative flex flex-col items-center justify-center text-center p-4 rounded-[1.5rem] border-2 transition-all duration-300"
+                                            style={{
+                                                background: active ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.4)",
+                                                borderColor: active ? "#000" : "rgba(0,0,0,0.08)",
+                                                boxShadow: active ? "4px 4px 0px rgba(0,0,0,1)" : "none",
+                                                opacity: active ? 1 : 0.65,
+                                            }}
+                                        >
+                                            <div
+                                                className="w-12 h-12 rounded-[1rem] border flex items-center justify-center mb-3 transition-colors"
+                                                style={{
+                                                    background: active ? GRADIENT : "rgba(0,0,0,0.05)",
+                                                    borderColor: active ? "rgba(0,0,0,1)" : "rgba(0,0,0,0.1)",
+                                                }}
+                                            >
+                                                <Icon size={22} className={active ? "text-black" : "text-gray-500"} />
+                                            </div>
+                                            <span className={`font-black text-[13px] leading-tight ${active ? "text-slate-900" : "text-slate-600"}`}>
+                                                {item.title}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="hidden md:grid gap-4">
                         {DELIVERY_CARD_ITEMS.map((item, index) => (
                             <DeliveryCard
                                 key={item.id}
@@ -160,9 +200,10 @@ export function LandingDeliveries() {
                                 {...item}
                             />
                         ))}
+                        </div>
                     </div>
 
-                    <div className="sticky top-10">
+                    <div className="md:sticky md:top-10">
                         <motion.div
                             key={activeId}
                             initial={{ opacity: 0, x: 20 }}

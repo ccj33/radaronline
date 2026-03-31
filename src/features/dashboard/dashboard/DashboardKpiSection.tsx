@@ -1,94 +1,115 @@
-﻿import { Activity as ActivityIcon, AlertTriangle, Clock, Target } from "lucide-react";
+import { Activity as ActivityIcon, AlertTriangle, Clock, Target } from "lucide-react";
 
-import { MobileKpiCard } from "../../../components/mobile";
 import type { DashboardMetrics } from "./dashboard.types";
 import { DashboardKpiCard } from "./DashboardKpiCard";
+
+interface DashboardSetupMetrics {
+    activeUsers: number;
+    objectiveCount: number;
+    pendingMembersCount: number;
+    totalUsers: number;
+}
 
 interface DashboardKpiSectionProps {
     isMobile: boolean;
     metrics: DashboardMetrics;
     onCardClick: (status?: string) => void;
     onNavigateToList: () => void;
+    onNavigateToTeam: () => void;
+    setup?: DashboardSetupMetrics | null;
 }
 
-export function DashboardKpiSection({ isMobile, metrics, onCardClick, onNavigateToList }: DashboardKpiSectionProps) {
-    if (isMobile) {
-        return (
-            <div className="grid grid-cols-2 gap-3">
-                <MobileKpiCard
-                    color="slate"
-                    icon={<Target size={20} />}
-                    onClick={onNavigateToList}
-                    subtitle="Ações"
-                    title="Total"
-                    value={metrics.total}
-                />
-                <MobileKpiCard
-                    color="teal"
-                    icon={<ActivityIcon size={20} />}
-                    onClick={() => onCardClick("Concluído")}
-                    subtitle={`${metrics.concluidos} ações`}
-                    title="Concluído"
-                    trend="up"
-                    value={`${metrics.percentConcluido}%`}
-                />
-                <MobileKpiCard
-                    color="blue"
-                    icon={<Clock size={20} />}
-                    onClick={() => onCardClick("Em Andamento")}
-                    subtitle="Ativas"
-                    title="Em Execução"
-                    value={metrics.emAndamento}
-                />
-                <MobileKpiCard
-                    color={metrics.atrasados > 0 ? "rose" : "slate"}
-                    icon={<AlertTriangle size={20} />}
-                    onClick={() => onCardClick("Atrasado")}
-                    subtitle={metrics.atrasados > 0 ? "Atrasadas" : "OK!"}
-                    title="Atenção"
-                    trend={metrics.atrasados > 0 ? "down" : "neutral"}
-                    value={metrics.atrasados}
-                />
-            </div>
-        );
-    }
+export function DashboardKpiSection({
+    isMobile,
+    metrics,
+    onCardClick,
+    onNavigateToList,
+    onNavigateToTeam,
+    setup,
+}: DashboardKpiSectionProps) {
+    const isSetupState = metrics.total === 0 && Boolean(setup);
+    const cards = isSetupState && setup ? [
+        {
+            eyebrow: "Base",
+            icon: <Target size={24} className="text-current" />,
+            onClick: onNavigateToList,
+            tone: "slate" as const,
+            title: "Objetivos ativos",
+            value: setup.objectiveCount,
+        },
+        {
+            eyebrow: "Equipe",
+            icon: <ActivityIcon size={24} className="text-current" />,
+            onClick: onNavigateToTeam,
+            tone: "emerald" as const,
+            title: "Equipe ativa",
+            value: `${setup.activeUsers}/${setup.totalUsers}`,
+        },
+        {
+            eyebrow: "Cadastro",
+            icon: <Clock size={24} className="text-current" />,
+            onClick: onNavigateToTeam,
+            tone: "blue" as const,
+            title: "Pendencias",
+            value: setup.pendingMembersCount,
+        },
+        {
+            eyebrow: "Primeiro passo",
+            icon: <AlertTriangle size={24} className="text-current" />,
+            onClick: onNavigateToList,
+            tone: "violet" as const,
+            title: "Proximo movimento",
+            value: "Planejar",
+        },
+    ] : [
+        {
+            eyebrow: "Total",
+            icon: <Target size={24} className="text-current" />,
+            onClick: onNavigateToList,
+            tone: "slate" as const,
+            title: "Total de acoes",
+            value: metrics.total,
+        },
+        {
+            eyebrow: "Ritmo",
+            icon: <Clock size={24} className="text-current" />,
+            onClick: () => onCardClick("Em Andamento"),
+            tone: "blue" as const,
+            title: "Em execucao",
+            value: metrics.emAndamento,
+        },
+        {
+            eyebrow: "Entrega",
+            icon: <ActivityIcon size={24} className="text-current" />,
+            onClick: () => onCardClick("Conclu\u00eddo"),
+            tone: "emerald" as const,
+            title: "Concluidas",
+            value: metrics.concluidos,
+        },
+        {
+            eyebrow: "Risco",
+            icon: <AlertTriangle size={24} className="text-current" />,
+            onClick: () => onCardClick("Atrasado"),
+            tone: metrics.atrasados > 0 ? "amber" as const : "slate" as const,
+            title: "Atencao necessaria",
+            value: metrics.atrasados,
+        },
+    ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <DashboardKpiCard
-                gradient="from-slate-700 to-slate-800"
-                icon={<Target size={24} className="text-white" />}
-                onClick={onNavigateToList}
-                subtext="Nos objetivos"
-                title="Total de Ações"
-                value={metrics.total}
-            />
-            <DashboardKpiCard
-                gradient="from-teal-500 to-emerald-500"
-                icon={<ActivityIcon size={24} className="text-white" />}
-                onClick={() => onCardClick("Concluído")}
-                subtext={`${metrics.concluidos} concluídas`}
-                title="Conclusão Geral"
-                trend="up"
-                value={`${metrics.percentConcluido}%`}
-            />
-            <DashboardKpiCard
-                gradient="from-blue-500 to-indigo-500"
-                icon={<Clock size={24} className="text-white" />}
-                onClick={() => onCardClick("Em Andamento")}
-                subtext="Ações ativas agora"
-                title="Em Execução"
-                value={metrics.emAndamento}
-            />
-            <DashboardKpiCard
-                gradient={metrics.atrasados > 0 ? "from-rose-500 to-red-600" : "from-slate-400 to-slate-500"}
-                icon={<AlertTriangle size={24} className="text-white" />}
-                onClick={() => onCardClick("Atrasado")}
-                subtext={metrics.atrasados > 0 ? "Ações atrasadas" : "Tudo dentro do prazo!"}
-                title="Atenção Necessária"
-                trend={metrics.atrasados > 0 ? "down" : "neutral"}
-                value={metrics.atrasados}
-            />
+        <div className={`grid gap-3 ${isMobile ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"}`}>
+            {cards.map((card) => (
+                <DashboardKpiCard
+                    key={card.title}
+                    compact={isMobile}
+                    eyebrow={card.eyebrow}
+                    icon={card.icon}
+                    onClick={card.onClick}
+                    title={card.title}
+                    tone={card.tone}
+                    value={card.value}
+                />
+            ))}
         </div>
     );
 }

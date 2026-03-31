@@ -22,6 +22,8 @@ function mapCommentsError(reply: FastifyReply, error: unknown) {
   switch (message) {
     case 'FORBIDDEN':
       return problem(reply, 403, 'Forbidden', 'User cannot manage this comment.');
+    case 'FORBIDDEN_SCOPE':
+      return problem(reply, 403, 'Forbidden', 'User cannot access comments outside the allowed microregion.');
     case 'NOT_FOUND':
     case 'ACTION_NOT_FOUND':
       return problem(reply, 404, 'Not found', 'Comment or action was not found.');

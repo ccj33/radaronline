@@ -1,28 +1,80 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseAdminClient } from '../../shared/persistence/supabase-admin.js';
-import type { CreateRequestInput, RequestRecord, RequestStatus, RequestUserSummary, UpdateRequestInput } from './requests.types.js';
+import type { CreateRequestInput, ManagedStatusFilter, RequestRecord, RequestUserSummary, UpdateRequestInput } from './requests.types.js';
 import type { RequestsRepository } from './requests.repository.js';
 
 type ProfileSummary = RequestUserSummary & { id: string };
+const ADMIN_ACTIONABLE_REQUEST_TYPES = ['request', 'feedback', 'support', 'system'];
+const ADMIN_PERSONAL_NOTIFICATION_TYPES = ['announcement', 'mention', 'request', 'feedback', 'support', 'system'];
+
+function isPrivilegedRequester(role?: string): boolean {
+  return role === 'admin' || role === 'superadmin';
+}
+
+function filterManagedModerationRequests(requests: RequestRecord[]): RequestRecord[] {
+  return requests.filter((request) => !isPrivilegedRequester(request.user?.role));
+}
+
+function filterAdminNotificationRequests(userId: string, requests: RequestRecord[]): RequestRecord[] {
+  return requests.filter((request) => {
+    const isPersonal =
+      request.user_id === userId &&
+      ADMIN_PERSONAL_NOTIFICATION_TYPES.includes(request.request_type);
+
+    const isActionableQueueItem =
+      request.status === 'pending' &&
+      ADMIN_ACTIONABLE_REQUEST_TYPES.includes(request.request_type) &&
+      !isPrivilegedRequester(request.user?.role);
+
+    return isPersonal || isActionableQueueItem;
+  });
+}
 
 function applyStatusAndTypeFilters<T>(
   query: T,
-  statusFilter?: RequestStatus | 'all',
+  statusFilter?: ManagedStatusFilter,
   typeFilter?: string | 'all'
 ): T {
-  let nextQuery = query as unknown as { eq: (column: string, value: string) => unknown };
-  if (statusFilter && statusFilter !== 'all') nextQuery = nextQuery.eq('status', statusFilter) as typeof nextQuery;
+  let nextQuery = query as unknown as {
+    eq: (column: string, value: string) => unknown;
+    in: (column: string, values: string[]) => unknown;
+    not: (column: string, operator: string, value: string) => unknown;
+  };
+
+  if (statusFilter === 'answered') {
+    nextQuery = nextQuery.in('status', ['resolved', 'rejected']) as typeof nextQuery;
+    nextQuery = nextQuery.not('resolved_by', 'is', 'null') as typeof nextQuery;
+  } else if (statusFilter && statusFilter !== 'all') {
+    nextQuery = nextQuery.eq('status', statusFilter) as typeof nextQuery;
+  }
+
   if (typeFilter && typeFilter !== 'all') nextQuery = nextQuery.eq('request_type', typeFilter) as typeof nextQuery;
   return nextQuery as unknown as T;
 }
 
-async function fetchProfilesMap(client: SupabaseClient, userIds: string[]): Promise<Map<string, ProfileSummary>> {
-  if (userIds.length === 0) return new Map();
+function getRequestProfileIds(requests: RequestRecord[]): string[] {
+  const ids = new Set<string>();
+
+  requests.forEach((request) => {
+    if (request.user_id) {
+      ids.add(request.user_id);
+    }
+
+    if (request.resolved_by) {
+      ids.add(request.resolved_by);
+    }
+  });
+
+  return [...ids];
+}
+
+async function fetchProfilesMap(client: SupabaseClient, profileIds: string[]): Promise<Map<string, ProfileSummary>> {
+  if (profileIds.length === 0) return new Map();
   const { data, error } = await client
     .from('profiles')
-    .select('id, nome, email, role, municipio, microregiao_id')
-    .in('id', userIds);
+    .select('id, nome, email, role, cargo, municipio, microregiao_id')
+    .in('id', profileIds);
   if (error || !data) return new Map();
   const rows = data as ProfileSummary[];
   return new Map(rows.map((row) => [row.id, row]));
@@ -30,17 +82,26 @@ async function fetchProfilesMap(client: SupabaseClient, userIds: string[]): Prom
 
 function mergeRequestsWithProfiles(requests: RequestRecord[], profiles: Map<string, ProfileSummary>): RequestRecord[] {
   return requests.map((request) => {
-    const profile = profiles.get(request.user_id);
-    if (!profile) return request;
+    const requesterProfile = profiles.get(request.user_id);
+    const resolverProfile = request.resolved_by ? profiles.get(request.resolved_by) : undefined;
+
+    if (!requesterProfile) {
+      return {
+        ...request,
+        resolved_by_name: resolverProfile?.nome ?? null,
+      };
+    }
+
     return {
       ...request,
+      resolved_by_name: resolverProfile?.nome ?? null,
       user: {
-        nome: profile.nome,
-        email: profile.email,
-        role: profile.role,
-        cargo: profile.cargo,
-        municipio: profile.municipio,
-        microregiao_id: profile.microregiao_id,
+        nome: requesterProfile.nome,
+        email: requesterProfile.email,
+        role: requesterProfile.role,
+        cargo: requesterProfile.cargo,
+        municipio: requesterProfile.municipio,
+        microregiao_id: requesterProfile.microregiao_id,
       },
     };
   });
@@ -55,52 +116,83 @@ export class SupabaseRequestsRepository implements RequestsRepository {
     const { data, error } = await query;
     if (error) throw new Error(error.message || 'Failed to list user requests');
     const requests = ((data || []) as RequestRecord[]);
-    const profiles = await fetchProfilesMap(this.client, [...new Set(requests.map((item) => item.user_id))]);
+    const profiles = await fetchProfilesMap(this.client, getRequestProfileIds(requests));
     return mergeRequestsWithProfiles(requests, profiles);
   }
 
   async listNotificationRequests(args: { userId: string; isAdmin: boolean; limit: number }): Promise<RequestRecord[]> {
-    let query = this.client.from('user_requests').select('*').order('created_at', { ascending: false }).limit(args.limit);
+    const fetchLimit = args.isAdmin ? Math.max(args.limit * 4, args.limit) : args.limit;
+    let query = this.client.from('user_requests').select('*').order('created_at', { ascending: false }).limit(fetchLimit);
     if (args.isAdmin) {
-      query = query.or(`request_type.in.(request,feedback,support,mention),and(request_type.eq.announcement,user_id.eq.${args.userId})`);
+      const actionableTypes = ADMIN_ACTIONABLE_REQUEST_TYPES.join(',');
+      const personalTypes = ADMIN_PERSONAL_NOTIFICATION_TYPES.join(',');
+      query = query.or(
+        `and(request_type.in.(${actionableTypes}),status.eq.pending),and(user_id.eq.${args.userId},request_type.in.(${personalTypes}))`
+      );
     } else {
       query = query.eq('user_id', args.userId);
     }
     const { data, error } = await query;
     if (error) throw new Error(error.message || 'Failed to list notification requests');
     const requests = ((data || []) as RequestRecord[]);
-    const profiles = await fetchProfilesMap(this.client, [...new Set(requests.map((item) => item.user_id))]);
-    return mergeRequestsWithProfiles(requests, profiles);
+    const profiles = await fetchProfilesMap(this.client, getRequestProfileIds(requests));
+    const merged = mergeRequestsWithProfiles(requests, profiles);
+
+    if (!args.isAdmin) {
+      return merged.slice(0, args.limit);
+    }
+
+    return filterAdminNotificationRequests(args.userId, merged).slice(0, args.limit);
   }
 
-  async countManagedRequests(args: { statusFilter?: RequestStatus | 'all'; typeFilter?: string | 'all' }): Promise<number> {
-    let query = this.client.from('user_requests').select('*', { count: 'exact', head: true });
+  async countManagedRequests(args: { statusFilter?: ManagedStatusFilter; typeFilter?: string | 'all' }): Promise<number> {
+    let query = this.client.from('user_requests').select('*').order('created_at', { ascending: false });
     query = applyStatusAndTypeFilters(query, args.statusFilter, args.typeFilter);
-    const { count, error } = await query;
+    const { data, error } = await query;
     if (error) throw new Error(error.message || 'Failed to count requests');
-    return count || 0;
+
+    const requests = ((data || []) as RequestRecord[]);
+    const profiles = await fetchProfilesMap(this.client, getRequestProfileIds(requests));
+    const scoped = filterManagedModerationRequests(mergeRequestsWithProfiles(requests, profiles));
+    return scoped.length;
   }
 
-  async listManagedRequests(args: { page: number; pageSize: number; statusFilter?: RequestStatus | 'all'; typeFilter?: string | 'all' }): Promise<RequestRecord[]> {
+  async listManagedRequests(args: { page: number; pageSize: number; statusFilter?: ManagedStatusFilter; typeFilter?: string | 'all' }): Promise<RequestRecord[]> {
     let query = this.client
       .from('user_requests')
       .select('*')
-      .order('created_at', { ascending: false })
-      .range((args.page - 1) * args.pageSize, args.page * args.pageSize - 1);
+      .order('created_at', { ascending: false });
     query = applyStatusAndTypeFilters(query, args.statusFilter, args.typeFilter);
     const { data, error } = await query;
     if (error) throw new Error(error.message || 'Failed to list managed requests');
     const requests = ((data || []) as RequestRecord[]);
-    const profiles = await fetchProfilesMap(this.client, [...new Set(requests.map((item) => item.user_id))]);
-    return mergeRequestsWithProfiles(requests, profiles);
+    const profiles = await fetchProfilesMap(this.client, getRequestProfileIds(requests));
+    const scoped = filterManagedModerationRequests(mergeRequestsWithProfiles(requests, profiles));
+    const start = (args.page - 1) * args.pageSize;
+    return scoped.slice(start, start + args.pageSize);
   }
 
   async countPendingRequests(args: { userId: string; isAdmin: boolean }): Promise<number> {
-    let query = this.client.from('user_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-    if (!args.isAdmin) query = query.eq('user_id', args.userId);
-    const { count, error } = await query;
+    if (!args.isAdmin) {
+      let query = this.client.from('user_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      query = query.eq('user_id', args.userId);
+      const { count, error } = await query;
+      if (error) throw new Error(error.message || 'Failed to count pending requests');
+      return count || 0;
+    }
+
+    const { data, error } = await this.client
+      .from('user_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .in('request_type', ADMIN_ACTIONABLE_REQUEST_TYPES);
     if (error) throw new Error(error.message || 'Failed to count pending requests');
-    return count || 0;
+
+    const pendingRequests = ((data || []) as RequestRecord[]);
+    const profiles = await fetchProfilesMap(this.client, getRequestProfileIds(pendingRequests));
+    const merged = mergeRequestsWithProfiles(pendingRequests, profiles);
+
+    return merged.filter((request) => !isPrivilegedRequester(request.user?.role)).length;
   }
 
   async createRequest(input: CreateRequestInput): Promise<RequestRecord> {

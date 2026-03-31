@@ -13,7 +13,7 @@ export function LandingStickyStory() {
     const blur1 = useTransform(scrollYProgress, [0.2, 0.3], ["0px", "10px"]);
 
     const opacity2 = useTransform(scrollYProgress, [0.3, 0.42, 0.62], [0, 1, 0]);
-    const x2 = useTransform(scrollYProgress, [0.3, 0.42, 0.62], [120, 0, -120]);
+    const y2 = useTransform(scrollYProgress, [0.3, 0.42, 0.62], [50, 0, -50]);
 
     const opacity3 = useTransform(scrollYProgress, [0.62, 0.72, 0.88], [0, 1, 0]);
     const y3 = useTransform(scrollYProgress, [0.62, 0.72, 0.88], [50, 0, -50]);
@@ -65,7 +65,7 @@ export function LandingStickyStory() {
                         </p>
                     </motion.div>
 
-                    <motion.div style={{ opacity: opacity2, x: x2 }} className="absolute text-center max-w-6xl">
+                    <motion.div style={{ opacity: opacity2, y: y2 }} className="absolute text-center max-w-6xl">
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 bg-white/5 mb-8">
                             <ShieldCheck className="text-white" size={18} />
                             <span className="text-white/90 font-black uppercase tracking-wider text-xs md:text-sm">

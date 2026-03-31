@@ -1,12 +1,17 @@
+import { parseMicroregiaoIds } from '../../lib/authHelpers';
 import type { ProfileDTO, User } from '../../types/auth.types';
 
 export function mapProfileToUser(profile: ProfileDTO): User {
+  const ids = parseMicroregiaoIds(profile.microregiao_id);
+  const primaryId = ids[0] || 'all';
+
   return {
     id: profile.id,
     nome: profile.nome,
     email: profile.email,
     role: profile.role,
-    microregiaoId: profile.microregiao_id || 'all',
+    microregiaoId: primaryId,
+    microregiaoIds: ids,
     ativo: profile.ativo,
     avatarId: profile.avatar_id || 'zg10',
     lgpdConsentimento: profile.lgpd_consentimento,

@@ -1,6 +1,6 @@
 import type { SessionUser } from '../../shared/auth/auth.types.js';
 import type { RequestsRepository } from './requests.repository.js';
-import type { CreateRequestInput, RequestStatus, UpdateRequestInput } from './requests.types.js';
+import type { CreateRequestInput, ManagedStatusFilter, UpdateRequestInput } from './requests.types.js';
 
 export class RequestsService {
   constructor(private readonly repository: RequestsRepository) {}
@@ -28,7 +28,7 @@ export class RequestsService {
     });
   }
 
-  async listManagedRequests(actor: SessionUser, args: { page: number; pageSize: number; statusFilter?: RequestStatus | 'all'; typeFilter?: string | 'all' }) {
+  async listManagedRequests(actor: SessionUser, args: { page: number; pageSize: number; statusFilter?: ManagedStatusFilter; typeFilter?: string | 'all' }) {
     if (!['superadmin', 'admin'].includes(actor.role)) {
       throw new Error('FORBIDDEN');
     }
@@ -41,11 +41,10 @@ export class RequestsService {
     return { items, totalCount };
   }
 
-  async createRequest(actor: SessionUser, input: Omit<CreateRequestInput, 'userId'> & { userId?: string }) {
-    const targetUserId = input.userId || actor.id;
+  async createRequest(actor: SessionUser, input: Omit<CreateRequestInput, 'userId'>) {
     return this.repository.createRequest({
       ...input,
-      userId: targetUserId,
+      userId: actor.id,
     });
   }
 

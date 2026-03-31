@@ -55,6 +55,7 @@ export function UserSettingsSupportTab({
               <div key={request.id} className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
                 <div className="flex justify-end">
                   <div className="bg-teal-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] shadow-sm">
+                    <div className="text-[10px] uppercase tracking-wide opacity-80 mb-1">{request.user?.nome || 'Voce'}</div>
                     <p className="text-sm">{request.content}</p>
                     <div className="flex items-center justify-end gap-2 mt-1 opacity-70">
                       <span className="text-[10px]">{new Date(request.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -69,7 +70,9 @@ export function UserSettingsSupportTab({
                     <div className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm">
                       <p className="text-sm">{request.admin_notes}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase">Suporte</span>
+                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase">
+                          {request.resolved_by_name || 'Suporte'}
+                        </span>
                       </div>
                     </div>
                   </div>

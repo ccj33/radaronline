@@ -1,4 +1,5 @@
 import type { SessionUser } from '../../shared/auth/auth.types.js';
+import { assertMicroregionAccess } from '../../shared/auth/authorization.js';
 import type { AnnouncementsRepository } from './announcements.repository.js';
 import type { CreateAnnouncementInput, UpdateAnnouncementInput } from './announcements.types.js';
 
@@ -14,8 +15,8 @@ function normalizeTargetMicros(targetMicros: string[] | undefined): string[] {
 export class AnnouncementsService {
   constructor(private readonly repository: AnnouncementsRepository) {}
 
-  async listActive(_actor: SessionUser, microregionId?: string) {
-    return this.repository.listActive(microregionId);
+  async listActive(actor: SessionUser, microregionId?: string) {
+    return this.repository.listActive(assertMicroregionAccess(actor, microregionId));
   }
 
   async listAll(_actor: SessionUser) {

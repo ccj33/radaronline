@@ -1,4 +1,11 @@
-import type { CreateUserRequestInput, LoadManagedRequestsResult, RequestStatus, RequestsRealtimeChannel, UserRequest } from './requests/requestsService.types';
+import type {
+  CreateUserRequestInput,
+  LoadManagedRequestsResult,
+  ManagedStatusFilter,
+  RequestStatus,
+  RequestsRealtimeChannel,
+  UserRequest,
+} from './requests/requestsService.types';
 
 import { apiRequest } from './apiClient';
 
@@ -28,7 +35,7 @@ export async function listNotificationRequestsViaBackendApi(limit = 20): Promise
 export async function listManagedRequestsViaBackendApi(args: {
   page: number;
   pageSize: number;
-  statusFilter?: RequestStatus | 'all';
+  statusFilter?: ManagedStatusFilter;
   typeFilter?: string | 'all';
 }): Promise<LoadManagedRequestsResult> {
   const response = await apiRequest<{ items: UserRequest[]; totalCount: number }>(
@@ -73,15 +80,15 @@ export async function deleteUserRequestViaBackendApi(requestId: string): Promise
 }
 
 export async function createUserRequestViaBackendApi(input: {
-  userId?: string;
   requestType: string;
   content: string;
-  status?: RequestStatus;
-  adminNotes?: string;
 }): Promise<UserRequest> {
   return apiRequest<UserRequest>('/v1/requests', {
     method: 'POST',
-    body: input,
+    body: {
+      requestType: input.requestType,
+      content: input.content,
+    },
   });
 }
 
@@ -100,7 +107,6 @@ export function unsubscribeFromBackendRequestsSubscription(channel: RequestsReal
 
 export function mapRequestBatchToBackendInputs(requests: CreateUserRequestInput[]) {
   return requests.map((request) => ({
-    userId: request.userId,
     requestType: request.requestType,
     content: request.content,
     status: request.status,

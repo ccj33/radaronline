@@ -62,8 +62,10 @@ interface AppOverlaysProps {
   onOnboardingComplete: () => void;
   onOnboardingSkip: () => void;
   onOpenOnboarding: () => void;
+  onMenuOpen: () => void;
   onShowToast: (message: string, type?: ToastType) => void;
   onViewModeChange: (viewMode: AppViewMode) => void;
+  onWorkspaceSelect: (workspace: 'planning' | 'community') => void;
 }
 
 export function AppOverlays({
@@ -99,8 +101,10 @@ export function AppOverlays({
   onOnboardingComplete,
   onOnboardingSkip,
   onOpenOnboarding,
+  onMenuOpen,
   onShowToast,
   onViewModeChange,
+  onWorkspaceSelect,
 }: AppOverlaysProps) {
   return (
     <>
@@ -159,10 +163,10 @@ export function AppOverlays({
         <MobileBottomNav
           currentNav={currentNav}
           currentWorkspace={currentWorkspace}
-          viewMode={viewMode}
           onNavChange={onCurrentNavChange}
           onViewModeChange={onViewModeChange}
-          showTeamOption={user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'gestor'}
+          onWorkspaceSelect={onWorkspaceSelect}
+          onMenuOpen={onMenuOpen}
         />
       )}
 
