@@ -27,11 +27,16 @@ type JoinedRequestRow = UserRequest & {
 function mapJoinedRequestRow(row: JoinedRequestRow): UserRequest {
   const { resolver, user, ...request } = row;
 
-  return {
+  const mappedRequest: UserRequest = {
     ...request,
     resolved_by_name: row.resolved_by_name ?? resolver?.nome ?? null,
-    user: user ?? request.user,
   };
+
+  if (user) {
+    mappedRequest.user = user;
+  }
+
+  return mappedRequest;
 }
 
 function isPrivilegedRequester(role?: string): boolean {
