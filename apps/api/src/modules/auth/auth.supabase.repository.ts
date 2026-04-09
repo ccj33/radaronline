@@ -92,52 +92,56 @@ export class SupabaseAuthProfileRepository implements AuthProfileRepository {
       throw new Error(passwordError.message || 'Failed to update password');
     }
 
-    const { data: existingTeam, error: existingTeamError } = await this.client
-      .from('teams')
-      .select('id')
-      .eq('email', input.userEmail)
-      .eq('microregiao_id', input.microregionId)
-      .maybeSingle();
+    const skipTeamUpsert = input.microregionId === 'all';
 
-    if (existingTeamError) {
-      throw new Error(existingTeamError.message || 'Failed to query first access team');
-    }
-
-    if (existingTeam) {
-      const { error: updateTeamError } = await this.client
+    if (!skipTeamUpsert) {
+      const { data: existingTeam, error: existingTeamError } = await this.client
         .from('teams')
-        .update({
-          municipio: normalizedMunicipio,
-          profile_id: input.userId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', (existingTeam as TeamRow).id);
-
-      if (updateTeamError) {
-        throw new Error(updateTeamError.message || 'Failed to update first access team');
-      }
-    } else {
-      const { data: profileNameData, error: profileNameError } = await this.client
-        .from('profiles')
-        .select('nome')
-        .eq('id', input.userId)
+        .select('id')
+        .eq('email', input.userEmail)
+        .eq('microregiao_id', input.microregionId)
         .maybeSingle();
 
-      if (profileNameError) {
-        throw new Error(profileNameError.message || 'Failed to load profile name');
+      if (existingTeamError) {
+        throw new Error(existingTeamError.message || 'Failed to query first access team');
       }
 
-      const { error: insertTeamError } = await this.client.from('teams').insert({
-        name: (profileNameData as { nome?: string } | null)?.nome || 'Usuario',
-        email: input.userEmail,
-        microregiao_id: input.microregionId,
-        municipio: normalizedMunicipio,
-        cargo: 'Membro',
-        profile_id: input.userId,
-      });
+      if (existingTeam) {
+        const { error: updateTeamError } = await this.client
+          .from('teams')
+          .update({
+            municipio: normalizedMunicipio,
+            profile_id: input.userId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', (existingTeam as TeamRow).id);
 
-      if (insertTeamError) {
-        throw new Error(insertTeamError.message || 'Failed to create first access team');
+        if (updateTeamError) {
+          throw new Error(updateTeamError.message || 'Failed to update first access team');
+        }
+      } else {
+        const { data: profileNameData, error: profileNameError } = await this.client
+          .from('profiles')
+          .select('nome')
+          .eq('id', input.userId)
+          .maybeSingle();
+
+        if (profileNameError) {
+          throw new Error(profileNameError.message || 'Failed to load profile name');
+        }
+
+        const { error: insertTeamError } = await this.client.from('teams').insert({
+          name: (profileNameData as { nome?: string } | null)?.nome || 'Usuario',
+          email: input.userEmail,
+          microregiao_id: input.microregionId,
+          municipio: normalizedMunicipio,
+          cargo: 'Membro',
+          profile_id: input.userId,
+        });
+
+        if (insertTeamError) {
+          throw new Error(insertTeamError.message || 'Failed to create first access team');
+        }
       }
     }
 

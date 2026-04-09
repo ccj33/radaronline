@@ -132,6 +132,10 @@ export async function upsertFirstAccessTeamMembership(args: {
   municipio: string;
   microregiaoId: string;
 }): Promise<void> {
+  if (args.microregiaoId === 'all') {
+    return;
+  }
+
   const { data: existingTeam, error: existingTeamError } = await platformClient()
     .from('teams')
     .select('id')

@@ -10,13 +10,9 @@ interface FirstAccessOnboardingModalProps {
 
 export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalProps> = ({ user, onSave }) => {
     const isMultiMicro = user.microregiaoIds.length > 1;
-    const isPlatformAdmin = user.role === 'admin' || user.role === 'superadmin';
+    const isAdminLike = user.role === 'admin' || user.role === 'superadmin';
 
     const [selectedMicroId, setSelectedMicroId] = useState(user.microregiaoId || '');
-    /** Admin estadual usa micro simbólica `all`; antes o bloco de município ficava oculto e o envio impossível. */
-    const showMunicipalitySection = Boolean(
-        selectedMicroId && (selectedMicroId !== 'all' || isPlatformAdmin)
-    );
     const [municipio, setMunicipio] = useState('');
     const [novaSenha, setNovaSenha] = useState('');
     const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -25,20 +21,26 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const isGlobalScope = !selectedMicroId || selectedMicroId === 'all';
+
     const microregiaoNome = React.useMemo(() => {
         if (!selectedMicroId || selectedMicroId === 'all') return '';
         return getMicroregiaoById(selectedMicroId)?.nome || '';
     }, [selectedMicroId]);
 
-    // Municípios da micro selecionada (recalcula quando muda a micro)
     const municipios = React.useMemo(() => {
         if (!selectedMicroId || selectedMicroId === 'all') return [];
         return getMunicipiosByMicro(selectedMicroId);
     }, [selectedMicroId]);
 
+    const showMunicipioSection = !isGlobalScope || isAdminLike;
+
     const validateForm = (): string | null => {
         if (isMultiMicro && !selectedMicroId) {
             return 'Por favor, selecione sua microrregião de vínculo.';
+        }
+        if (!isAdminLike && isGlobalScope && user.microregiaoIds.length === 0) {
+            return 'Sua conta não possui microrregião vinculada. Contate o administrador.';
         }
         if (!municipio) {
             return 'Por favor, selecione um município.';
@@ -130,25 +132,22 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
                                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                 </div>
                             ) : (
-                                /* Usuário/gestor com micro única: campo readonly */
-                                <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed">
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed">
                                     <Building size={18} />
                                     <span>
-                                        {microregiaoNome ||
-                                            (isPlatformAdmin && selectedMicroId === 'all'
-                                                ? 'Acesso estadual (todas as microrregiões)'
-                                                : 'Microrregião não identificada')}
+                                        {isGlobalScope
+                                            ? (isAdminLike ? 'Todas as Microrregiões (Escopo Global)' : 'Microrregião não identificada')
+                                            : (microregiaoNome || 'Microrregião não identificada')}
                                     </span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Município — micro concreta ou admin estadual (`all`) com opção Sede/Remoto */}
-                        {showMunicipalitySection && (
+                        {showMunicipioSection && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 <MapPin size={16} className="inline mr-1" />
-                                Selecione seu Município *
+                                {isAdminLike && isGlobalScope ? 'Município / Localização *' : 'Selecione seu Município *'}
                             </label>
                             <select
                                 value={municipio}
@@ -162,7 +161,7 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
                                         {mun.nome}
                                     </option>
                                 ))}
-                                {(user.role === 'admin' || user.role === 'superadmin') && (
+                                {isAdminLike && (
                                     <option value="Sede/Remoto">Sede Administrativa / Remoto</option>
                                 )}
                             </select>
