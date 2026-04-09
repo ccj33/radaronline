@@ -10,8 +10,13 @@ interface FirstAccessOnboardingModalProps {
 
 export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalProps> = ({ user, onSave }) => {
     const isMultiMicro = user.microregiaoIds.length > 1;
+    const isPlatformAdmin = user.role === 'admin' || user.role === 'superadmin';
 
     const [selectedMicroId, setSelectedMicroId] = useState(user.microregiaoId || '');
+    /** Admin estadual usa micro simbólica `all`; antes o bloco de município ficava oculto e o envio impossível. */
+    const showMunicipalitySection = Boolean(
+        selectedMicroId && (selectedMicroId !== 'all' || isPlatformAdmin)
+    );
     const [municipio, setMunicipio] = useState('');
     const [novaSenha, setNovaSenha] = useState('');
     const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -128,13 +133,18 @@ export const MunicipalityOnboardingModal: React.FC<FirstAccessOnboardingModalPro
                                 /* Usuário/gestor com micro única: campo readonly */
                                 <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed">
                                     <Building size={18} />
-                                    <span>{microregiaoNome || 'Microrregião não identificada'}</span>
+                                    <span>
+                                        {microregiaoNome ||
+                                            (isPlatformAdmin && selectedMicroId === 'all'
+                                                ? 'Acesso estadual (todas as microrregiões)'
+                                                : 'Microrregião não identificada')}
+                                    </span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Município — só aparece se uma micro estiver selecionada */}
-                        {selectedMicroId && selectedMicroId !== 'all' && (
+                        {/* Município — micro concreta ou admin estadual (`all`) com opção Sede/Remoto */}
+                        {showMunicipalitySection && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 <MapPin size={16} className="inline mr-1" />
