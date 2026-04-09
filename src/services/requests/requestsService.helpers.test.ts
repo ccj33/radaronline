@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCreateRequestBatchPayload,
   buildCreateRequestPayload,
+  buildPendingMemberRequestContent,
   buildUpdateRequestPayload,
+  dedupeManagedRequestsByContentKey,
   dedupeRequestsById,
   getMissingRequestProfileIds,
   getRequestRequesterLabel,
@@ -12,6 +14,7 @@ import {
   mergeRequestsWithProfiles,
   shouldCreateOwnRequestViaBackend,
 } from './requestsService.helpers';
+import type { UserRequest } from './requestsService.types';
 
 describe('requestsService.helpers', () => {
   it('deduplicates request profile ids', () => {
@@ -323,5 +326,37 @@ describe('requestsService.helpers', () => {
         targetUserId: 'user-1',
       })
     ).toBe(false);
+  });
+
+  it('colapsa na Central só alertas de membro pendente repetidos, não dois tickets support iguais', () => {
+    const content = buildPendingMemberRequestContent('ff', 'ffff@gmail.com', 'MR016');
+    const pendingMember = {
+      id: 'p1',
+      user_id: 'admin-a',
+      request_type: 'request',
+      content,
+      status: 'pending' as const,
+      admin_notes: null,
+      created_at: '2026-04-09T12:00:00Z',
+    };
+    const supportA = {
+      id: 's1',
+      user_id: 'u1',
+      request_type: 'support',
+      content: 'texto identico',
+      status: 'pending' as const,
+      admin_notes: null,
+      created_at: '2026-04-09T11:00:00Z',
+    };
+    const supportB = { ...supportA, id: 's2', user_id: 'u2' };
+
+    const out = dedupeManagedRequestsByContentKey([
+      pendingMember,
+      { ...pendingMember, id: 'p2', user_id: 'admin-b' },
+      supportA,
+      supportB,
+    ] as UserRequest[]);
+
+    expect(out).toHaveLength(3);
   });
 });

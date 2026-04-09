@@ -1,8 +1,9 @@
-﻿import { ChevronDown, Layers, Zap } from "lucide-react";
+import { ChevronDown, Layers, Zap } from "lucide-react";
 
 import type { Action } from "../../../types";
 import { useResponsive } from "../../../hooks/useMediaQuery";
 import { getActivityDisplayId } from "../../../lib/text";
+import { getDerivedActionStatus } from "../../../lib/actionPortfolio";
 import {
   ActionCard,
   buildListRows,
@@ -192,7 +193,7 @@ export function OptimizedKanbanView({
 
       <div className={isMobile ? "flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1" : "grid grid-cols-4 gap-4"}>
         {KANBAN_COLUMNS.map((column) => {
-          const columnActions = filteredActions.filter((action) => action.status === column.key);
+          const columnActions = filteredActions.filter((action) => getDerivedActionStatus(action) === column.key);
           return (
             <div key={column.key} className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl transition-shadow ${isMobile ? "min-w-[82vw] max-w-[82vw] snap-start" : ""}`}>
               <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 ${STATUS_CONFIG[column.key].header}`}>

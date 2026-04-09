@@ -6,10 +6,13 @@ import { getMicroregiaoById } from "../../data/microregioes";
 import { useResponsive } from "../../hooks/useMediaQuery";
 import { filterActionsByObjective, getDerivedActionStatus } from "../../lib/actionPortfolio";
 import { buildMicroDetailInsights } from "../../lib/microInsights";
+import { ActionDetailModal } from "../actions/ActionDetailModal";
 import { DashboardChartsSection } from "./dashboard/DashboardChartsSection";
 import { DashboardExecutiveOverview } from "./dashboard/DashboardExecutiveOverview";
 import { DashboardHeader } from "./dashboard/DashboardHeader";
 import { DashboardKpiSection } from "./dashboard/DashboardKpiSection";
+import { DashboardHealthRadar } from "./dashboard/DashboardHealthRadar";
+import { DashboardTeamCapacity } from "./dashboard/DashboardTeamCapacity";
 import { DashboardPendingMembersAlert } from "./dashboard/DashboardPendingMembersAlert";
 import { DashboardSummaryPanels } from "./dashboard/DashboardSummaryPanels";
 import type { DashboardProps } from "./dashboard/dashboard.types";
@@ -27,16 +30,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const { user } = useAuth();
     const { isMobile } = useResponsive();
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-    const resolvedMicroId = currentMicroId && currentMicroId !== "all"
-        ? currentMicroId
-        : user?.microregiaoId && user.microregiaoId !== "all"
-            ? user.microregiaoId
-            : actions[0]?.microregiaoId || team[0]?.microregiaoId || null;
+    const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+    const resolvedMicroId = currentMicroId || "all";
+
+    const selectedAction = useMemo(() => {
+        if (!selectedActionId) return null;
+        return actions.find((a) => a.uid === selectedActionId || a.id === selectedActionId) || null;
+    }, [actions, selectedActionId]);
     const micro = useMemo(
-        () => (resolvedMicroId ? getMicroregiaoById(resolvedMicroId) || null : null),
+        () => (resolvedMicroId && resolvedMicroId !== "all" ? getMicroregiaoById(resolvedMicroId) || null : null),
         [resolvedMicroId],
     );
-    const resolvedMicroName = currentMicroLabel || micro?.nome || "Microrregiao";
+    const resolvedMicroName = currentMicroLabel || micro?.nome || (resolvedMicroId === "all" ? "Estado de Minas Gerais" : "Microrregiao");
     const insightUsers = useMemo(
         () => team.map((member) => ({
             ativo: member.isRegistered !== false,
@@ -48,7 +53,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         () => (resolvedMicroId ? buildMicroDetailInsights(resolvedMicroId, actions, insightUsers) : null),
         [actions, insightUsers, resolvedMicroId],
     );
-    const showEmptyState = (executiveInsights?.totalActions || 0) === 0;
 
     const { metrics, pendingMembers, showPendingMembers } = useDashboardMetrics({
         actions,
@@ -102,6 +106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 userName={user?.nome}
             />
 
+            {/* 1. NARRATIVE - Slim Banner */}
             <DashboardExecutiveOverview
                 insights={executiveInsights}
                 isMobile={isMobile}
@@ -111,36 +116,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 urs={micro?.urs}
             />
 
+            {/* 2. KPI HERO - Slim and modern */}
             <DashboardKpiSection
+                insights={executiveInsights}
                 isMobile={isMobile}
                 metrics={metrics}
                 onCardClick={handleCardClick}
                 onNavigateToList={() => onNavigate("list", {})}
                 onNavigateToTeam={() => onNavigate("team")}
-                setup={showEmptyState ? {
-                    activeUsers: executiveInsights?.activeUsers || 0,
-                    objectiveCount: objectives.length,
-                    pendingMembersCount: pendingMembers.length,
-                    totalUsers: executiveInsights?.totalUsers || 0,
-                } : null}
             />
 
-            {showEmptyState ? null : (
-                <>
-                    <DashboardChartsSection
-                        isMobile={isMobile}
-                        metrics={metrics}
-                        onNavigateObjective={(objectiveId) => onNavigate("list", { objectiveId })}
-                        onStatusClick={handleCardClick}
-                    />
+            {/* 3. CENTRAL PANEL - Indicadores do plano (barras) e carga da equipe */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <DashboardHealthRadar insights={executiveInsights} isMobile={isMobile} />
+                <DashboardTeamCapacity data={metrics.actionsByMember} isMobile={isMobile} />
+            </div>
 
-                    <DashboardSummaryPanels
-                        actions={actions}
-                        insights={executiveInsights}
-                        isMobile={isMobile}
-                    />
-                </>
-            )}
+            {/* 4. DETAIL - Timeline + Focus actions */}
+            <DashboardSummaryPanels
+                actions={actions}
+                insights={executiveInsights}
+                isMobile={isMobile}
+                onActionClick={setSelectedActionId}
+            />
+
+            {/* 5. CHARTS - Legacy secondary visualizations */}
+            <DashboardChartsSection
+                isMobile={isMobile}
+                metrics={metrics}
+                onNavigateObjective={(objectiveId) => onNavigate("list", { objectiveId })}
+                onStatusClick={handleCardClick}
+            />
 
             <StrategicReportGenerator
                 actions={actions}
@@ -152,6 +158,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 team={team}
                 userName={user?.nome || "Gestor"}
             />
+
+            {selectedActionId && selectedAction && (
+                <ActionDetailModal
+                    action={selectedAction}
+                    isOpen={true}
+                    onClose={() => setSelectedActionId(null)}
+                    onDeleteAction={() => {}}
+                    readOnly={true}
+                    team={team}
+                />
+            )}
         </div>
     );
 };

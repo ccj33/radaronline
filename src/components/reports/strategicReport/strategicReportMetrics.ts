@@ -22,19 +22,22 @@ export function calculateStrategicReportMetrics(
         { color: "#f43f5e", name: "Atrasado", value: summary.late },
     ].filter((datum) => datum.value > 0);
 
-    const progressoPorObjetivo = objectives.map((objective) => {
+    const progressoPorObjetivo = objectives.map((objective, index) => {
         const objectiveActions = filterActionsByObjective(actions, activities, objective.id);
         const completed = objectiveActions.filter((action) => getDerivedActionStatus(action) === "Concluído").length;
         const progress = objectiveActions.length > 0
             ? Math.round(objectiveActions.reduce((sum, action) => sum + action.progress, 0) / objectiveActions.length)
             : 0;
 
+        const displayOrder = index + 1;
+
         return {
             completed,
             count: objectiveActions.length,
+            displayOrder,
             fullName: objective.title,
             id: objective.id,
-            name: `Obj ${objective.id}`,
+            name: `Objetivo ${displayOrder}`,
             progress,
         };
     });

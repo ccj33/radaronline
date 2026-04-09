@@ -9,6 +9,7 @@ import { ActionDetailHeader } from './detail/ActionDetailHeader';
 import { ActionDetailMobileTabs } from './detail/ActionDetailMobileTabs';
 import { ActionDetailMetaBar } from './detail/ActionDetailMetaBar';
 import { ActionDetailMobileRaciSection } from './detail/ActionDetailMobileRaciSection';
+import { getDerivedActionStatus } from '../../lib/actionPortfolio';
 import { actionDetailStatusColors } from './detail/actionDetail.constants';
 import { useActionDetailComments } from './hooks/useActionDetailComments';
 import { useActionDetailDialogs } from './hooks/useActionDetailDialogs';
@@ -185,7 +186,8 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
     const action = draftAction;
     if (!isOpen || !action) return null;
 
-    const currentStatus = actionDetailStatusColors[action.status] || actionDetailStatusColors['N\u00E3o Iniciado'];
+    const displayStatus = getDerivedActionStatus(action);
+    const currentStatus = actionDetailStatusColors[displayStatus] || actionDetailStatusColors['N\u00E3o Iniciado'];
 
     return (
         <div
@@ -240,6 +242,7 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
 
                 <ActionDetailMetaBar
                     action={action}
+                    displayStatus={displayStatus}
                     currentStatus={currentStatus}
                     draftMicroregiaoId={draftAction?.microregiaoId}
                     isMobile={isMobile}

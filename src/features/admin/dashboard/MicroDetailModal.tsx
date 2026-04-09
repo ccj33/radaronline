@@ -160,7 +160,7 @@ export default function MicroDetailModal({ isOpen, microId, onClose, onOpenPanel
         <ul style="padding-left:18px;line-height:1.7;">${alertsHtml}</ul>
         <h3 class="section-title">Proximas entregas</h3>
         <ul style="padding-left:18px;line-height:1.7;">${upcomingHtml}</ul>
-        <h3 class="section-title">Carteira em foco</h3>
+        <h3 class="section-title">Ações em Foco</h3>
         <ul style="padding-left:18px;line-height:1.7;">${focusHtml}</ul>
       </div>
     `;
@@ -265,7 +265,7 @@ export default function MicroDetailModal({ isOpen, microId, onClose, onOpenPanel
           </div>
 
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 shadow-sm"><div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Carteira</div><div className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{insights.totalActions}</div><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{insights.completionRate}% da carteira concluida</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 shadow-sm"><div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Plano de Ação</div><div className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{insights.totalActions}</div><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{insights.completionRate}% do plano concluído</p></div>
             <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 shadow-sm"><div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Progresso medio</div><div className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{insights.averageProgress}%</div><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{insights.statusBreakdown.completed} concluidas e {insights.statusBreakdown.late} atrasadas</p></div>
             <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 shadow-sm"><div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Equipe</div><div className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{insights.activeUsers}/{insights.totalUsers}</div><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">usuarios ativos - {insights.responsibleCoverage}% com responsavel</p></div>
             <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 shadow-sm"><div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Entrega recente</div><div className="mt-3 text-2xl font-black text-slate-900 dark:text-slate-50">{insights.trend.currentPeriodCompleted}</div><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">concluidas nos ultimos 30 dias</p></div>
@@ -315,7 +315,7 @@ export default function MicroDetailModal({ isOpen, microId, onClose, onOpenPanel
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
-              <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-teal-600" /><h4 className="text-base font-bold text-slate-900 dark:text-slate-50">Distribuicao da carteira</h4></div>
+              <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-teal-600" /><h4 className="text-base font-bold text-slate-900 dark:text-slate-50">Distribuição do plano</h4></div>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Como a carga desta micro esta distribuida hoje.</p>
               <div className="mt-4 space-y-4">
                 {statusItems.map((item) => (
@@ -337,7 +337,7 @@ export default function MicroDetailModal({ isOpen, microId, onClose, onOpenPanel
           </div>
 
           <section className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-teal-600" /><h4 className="text-base font-bold text-slate-900 dark:text-slate-50">Carteira em foco</h4></div>
+            <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-teal-600" /><h4 className="text-base font-bold text-slate-900 dark:text-slate-50">Ações em Foco</h4></div>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">As acoes que merecem acompanhamento imediato nesta micro.</p>
             <div className="mt-4 grid gap-3">
               {insights.focusActions.length > 0 ? insights.focusActions.map((action) => {

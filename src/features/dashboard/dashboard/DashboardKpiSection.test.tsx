@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardKpiSection } from "./DashboardKpiSection";
 import type { DashboardMetrics } from "./dashboard.types";
@@ -18,7 +18,9 @@ const baseMetrics: DashboardMetrics = {
 };
 
 describe("DashboardKpiSection", () => {
-    it("renderiza a leitura minimalista com dica de interacao e calculos", () => {
+    afterEach(cleanup);
+
+    it("renderiza os 4 KPIs com valores corretos", () => {
         render(
             <DashboardKpiSection
                 isMobile={false}
@@ -29,44 +31,42 @@ describe("DashboardKpiSection", () => {
             />,
         );
 
-        expect(screen.queryByText("Resumo da carteira")).not.toBeInTheDocument();
-        expect(screen.queryByText(/Clique em um indicador para abrir o recorte correspondente/i)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Calculo/i)).not.toBeInTheDocument();
-        expect(screen.getByText("Total")).toBeInTheDocument();
-        expect(screen.getByText("Total de acoes")).toBeInTheDocument();
-        expect(screen.getByText("Em execucao")).toBeInTheDocument();
-        expect(screen.getByText("Concluidas")).toBeInTheDocument();
-        expect(screen.getByText("Atencao necessaria")).toBeInTheDocument();
-
-        const ritmoTitle = screen.getByText("Em execucao");
-        const entregaTitle = screen.getByText("Concluidas");
-
-        expect(ritmoTitle.compareDocumentPosition(entregaTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText("Total de Acoes")).toBeInTheDocument();
+        expect(screen.getByText("Em Execucao")).toBeInTheDocument();
+        expect(screen.getByText("Cadencia 30d")).toBeInTheDocument();
+        expect(screen.getByText("Atrasadas")).toBeInTheDocument();
+        expect(screen.getByText("43")).toBeInTheDocument();
+        expect(screen.getByText("18")).toBeInTheDocument();
+        expect(screen.getByText("0")).toBeInTheDocument(); // Cadencia sem dados no mock base
+        expect(screen.getByText("4")).toBeInTheDocument();
     });
 
-    it("troca para o estado de setup com explicacoes operacionais mais enxutas", () => {
+    it("mostra trend badges e subtitulos contextuais", () => {
         render(
             <DashboardKpiSection
                 isMobile={false}
-                metrics={{ ...baseMetrics, total: 0 }}
+                metrics={baseMetrics}
                 onCardClick={vi.fn()}
                 onNavigateToList={vi.fn()}
                 onNavigateToTeam={vi.fn()}
-                setup={{
-                    activeUsers: 3,
-                    objectiveCount: 7,
-                    pendingMembersCount: 2,
-                    totalUsers: 5,
-                }}
             />,
         );
 
-        expect(screen.queryByText("Preparacao da carteira")).not.toBeInTheDocument();
-        expect(screen.getByText("Objetivos ativos")).toBeInTheDocument();
-        expect(screen.getByText("Equipe ativa")).toBeInTheDocument();
-        expect(screen.getByText("Pendencias")).toBeInTheDocument();
-        expect(screen.getByText("Proximo movimento")).toBeInTheDocument();
-        expect(screen.queryByText(/usuarios ativos com acesso/i)).not.toBeInTheDocument();
-        expect(screen.queryByText(/use a carteira para cadastrar/i)).not.toBeInTheDocument();
+        expect(screen.getAllByText(/28% concluido/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("destaca visualmente quando ha atrasos", () => {
+        render(
+            <DashboardKpiSection
+                isMobile={false}
+                metrics={{ ...baseMetrics, atrasados: 10 }}
+                onCardClick={vi.fn()}
+                onNavigateToList={vi.fn()}
+                onNavigateToTeam={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByText("10")).toBeInTheDocument();
+        expect(screen.getAllByText(/23% do planejamento/).length).toBeGreaterThanOrEqual(1);
     });
 });

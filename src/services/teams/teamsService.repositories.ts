@@ -1,5 +1,6 @@
 import { MICROREGIOES } from '../../data/microregioes';
 import { getPlatformClient } from '../platformClient';
+import { normalizeEmail } from './teamsService.helpers';
 import type {
   PendingRegistrationRow,
   TeamDTO,
@@ -9,23 +10,34 @@ import type {
 } from './teamsService.types';
 
 const platformClient = getPlatformClient;
+
+/** Supabase usa UUID em `microregioes.id`; o app ainda referencia códigos MR### / numéricos vindos de `microregioes.ts`. */
+const MICROREGIAO_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const PROFILE_FIELDS = 'id, nome, email, municipio, microregiao_id, role';
 const TEAM_FIELDS =
   'id, microregiao_id, name, cargo, email, municipio, profile_id, created_at, updated_at';
 const PENDING_REGISTRATION_FIELDS = 'id, name, email, municipio, microregiao_id, cargo, created_at';
 
 export async function fetchMicroNameById(id: string): Promise<string> {
+  const staticHit = MICROREGIOES.find((m) => m.id === id || m.codigo === id);
+  if (staticHit?.nome) {
+    return staticHit.nome;
+  }
+
+  const column = MICROREGIAO_UUID_RE.test(id) ? 'id' : 'codigo';
   const { data, error } = await platformClient()
     .from('microregioes')
     .select('nome')
-    .eq('id', id)
+    .eq(column, id)
     .single();
 
   if (error) {
     throw new Error(error.message || 'Falha ao carregar nome da microrregiao');
   }
 
-  return data?.nome || MICROREGIOES.find((m) => m.id === id)?.nome || id;
+  return data?.nome || id;
 }
 
 export async function listAdminIds(): Promise<string[]> {
@@ -41,6 +53,47 @@ export async function listAdminIds(): Promise<string[]> {
   return ((data || []) as Array<{ id: string }>).map((admin) => admin.id);
 }
 
+/** Um destinatário para alertas operacionais: evita N linhas iguais em `user_requests`. */
+export async function pickPrimaryAdminNotificationRecipientId(): Promise<string | null> {
+  const ids = await listAdminIds();
+  if (ids.length === 0) {
+    return null;
+  }
+  if (ids.length === 1) {
+    return ids[0];
+  }
+
+  const { data, error } = await platformClient()
+    .from('profiles')
+    .select('id, role')
+    .in('id', ids);
+
+  if (error || !data || data.length === 0) {
+    return ids[0];
+  }
+
+  const rows = data as Array<{ id: string; role: string }>;
+  const superadmin = rows.find((row) => row.role === 'superadmin');
+  return superadmin?.id ?? rows[0].id;
+}
+
+export async function hasPendingDuplicateMemberRequestContent(content: string): Promise<boolean> {
+  const trimmed = content.trim();
+  const { data, error } = await platformClient()
+    .from('user_requests')
+    .select('id')
+    .eq('status', 'pending')
+    .eq('request_type', 'request')
+    .eq('content', trimmed)
+    .limit(1);
+
+  if (error) {
+    return false;
+  }
+
+  return Boolean(data && data.length > 0);
+}
+
 export async function listActiveProfiles(microregiaoId?: string): Promise<TeamProfileRow[]> {
   let query = platformClient()
     .from('profiles')
@@ -54,6 +107,25 @@ export async function listActiveProfiles(microregiaoId?: string): Promise<TeamPr
   const { data, error } = await query;
   if (error) {
     throw error;
+  }
+
+  return (data as TeamProfileRow[] | null) || [];
+}
+
+export async function listActiveProfilesByEmails(emails: string[]): Promise<TeamProfileRow[]> {
+  const normalized = [...new Set(emails.map((e) => normalizeEmail(e)).filter((e) => e.length > 0))];
+  if (normalized.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await platformClient()
+    .from('profiles')
+    .select(PROFILE_FIELDS)
+    .eq('ativo', true)
+    .in('email', normalized);
+
+  if (error) {
+    throw new Error(error.message || 'Falha ao carregar perfis por email');
   }
 
   return (data as TeamProfileRow[] | null) || [];
@@ -192,7 +264,39 @@ export async function listPendingRegistrationRows(): Promise<PendingRegistration
     throw new Error(error.message || 'Falha ao buscar pendentes');
   }
 
-  return (data as PendingRegistrationRow[] | null) || [];
+  const pendingRows = (data as PendingRegistrationRow[] | null) || [];
+  if (pendingRows.length === 0) {
+    return pendingRows;
+  }
+
+  const emails = pendingRows
+    .map((row) => (row.email || '').trim().toLowerCase())
+    .filter((email) => email.length > 0);
+
+  if (emails.length === 0) {
+    return pendingRows;
+  }
+
+  const uniqueEmails = [...new Set(emails)];
+  const { data: profileRows } = await platformClient()
+    .from('profiles')
+    .select('email')
+    .in('email', uniqueEmails);
+
+  if (!profileRows || profileRows.length === 0) {
+    return pendingRows;
+  }
+
+  const registeredEmails = new Set(
+    (profileRows as Array<{ email: string | null }>)
+      .map((row) => (row.email || '').trim().toLowerCase())
+      .filter((email) => email.length > 0)
+  );
+
+  return pendingRows.filter((row) => {
+    const email = (row.email || '').trim().toLowerCase();
+    return !email || !registeredEmails.has(email);
+  });
 }
 
 export async function deletePendingRegistrationRecord(id: string): Promise<void> {

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 export type DashboardKpiTone = "amber" | "blue" | "emerald" | "slate" | "violet";
 
@@ -10,6 +11,8 @@ interface DashboardKpiCardProps {
     title: string;
     tone: DashboardKpiTone;
     value: number | string;
+    trendDirection?: "up" | "down" | "stable";
+    trendLabel?: string;
 }
 
 function toneClasses(tone: DashboardKpiTone) {
@@ -65,6 +68,8 @@ export function DashboardKpiCard({
     title,
     tone,
     value,
+    trendDirection,
+    trendLabel,
 }: DashboardKpiCardProps) {
     const toneStyle = toneClasses(tone);
 
@@ -90,6 +95,14 @@ export function DashboardKpiCard({
                     <h3 className={`${compact ? "mt-3 text-[2rem]" : "mt-4 text-[2.35rem]"} font-black tracking-tight text-slate-900 dark:text-slate-50`}>
                         {value}
                     </h3>
+                    {trendDirection && trendLabel ? (
+                        <div className="mt-2 flex items-center">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${trendDirection === "up" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" : trendDirection === "down" ? "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400" : "bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-400"}`}>
+                                {trendDirection === "up" ? <TrendingUp size={12} className="mr-1" /> : trendDirection === "down" ? <TrendingDown size={12} className="mr-1" /> : <Minus size={12} className="mr-1" />}
+                                {trendLabel}
+                            </span>
+                        </div>
+                    ) : null}
                 </div>
 
                 <div className={`flex items-center justify-center rounded-2xl border ${toneStyle.icon} ${compact ? "h-10 w-10" : "h-11 w-11"}`}>

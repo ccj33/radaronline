@@ -128,7 +128,7 @@ export const SidebarPlanningNavigation = React.memo<SidebarPlanningNavigationPro
 
       <SidebarItem
         icon={BarChart3}
-        label="Indicadores"
+        label="Acompanhamento"
         isActive={currentNav === 'dashboard'}
         onClick={openDashboard}
         collapsed={!isOpen}

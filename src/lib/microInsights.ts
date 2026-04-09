@@ -167,7 +167,7 @@ function calculateHealthScore(input: {
     score,
     tone: "critical",
     label: "Critica",
-    summary: "A carteira pede intervencao imediata para recuperar prazo e cadencia.",
+    summary: "O plano de acao pede intervencao imediata para recuperar prazo e cadencia.",
   };
 }
 
@@ -233,10 +233,14 @@ function buildTrend(actions: Action[], today: Date): MicroTrend {
 }
 
 function buildBenchmark(
-  microId: string,
+  microId: string | "all",
   actions: Action[],
   today: Date,
 ): MicroBenchmark | null {
+  if (microId === "all") {
+    return null;
+  }
+
   const micro = getMicroregiaoById(microId);
   if (!micro) {
     return null;
@@ -322,7 +326,7 @@ function buildAlerts(input: {
     alerts.push({
       id: "no-actions",
       tone: "warning",
-      title: "Carteira ainda nao iniciada",
+      title: "Plano de acao ainda nao iniciado",
       description: "Cadastre as primeiras acoes da micro para liberar acompanhamento, score e alertas operacionais.",
     });
     return alerts;
@@ -417,7 +421,7 @@ function buildRecommendation(input: {
   if (noActionsAlert) {
     return {
       tone: "warning",
-      title: "Montar a primeira carteira",
+      title: "Montar o primeiro plano de acao",
       description: "Escolha os objetivos prioritarios da micro, cadastre as primeiras acoes e defina responsaveis para liberar a leitura executiva completa.",
     };
   }
@@ -545,14 +549,14 @@ function buildTopPerformer(actions: Action[], today: Date): MicroTopPerformer | 
 }
 
 export function buildMicroDetailInsights(
-  microId: string,
+  microId: string | "all",
   actions: Action[],
   users: MicroInsightsUserLike[],
   today: Date = new Date(),
 ): MicroDetailInsights {
   const safeToday = toStartOfDay(today);
-  const microActions = actions.filter((action) => action.microregiaoId === microId);
-  const microUsers = users.filter((user) => user.microregiaoId === microId);
+  const microActions = microId === "all" ? actions : actions.filter((action) => action.microregiaoId === microId);
+  const microUsers = microId === "all" ? users : users.filter((user) => user.microregiaoId === microId);
   const summary = summarizeActionPortfolio(microActions, safeToday);
   const averageProgress = calculateAverageProgress(microActions);
   const activeUsers = microUsers.filter((user) => user.ativo !== false).length;

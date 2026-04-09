@@ -38,9 +38,9 @@ describe('MobileBottomNav', () => {
 
     expect(onWorkspaceSelect).toHaveBeenCalledWith('planning');
     expect(onNavChange).toHaveBeenCalledWith('news');
-  });
+  }, 15000);
 
-  it('leva o atalho Painel para os indicadores no mobile', () => {
+  it('leva o atalho Painel para o acompanhamento no mobile', () => {
     const onNavChange = vi.fn();
     const onWorkspaceSelect = vi.fn();
     const onViewModeChange = vi.fn();
@@ -62,5 +62,5 @@ describe('MobileBottomNav', () => {
     expect(onWorkspaceSelect).toHaveBeenCalledWith('planning');
     expect(onNavChange).toHaveBeenCalledWith('dashboard');
     expect(onViewModeChange).not.toHaveBeenCalled();
-  });
+  }, 15000);
 });

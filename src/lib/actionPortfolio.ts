@@ -151,3 +151,42 @@ export function getUpcomingActions(
     })
     .slice(0, limit);
 }
+
+/**
+ * Ações com status derivado "Atrasado" cujo prazo planejado está entre 1 e `maxDelayDays` dias no passado
+ * (espelha a janela de "Próximos prazos", mas para atraso em vez de vencimentos futuros).
+ */
+export function getDelayedActions(
+  actions: Action[],
+  today: Date = new Date(),
+  maxDelayDays = 7,
+  limit = 5,
+): Action[] {
+  const todayStart = toStartOfDay(today);
+
+  return actions
+    .filter((action) => {
+      if (getDerivedActionStatus(action, todayStart) !== 'Atrasado') {
+        return false;
+      }
+
+      const plannedDate = parseDateLocal(action.plannedEndDate || action.endDate);
+
+      if (!plannedDate) {
+        return false;
+      }
+
+      const overdueDays = Math.ceil(
+        (todayStart.getTime() - plannedDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      return overdueDays >= 1 && overdueDays <= maxDelayDays;
+    })
+    .sort((left, right) => {
+      const leftDate = parseDateLocal(left.plannedEndDate || left.endDate)?.getTime() || 0;
+      const rightDate = parseDateLocal(right.plannedEndDate || right.endDate)?.getTime() || 0;
+
+      return leftDate - rightDate;
+    })
+    .slice(0, limit);
+}

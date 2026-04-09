@@ -51,8 +51,8 @@ export interface TeamInsertInput {
 }
 
 export interface TeamUpdateInput {
-  municipio: string;
-  name: string;
+  municipio?: string;
+  name?: string;
   profile_id?: string | null;
 }
 

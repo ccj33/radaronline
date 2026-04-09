@@ -113,7 +113,8 @@ function mergeProfilesAndTeams(profiles: ProfileRow[], teams: TeamRow[]): Record
     }
 
     const member = mapTeamRow(team);
-    member.isRegistered = !!email && registeredProfileEmails.has(email);
+    member.isRegistered =
+      !!team.profile_id || (!!email && registeredProfileEmails.has(email));
     grouped[team.microregiao_id] ||= [];
     grouped[team.microregiao_id].push(member);
   });
@@ -125,32 +126,61 @@ export class SupabaseTeamsRepository implements TeamsRepository {
   constructor(private readonly client: SupabaseClient = getSupabaseAdminClient()) {}
 
   async listTeams(microregionId?: string): Promise<Record<string, TeamMemberRecord[]>> {
-    let profilesQuery = this.client
-      .from('profiles')
-      .select('id, nome, email, municipio, microregiao_id, role')
-      .eq('ativo', true);
-
     let teamsQuery = this.client
       .from('teams')
       .select('id, microregiao_id, name, cargo, email, municipio, profile_id')
       .order('name', { ascending: true });
 
     if (microregionId && microregionId !== 'all') {
-      profilesQuery = profilesQuery.eq('microregiao_id', microregionId);
       teamsQuery = teamsQuery.eq('microregiao_id', microregionId);
     }
 
-    const [{ data: profiles, error: profilesError }, { data: teams, error: teamsError }] =
-      await Promise.all([profilesQuery, teamsQuery]);
-
-    if (profilesError) {
-      throw new Error(profilesError.message || 'Failed to load active profiles');
-    }
+    const { data: teams, error: teamsError } = await teamsQuery;
     if (teamsError) {
       throw new Error(teamsError.message || 'Failed to load teams');
     }
 
-    return mergeProfilesAndTeams((profiles as ProfileRow[] | null) || [], (teams as TeamRow[] | null) || []);
+    const teamRows = (teams as TeamRow[] | null) || [];
+    const emailSet = new Set<string>();
+    for (const team of teamRows) {
+      const email = normalizeEmail(team.email);
+      if (email) {
+        emailSet.add(email);
+      }
+    }
+
+    let profilesQuery = this.client
+      .from('profiles')
+      .select('id, nome, email, municipio, microregiao_id, role')
+      .eq('ativo', true);
+
+    if (microregionId && microregionId !== 'all') {
+      profilesQuery = profilesQuery.eq('microregiao_id', microregionId);
+    }
+
+    const profileLoads = [profilesQuery];
+    if (emailSet.size > 0) {
+      profileLoads.push(
+        this.client
+          .from('profiles')
+          .select('id, nome, email, municipio, microregiao_id, role')
+          .eq('ativo', true)
+          .in('email', [...emailSet])
+      );
+    }
+
+    const profileResults = await Promise.all(profileLoads);
+    const profileById = new Map<string, ProfileRow>();
+    for (const result of profileResults) {
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to load active profiles');
+      }
+      for (const row of (result.data as ProfileRow[] | null) || []) {
+        profileById.set(row.id, row);
+      }
+    }
+
+    return mergeProfilesAndTeams([...profileById.values()], teamRows);
   }
 
   async getUserTeamStatus(
@@ -377,7 +407,41 @@ export class SupabaseTeamsRepository implements TeamsRepository {
       throw new Error(error.message || 'Failed to load pending registrations');
     }
 
-    return ((data as PendingRow[] | null) || []).map(mapPendingRow);
+    const pendingRows = (data as PendingRow[] | null) || [];
+    if (pendingRows.length === 0) {
+      return [];
+    }
+
+    const emails = pendingRows
+      .map((row) => normalizeEmail(row.email))
+      .filter((email) => email.length > 0);
+
+    if (emails.length === 0) {
+      return pendingRows.map(mapPendingRow);
+    }
+
+    const uniqueEmails = [...new Set(emails)];
+    const { data: profileRows } = await this.client
+      .from('profiles')
+      .select('email')
+      .in('email', uniqueEmails);
+
+    if (!profileRows || profileRows.length === 0) {
+      return pendingRows.map(mapPendingRow);
+    }
+
+    const registeredEmails = new Set(
+      (profileRows as Array<{ email: string | null }>)
+        .map((row) => normalizeEmail(row.email))
+        .filter((email) => email.length > 0)
+    );
+
+    return pendingRows
+      .filter((row) => {
+        const email = normalizeEmail(row.email);
+        return !email || !registeredEmails.has(email);
+      })
+      .map(mapPendingRow);
   }
 
   async deletePendingRegistration(id: string): Promise<void> {

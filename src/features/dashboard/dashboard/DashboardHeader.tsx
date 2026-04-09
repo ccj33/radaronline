@@ -13,7 +13,7 @@ export function DashboardHeader({ macroName, microName, onOpenReport, urs, userN
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 sm:text-[2rem]">
-                    Indicadores
+                    Acompanhamento
                 </h2>
                 <p className="mt-1 text-slate-500 dark:text-slate-400">
                     Ola, <strong>{userName || "Gestor"}</strong>. Aqui esta o que importa agora na sua microrregiao.

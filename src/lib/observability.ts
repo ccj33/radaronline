@@ -33,6 +33,40 @@ let currentUserContext: ObservabilityUserContext | null = null;
 let cleanupHandlers: (() => void) | null = null;
 let inMemoryEvents: ObservabilityEvent[] = [];
 
+function isAbortLikeError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.name === 'AbortError' ||
+    error.message.includes('signal is aborted without reason') ||
+    error.message.includes('The user aborted a request')
+  );
+}
+
+function isExtensionNoise(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : '';
+
+  if (!message) {
+    return false;
+  }
+
+  return (
+    message.includes('Extension context invalidated') ||
+    message.includes('Node cannot be found in the current page')
+  );
+}
+
+function shouldIgnoreObservabilityError(error: unknown): boolean {
+  return isAbortLikeError(error) || isExtensionNoise(error);
+}
+
 function getCurrentPage(): string | undefined {
   if (typeof window === 'undefined') {
     return undefined;
@@ -217,6 +251,10 @@ export function captureLog(
 }
 
 export function captureException(source: string, error: unknown, details?: unknown): void {
+  if (shouldIgnoreObservabilityError(error)) {
+    return;
+  }
+
   recordEvent(
     buildEvent({
       level: 'error',
@@ -238,6 +276,10 @@ export function installObservabilityGlobalHandlers(): () => void {
   }
 
   const handleError = (event: ErrorEvent) => {
+    if (shouldIgnoreObservabilityError(event.error || event.message)) {
+      return;
+    }
+
     captureException('window.error', event.error || new Error(event.message), {
       filename: event.filename,
       lineno: event.lineno,
@@ -246,6 +288,10 @@ export function installObservabilityGlobalHandlers(): () => void {
   };
 
   const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+    if (shouldIgnoreObservabilityError(event.reason)) {
+      return;
+    }
+
     captureException('window.unhandledrejection', event.reason, {
       type: 'unhandledrejection',
     });

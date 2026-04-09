@@ -270,3 +270,8 @@ Depois:
 5. validacao real de `infra/bicep` e workflows de deploy
 6. consolidacao das migrations legadas
 7. preparacao do cutover de identidade
+
+- 2026-04-08: o experimento de Hub/forum externo foi retirado do caminho principal do produto. O Radar voltou a operar `Hub` e `Forums` pela trilha nativa em `Supabase-first`, sem Docker, Discourse ou launcher externo dentro do app.
+- 2026-04-08: o gate automatico que escondia o Hub quando havia configuracao de backend deixou de atuar por padrao. Bloqueio de modulos do Hub agora so deve acontecer por flag explicita.
+- 2026-04-08: o `MinasMicroMap` do painel admin foi endurecido contra corrida de bootstrap do Leaflet; em falha de mapa, `Forca de Trabalho` e os demais indicadores devem continuar acessiveis.
+- 2026-04-08: a rodada de saneamento local reduziu ruido de console em `useAppAccessFlow` e `useAppData`, estabilizou a regressao de teste do `MainViewContentSwitch` e fechou com `npm run lint`, `npm run test:run`, `npm run build` e `npm --prefix apps/api run build` verdes.

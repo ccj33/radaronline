@@ -23,15 +23,7 @@ export function isLegacySupabaseAdminFlowDisabled(): boolean {
 }
 
 export function shouldDisableLegacyHubModules(): boolean {
-  if (isFlagEnabled(import.meta.env.VITE_ALLOW_UNSUPPORTED_HUB_MODULES)) {
-    return false;
-  }
-
-  if (isFlagEnabled(import.meta.env.VITE_DISABLE_UNSUPPORTED_HUB_MODULES)) {
-    return true;
-  }
-
-  return hasBackendApiConfig() || import.meta.env.PROD;
+  return isFlagEnabled(import.meta.env.VITE_DISABLE_UNSUPPORTED_HUB_MODULES);
 }
 
 export function getBackendApiBaseUrl(): string {

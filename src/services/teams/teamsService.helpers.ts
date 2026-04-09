@@ -89,7 +89,9 @@ export function mergeProfilesAndTeams(
     }
 
     const member = mapTeamDTOToTeamMember(teamRecord);
-    member.isRegistered = !!normalizedEmail && registeredProfileEmails.has(normalizedEmail);
+    member.isRegistered =
+      !!teamRecord.profile_id ||
+      (!!normalizedEmail && registeredProfileEmails.has(normalizedEmail));
 
     if (!teamsByMicro[microId]) {
       teamsByMicro[microId] = [];

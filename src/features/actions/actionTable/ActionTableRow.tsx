@@ -7,6 +7,7 @@ import { formatDateBr } from "../../../lib/date";
 import type { Action, RaciRole, TeamMember } from "../../../types";
 import { ActionTableExpandedPanel } from "./ActionTableExpandedPanel";
 import { formatDateShortYear, rolePriority } from "./actionTable.utils";
+import { getDerivedActionStatus } from "../../../lib/actionPortfolio";
 
 interface ActionTableRowProps {
   action: Action;
@@ -128,8 +129,23 @@ export function ActionTableRow({
           {action.raci.length === 0 ? <span className="text-[10px] text-slate-300 italic pl-2">Sem equipe</span> : null}
         </div>
 
-        <div className="col-span-2 md:pl-2">
-          <StatusBadge status={action.status} />
+        <div className="col-span-2 md:pl-2 flex flex-col gap-1.5 min-w-0 justify-center">
+          <StatusBadge status={getDerivedActionStatus(action)} />
+          <Tooltip content={`Progresso: ${action.progress}%`}>
+            <div
+              className="w-full max-w-[150px] rounded-full bg-slate-100 dark:bg-slate-700/80 h-1.5 overflow-hidden"
+              role="progressbar"
+              aria-valuenow={action.progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Progresso ${action.progress}%`}
+            >
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-[width] duration-300"
+                style={{ width: `${Math.min(100, Math.max(0, action.progress))}%` }}
+              />
+            </div>
+          </Tooltip>
         </div>
 
         <div className="col-span-2 flex flex-wrap justify-end gap-1.5 items-center content-center">
@@ -157,14 +173,33 @@ export function ActionTableRow({
       <div onClick={() => onToggle(action.uid)} className="sm:hidden p-4 cursor-pointer">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <Tooltip content={`ID: ${rowId}`}>
                 <span className="inline-block font-mono text-[10px] font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-600 cursor-help min-w-[24px] text-center">
                   {rowId.split(".").pop()}
                 </span>
               </Tooltip>
-              <StatusBadge status={action.status} />
-              {!userCanEdit ? <Lock size={12} className="text-slate-400" /> : null}
+              <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={getDerivedActionStatus(action)} />
+                  {!userCanEdit ? <Lock size={12} className="text-slate-400" /> : null}
+                </div>
+                <Tooltip content={`Progresso: ${action.progress}%`}>
+                  <div
+                    className="w-full max-w-[180px] rounded-full bg-slate-100 dark:bg-slate-700/80 h-1.5 overflow-hidden"
+                    role="progressbar"
+                    aria-valuenow={action.progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Progresso ${action.progress}%`}
+                  >
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400"
+                      style={{ width: `${Math.min(100, Math.max(0, action.progress))}%` }}
+                    />
+                  </div>
+                </Tooltip>
+              </div>
             </div>
             <div className="font-medium text-sm text-slate-700 dark:text-slate-200 line-clamp-2">{action.title}</div>
           </div>

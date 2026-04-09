@@ -62,6 +62,14 @@ vi.mock("./dashboard/DashboardKpiSection", () => ({
     DashboardKpiSection: () => null,
 }));
 
+vi.mock("./dashboard/DashboardHealthRadar", () => ({
+    DashboardHealthRadar: () => null,
+}));
+
+vi.mock("./dashboard/DashboardTeamCapacity", () => ({
+    DashboardTeamCapacity: () => null,
+}));
+
 vi.mock("./dashboard/DashboardChartsSection", () => ({
     DashboardChartsSection: () => null,
 }));
@@ -88,7 +96,7 @@ const sampleAction: Action = {
 };
 
 describe("Dashboard", () => {
-    it("usa a microrregiao atualmente analisada para nome e calculo dos indicadores", () => {
+    it("usa a microrregiao atualmente analisada para nome e calculo do acompanhamento", () => {
         render(
             <Dashboard
                 actions={[sampleAction]}

@@ -142,6 +142,29 @@ export class SupabaseUsersRepository implements UsersRepository {
   }
 
   async delete(userId: string): Promise<boolean> {
+    const { data: profile, error: profileReadError } = await this.client
+      .from('profiles')
+      .select('email')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileReadError) {
+      throw new Error(profileReadError.message || 'Failed to load profile before delete');
+    }
+
+    const { error: teamsByProfileError } = await this.client.from('teams').delete().eq('profile_id', userId);
+    if (teamsByProfileError) {
+      throw new Error(teamsByProfileError.message || 'Failed to delete team rows for user');
+    }
+
+    const email = profile?.email?.trim();
+    if (email) {
+      const { error: teamsByEmailError } = await this.client.from('teams').delete().eq('email', email);
+      if (teamsByEmailError) {
+        throw new Error(teamsByEmailError.message || 'Failed to delete team rows by email');
+      }
+    }
+
     const { error: profileDeleteError } = await this.client.from('profiles').delete().eq('id', userId);
     if (profileDeleteError) {
       throw new Error(profileDeleteError.message || 'Failed to delete profile');

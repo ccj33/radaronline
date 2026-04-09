@@ -201,7 +201,7 @@ export function generateStrategicReportHTML({
                     return `
                         <div class="obj-card">
                             <div class="obj-header">
-                                <div class="obj-title">Objetivo ${objective.id}</div>
+                                <div class="obj-title">Objetivo ${objective.displayOrder}</div>
                                 <div style="font-weight: 700; color: var(--primary);">${objective.progress}%</div>
                             </div>
                             <div style="font-size: 11px; margin-bottom: 8px; color: #475569; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
@@ -224,7 +224,7 @@ export function generateStrategicReportHTML({
 
     const actionsTableHTML = `
         <div class="report-section page-break">
-            <h3 class="section-title">Detalhamento da Carteira de Ações</h3>
+            <h3 class="section-title">Detalhamento do Plano de Ações</h3>
             <table>
                 <thead>
                     <tr>

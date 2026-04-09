@@ -140,6 +140,55 @@ export function getRequestResponderLabel(
     || (request.resolved_by ? `Admin ${shortId(request.resolved_by)}` : 'Administracao');
 }
 
+/** Texto gerado ao adicionar membro sem conta — idempotência e resolução em lote na Central. */
+export const PENDING_MEMBER_USER_REQUEST_PREFIX = 'Membro pendente de cadastro:';
+
+export function buildPendingMemberRequestContent(name: string, email: string, microId: string): string {
+  return `${PENDING_MEMBER_USER_REQUEST_PREFIX} ${name} (${email}) na Micro ${microId}. Necessário criar conta.`;
+}
+
+export function isPendingMemberUserRequestRow(row: {
+  content?: string | null;
+  request_type: string;
+  status: string;
+}): boolean {
+  return (
+    row.status === 'pending' &&
+    row.request_type === 'request' &&
+    typeof row.content === 'string' &&
+    row.content.startsWith(PENDING_MEMBER_USER_REQUEST_PREFIX)
+  );
+}
+
+/**
+ * Colapsa só alertas “membro pendente” repetidos (mesmo texto para N admins).
+ * Demais solicitações usam `id` para nunca misturar dois tickets distintos com texto igual.
+ */
+export function dedupeManagedRequestsByContentKey(requests: UserRequest[]): UserRequest[] {
+  const keyOf = (r: UserRequest) => {
+    if (isPendingMemberUserRequestRow(r)) {
+      return `pm|${r.request_type}|${r.status}|${(r.content || '').trim().toLowerCase()}`;
+    }
+    return `id|${r.id}`;
+  };
+
+  const newestFirst = [...requests].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  const chosen = new Map<string, UserRequest>();
+  for (const r of newestFirst) {
+    const k = keyOf(r);
+    if (!chosen.has(k)) {
+      chosen.set(k, r);
+    }
+  }
+
+  return [...chosen.values()].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
 export function buildUpdateRequestPayload(
   status: RequestStatus,
   adminNotes?: string,

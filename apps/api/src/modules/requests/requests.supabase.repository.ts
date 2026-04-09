@@ -5,15 +5,30 @@ import type { CreateRequestInput, ManagedStatusFilter, RequestRecord, RequestUse
 import type { RequestsRepository } from './requests.repository.js';
 
 type ProfileSummary = RequestUserSummary & { id: string };
-const ADMIN_ACTIONABLE_REQUEST_TYPES = ['request', 'feedback', 'support', 'system'];
-const ADMIN_PERSONAL_NOTIFICATION_TYPES = ['announcement', 'mention', 'request', 'feedback', 'support', 'system'];
+const ADMIN_ACTIONABLE_REQUEST_TYPES = ['request', 'feedback', 'support'];
+const ADMIN_PERSONAL_NOTIFICATION_TYPES = [
+  'announcement',
+  'mention',
+  'request',
+  'feedback',
+  'support',
+  'system',
+];
 
 function isPrivilegedRequester(role?: string): boolean {
   return role === 'admin' || role === 'superadmin';
 }
 
 function filterManagedModerationRequests(requests: RequestRecord[]): RequestRecord[] {
-  return requests.filter((request) => !isPrivilegedRequester(request.user?.role));
+  return requests.filter((request) => {
+    if (!isPrivilegedRequester(request.user?.role)) {
+      return true;
+    }
+    return (
+      request.status === 'pending' &&
+      ADMIN_ACTIONABLE_REQUEST_TYPES.includes(request.request_type)
+    );
+  });
 }
 
 function filterAdminNotificationRequests(userId: string, requests: RequestRecord[]): RequestRecord[] {
@@ -192,7 +207,12 @@ export class SupabaseRequestsRepository implements RequestsRepository {
     const profiles = await fetchProfilesMap(this.client, getRequestProfileIds(pendingRequests));
     const merged = mergeRequestsWithProfiles(pendingRequests, profiles);
 
-    return merged.filter((request) => !isPrivilegedRequester(request.user?.role)).length;
+    return merged.filter((request) => {
+      if (!isPrivilegedRequester(request.user?.role)) {
+        return true;
+      }
+      return ADMIN_ACTIONABLE_REQUEST_TYPES.includes(request.request_type);
+    }).length;
   }
 
   async createRequest(input: CreateRequestInput): Promise<RequestRecord> {

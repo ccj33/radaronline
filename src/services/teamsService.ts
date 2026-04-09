@@ -12,38 +12,54 @@ import {
   removeTeamMemberViaBackendApi,
   saveUserMunicipalityViaBackendApi,
 } from './teamsApi';
-import { mapPendingRegistration, mapTeamDTOToTeamMember, mergeProfilesAndTeams, normalizeEmail } from './teams/teamsService.helpers';
+import { buildPendingMemberRequestContent } from './requests/requestsService.helpers';
+import {
+  mapPendingRegistration,
+  mapTeamDTOToTeamMember,
+  mergeProfilesAndTeams,
+  normalizeEmail,
+} from './teams/teamsService.helpers';
 import {
   deletePendingRegistrationRecord,
   deleteTeamRecord,
   fetchMicroNameById,
   findProfileIdByEmail,
   findTeamStatusByEmail,
+  hasPendingDuplicateMemberRequestContent,
   insertTeamRecord,
   listActiveProfiles,
-  listAdminIds,
+  listActiveProfilesByEmails,
   listPendingRegistrationRows,
   listTeamIdsByEmail,
   listTeamRecords,
+  pickPrimaryAdminNotificationRecipientId,
   updateProfileMunicipalityByEmail,
   updateTeamRecordsByIds,
 } from './teams/teamsService.repositories';
-import type { PendingRegistration } from './teams/teamsService.types';
+import type { PendingRegistration, TeamDTO, TeamProfileRow } from './teams/teamsService.types';
 import { shouldUseBackendTeamsApi } from './apiClient';
 export type { PendingRegistration } from './teams/teamsService.types';
 
 async function notifyAdminsOfPendingUser(name: string, email: string, microId: string) {
-  const adminIds = await listAdminIds();
-  if (adminIds.length === 0) return;
+  const content = buildPendingMemberRequestContent(name, email, microId);
+  const alreadyPending = await hasPendingDuplicateMemberRequestContent(content);
+  if (alreadyPending) {
+    return;
+  }
 
-  const notifications = adminIds.map((adminId) => ({
-    userId: adminId,
-    requestType: 'system',
-    content: `Membro pendente de cadastro: ${name} (${email}) na Micro ${microId}. Necess\u00E1rio criar conta.`,
-    status: 'pending' as const,
-  }));
+  const recipientId = await pickPrimaryAdminNotificationRecipientId();
+  if (!recipientId) {
+    return;
+  }
 
-  await createUserRequestsBatch(notifications);
+  await createUserRequestsBatch([
+    {
+      userId: recipientId,
+      requestType: 'request',
+      content,
+      status: 'pending' as const,
+    },
+  ]);
 }
 
 export async function loadTeams(microregiaoId?: string): Promise<Record<string, TeamMember[]>> {
@@ -52,24 +68,51 @@ export async function loadTeams(microregiaoId?: string): Promise<Record<string, 
       return await loadTeamsViaBackendApi(microregiaoId);
     }
 
-    const [profilesDataResult, teamsData] = await Promise.allSettled([
+    let teamsRows: TeamDTO[] = [];
+    try {
+      teamsRows = await listTeamRecords(microregiaoId);
+    } catch (teamsError) {
+      logError('teamsService', 'Erro ao carregar equipes', teamsError);
+      throw teamsError;
+    }
+
+    const emailsFromTeams = [
+      ...new Set(
+        teamsRows
+          .map((row) => normalizeEmail(row.email))
+          .filter((email) => email.length > 0)
+      ),
+    ];
+
+    const [profilesMicroResult, profilesByEmailResult] = await Promise.allSettled([
       listActiveProfiles(microregiaoId),
-      listTeamRecords(microregiaoId),
+      emailsFromTeams.length > 0
+        ? listActiveProfilesByEmails(emailsFromTeams)
+        : Promise.resolve([]),
     ]);
 
-    const profilesData =
-      profilesDataResult.status === 'fulfilled' ? profilesDataResult.value : [];
-
-    if (profilesDataResult.status === 'rejected') {
-      logError('teamsService', 'Erro ao carregar perfis', profilesDataResult.reason);
+    const profilesMicro =
+      profilesMicroResult.status === 'fulfilled' ? profilesMicroResult.value : [];
+    if (profilesMicroResult.status === 'rejected') {
+      logError('teamsService', 'Erro ao carregar perfis da micro', profilesMicroResult.reason);
     }
 
-    if (teamsData.status === 'rejected') {
-      logError('teamsService', 'Erro ao carregar equipes', teamsData.reason);
-      throw teamsData.reason;
+    const profilesByEmail =
+      profilesByEmailResult.status === 'fulfilled' ? profilesByEmailResult.value : [];
+    if (profilesByEmailResult.status === 'rejected') {
+      logError('teamsService', 'Erro ao carregar perfis por email da equipe', profilesByEmailResult.reason);
     }
 
-    return mergeProfilesAndTeams(profilesData, teamsData.value);
+    const profileById = new Map<string, TeamProfileRow>();
+    for (const row of profilesMicro) {
+      profileById.set(row.id, row);
+    }
+    for (const row of profilesByEmail) {
+      profileById.set(row.id, row);
+    }
+    const profilesData = [...profileById.values()];
+
+    return mergeProfilesAndTeams(profilesData, teamsRows);
   } catch (error) {
     logError('teamsService', 'Erro inesperado ao carregar equipes', error);
     throw error;
@@ -231,6 +274,23 @@ export async function loadPendingRegistrations(): Promise<PendingRegistration[]>
   } catch (error) {
     logError('teamsService', 'Erro inesperado ao buscar pendentes', error);
     return [];
+  }
+}
+
+export async function linkProfileToTeamRecords(email: string): Promise<void> {
+  try {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) return;
+
+    const profileId = await findProfileIdByEmail(normalizedEmail);
+    if (!profileId) return;
+
+    const teamIds = await listTeamIdsByEmail(normalizedEmail);
+    if (teamIds.length === 0) return;
+
+    await updateTeamRecordsByIds(teamIds, { profile_id: profileId });
+  } catch (error) {
+    logWarn('teamsService', 'Erro ao vincular profile_id em teams', error);
   }
 }
 

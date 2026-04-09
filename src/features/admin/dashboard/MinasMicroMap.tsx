@@ -68,6 +68,7 @@ const MinasMicroMap: React.FC<MinasMicroMapProps> = ({
         handleBackgroundClick,
         hoveredInfo,
         loading,
+        mapError,
         mapContainerRef,
         mousePos,
     } = useMinasMicroMapLeaflet({
@@ -126,6 +127,15 @@ const MinasMicroMap: React.FC<MinasMicroMapProps> = ({
             ) : null}
 
             <MinasMicroMapLoadingOverlay loading={loading} themeColors={themeColors} />
+
+            {mapError ? (
+                <div className="absolute inset-x-4 bottom-4 z-20 rounded-xl border border-amber-200 bg-white/95 px-4 py-3 text-sm text-slate-700 shadow-lg backdrop-blur dark:border-amber-900/40 dark:bg-slate-950/90 dark:text-slate-200">
+                    <p className="font-semibold text-slate-900 dark:text-white">Mapa indisponivel</p>
+                    <p className="mt-1 leading-6">
+                        O painel continua funcionando sem o mapa. Forca de Trabalho e os demais indicadores devem permanecer acessiveis.
+                    </p>
+                </div>
+            ) : null}
 
             <div
                 className="absolute inset-0 z-0"

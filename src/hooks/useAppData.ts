@@ -9,7 +9,7 @@ import * as actionsService from '../services/actionsService';
 import { loadObjectives, loadActivities } from '../services/objectivesActivitiesService';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/common/Toast';
-import { log, logError } from '../lib/logger';
+import { logError } from '../lib/logger';
 import { CACHE_KEYS, getCache, setCache } from '../lib/sessionCache';
 import { isAdminLike } from '../lib/authHelpers';
 import { filterOrphanedActions as filterValidActionsByActivity } from '../lib/actionValidation';
@@ -29,6 +29,18 @@ const _filterOrphanedActions = (actions: Action[], activitiesByObj: Record<numbe
     });
     return actions.filter(action => allActivityIds.has(String(action.activityId)));
 };
+
+function isAbortLikeError(error: unknown): boolean {
+    if (error instanceof Error) {
+        return error.name === 'AbortError' || error.message.toLowerCase().includes('signal is aborted');
+    }
+
+    if (typeof error === 'string') {
+        return error.toLowerCase().includes('signal is aborted');
+    }
+
+    return false;
+}
 
 export function useAppData() {
     const { user, isDemoMode: isDemo } = useAuth();
@@ -106,7 +118,6 @@ export function useAppData() {
                 ];
 
                 if (cachedActions && cachedTeams && cachedObjs && cachedActs) {
-                    log('useAppData', 'âš¡ Using cached data');
                     setActions(cachedActions);
                     setTeamsByMicro(cachedTeams);
                     setObjectives(cachedObjs);
@@ -189,6 +200,10 @@ export function useAppData() {
             }
 
         } catch (error: any) {
+            if (isAbortLikeError(error)) {
+                return;
+            }
+
             logError('useAppData', 'Error loading data', error);
             if (!hydratedFromCache) {
                 setDataError(error.message || 'Erro ao carregar dados');
@@ -245,4 +260,3 @@ export function useAppData() {
         setSelectedActivity,
     };
 }
-

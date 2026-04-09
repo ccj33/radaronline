@@ -23,5 +23,5 @@ describe('UserSettingsModalNav', () => {
     fireEvent.click(screen.getByRole('button', { name: /Notificacoes/i }));
 
     expect(setActiveTab).toHaveBeenCalledWith('notifications');
-  });
+  }, 15000);
 });

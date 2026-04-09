@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Action, Activity, Objective, TeamMember } from '../../types';
 
@@ -77,8 +77,10 @@ function createTeamMember(): TeamMember {
 
 describe('MainViewContentSwitch', () => {
   afterEach(() => {
+    cleanup();
     optimizedViewSpy.mockClear();
     hubHomeSpy.mockClear();
+    vi.unstubAllEnvs();
   });
 
   it('passa apenas objetivos e atividades filtrados para a Visao Rapida', async () => {
@@ -224,14 +226,14 @@ describe('MainViewContentSwitch', () => {
       />
     );
 
-    const hubButton = await screen.findByTestId('hub-home-view');
+    const hubButton = await screen.findByTestId('hub-home-view', {}, { timeout: 5000 });
     fireEvent.click(hubButton);
 
     expect(hubHomeSpy).toHaveBeenCalled();
     expect(onCommunityNavigate).toHaveBeenCalledWith('forums');
   });
 
-  it('bloqueia os modulos legados do Hub quando a flag de seguranca esta ativa', async () => {
+  it('mantem o Hub nativo acessivel mesmo quando a flag legada estiver ativa', async () => {
     vi.stubEnv('VITE_DISABLE_UNSUPPORTED_HUB_MODULES', 'true');
 
     render(
@@ -295,9 +297,9 @@ describe('MainViewContentSwitch', () => {
       />
     );
 
-    expect(
-      await screen.findByText('Modulos do Hub temporariamente protegidos')
-    ).toBeInTheDocument();
-    expect(hubHomeSpy).not.toHaveBeenCalled();
+    const hubEntries = await screen.findAllByTestId('hub-home-view', {}, { timeout: 5000 });
+
+    expect(hubEntries.length).toBeGreaterThan(0);
+    expect(hubHomeSpy).toHaveBeenCalled();
   });
 });

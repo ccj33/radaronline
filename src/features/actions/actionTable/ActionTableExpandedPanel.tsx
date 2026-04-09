@@ -4,6 +4,7 @@ import { LoadingButton } from "../../../components/common/LoadingSpinner";
 import { RaciTag } from "../../../components/common/RaciPill";
 import { Tooltip } from "../../../components/common/Tooltip";
 import { Select } from "../../../ui/Select";
+import { getDerivedActionStatus } from "../../../lib/actionPortfolio";
 import type { Action, RaciRole, Status, TeamMember } from "../../../types";
 import { rolePriority } from "./actionTable.utils";
 import { ActionTableCommentItem } from "./ActionTableCommentItem";
@@ -55,6 +56,8 @@ export function ActionTableExpandedPanel({
   onAddComment,
   onClose,
 }: ActionTableExpandedPanelProps) {
+  const derivedActionStatus = getDerivedActionStatus(action);
+
   return (
     <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 border-t border-slate-100 dark:border-slate-700 animate-fade-in">
       {!userCanEdit ? (
@@ -178,11 +181,11 @@ export function ActionTableExpandedPanel({
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Progresso & Status</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Situação atual (igual à lista)</label>
             <div className="flex gap-2 mt-1">
               <Select
                 className="flex-1 text-sm"
-                value={action.status}
+                value={derivedActionStatus}
                 onChange={(event) => onUpdateAction(action.uid, "status", event.target.value as Status)}
                 disabled={!userCanEdit}
               >
@@ -201,6 +204,11 @@ export function ActionTableExpandedPanel({
                 disabled={!userCanEdit}
               />
             </div>
+            {action.status !== derivedActionStatus ? (
+              <p className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                Cadastro salvo: <span className="font-semibold text-slate-600 dark:text-slate-300">{action.status}</span>. A tabela usa a situação calculada (prazo e progresso).
+              </p>
+            ) : null}
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded border border-slate-100 dark:border-slate-600">

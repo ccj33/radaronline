@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, FileSpreadsheet, Plus, Target } from "lucide-react";
 
@@ -17,6 +17,7 @@ import {
   getCorrectActivityPrefix,
   naturalSortComparator,
 } from "../../lib/text";
+import { getDerivedActionStatus } from "../../lib/actionPortfolio";
 import type { Action, Activity, Objective, RaciRole, Status, TeamMember } from "../../types";
 import { SmartPasteModal } from "./SmartPasteModal";
 import type { ParsedAction } from "./SmartPasteModal";
@@ -185,7 +186,7 @@ const ActionTableImpl: React.FC<ActionTableProps> = ({
           }
         }
 
-        if (statusFilter !== "all" && action.status !== statusFilter) return false;
+        if (statusFilter !== "all" && getDerivedActionStatus(action) !== statusFilter) return false;
         if (responsibleFilter && !action.raci.some((person) => person.name === responsibleFilter && person.role === "R")) {
           return false;
         }

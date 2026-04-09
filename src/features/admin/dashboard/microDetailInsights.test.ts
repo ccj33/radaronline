@@ -134,13 +134,13 @@ describe("buildMicroDetailInsights", () => {
     expect(insights.focusActions[0]?.title).toBe("Treinar equipe APS");
   });
 
-  it("sinaliza micro sem carteira como falta de tracao", () => {
+  it("sinaliza micro sem plano de acao como falta de tracao", () => {
     const insights = buildMicroDetailInsights("MR011", [], [], new Date("2026-03-30T00:00:00"));
 
     expect(insights.healthScore.score).toBe(0);
     expect(insights.healthScore.tone).toBe("neutral");
     expect(insights.alerts[0]?.id).toBe("no-actions");
-    expect(insights.recommendation.title).toBe("Montar a primeira carteira");
+    expect(insights.recommendation.title).toBe("Montar o primeiro plano de acao");
     expect(insights.upcomingActions).toHaveLength(0);
     expect(insights.topPerformer).toBeNull();
   });

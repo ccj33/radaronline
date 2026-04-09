@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { log } from '../lib/logger';
 import { User } from '../types/auth.types';
 
 interface UseAppAccessFlowProps {
@@ -25,21 +24,10 @@ export function useAppAccessFlow({
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      log('App', 'Verificando FirstAccess', {
-        id: user.id,
-        auth: isAuthenticated,
-        admin: isAdmin,
-        firstAccess: user.firstAccess,
-        modalOpen: showMunicipalityModal,
-      });
-    }
-
     if (isAuthenticated && user && user.firstAccess) {
-      log('App', 'Triggering Municipality Modal - User needs setup');
       setShowMunicipalityModal(true);
     }
-  }, [isAdmin, isAuthenticated, showMunicipalityModal, user]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (!(isAuthenticated && user && !isAdmin)) {

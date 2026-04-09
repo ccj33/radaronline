@@ -83,15 +83,9 @@ describe('backendApiConfig', () => {
     expect(shouldDisableLegacyHubModules()).toBe(true);
   });
 
-  it('allows explicit override to keep unsupported legacy hub modules enabled', () => {
-    vi.stubEnv('VITE_ALLOW_UNSUPPORTED_HUB_MODULES', 'true');
-
-    expect(shouldDisableLegacyHubModules()).toBe(false);
-  });
-
-  it('blocks unsupported legacy hub modules automatically when backend api is configured', () => {
+  it('keeps native hub modules enabled by default even when backend api is configured', () => {
     vi.stubEnv('VITE_BACKEND_API_URL', 'https://api.example.gov.br');
 
-    expect(shouldDisableLegacyHubModules()).toBe(true);
+    expect(shouldDisableLegacyHubModules()).toBe(false);
   });
 });

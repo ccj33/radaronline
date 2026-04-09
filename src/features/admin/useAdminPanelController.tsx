@@ -16,6 +16,7 @@ import * as authService from '../../services/authService';
 import type { UserImportCommitResponse } from '../../services/adminUsersApi';
 import {
   deletePendingRegistration,
+  linkProfileToTeamRecords,
   loadPendingRegistrations,
   saveUserMunicipality,
   type PendingRegistration,
@@ -253,6 +254,8 @@ export function useAdminPanelController({ activities, objectives, onBack }: UseA
           role: userData.role || 'usuario',
           senha: userData.senha,
         });
+
+        await linkProfileToTeamRecords(userData.email);
 
         if (userData.municipio) {
           await saveUserMunicipality(

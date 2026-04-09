@@ -125,7 +125,40 @@ serve(async (req: Request) => {
             targetUserId: userId,
         });
 
-        // ✅ Excluir profile primeiro (cascade deve cuidar de relacionamentos)
+        // ✅ Antes de apagar o profile: remover linhas em `teams`, senão o membro continua
+        //    na Equipe como "cadastro pendente" (merge só vê teams sem profile).
+        const { data: targetProfile, error: profileReadError } = await supabaseAdmin
+            .from('profiles')
+            .select('email')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (profileReadError) {
+            console.error('[delete-user] Erro ao ler profile antes da exclusão:', profileReadError);
+        }
+
+        const { error: teamsByProfileError } = await supabaseAdmin
+            .from('teams')
+            .delete()
+            .eq('profile_id', userId);
+
+        if (teamsByProfileError) {
+            console.error('[delete-user] Erro ao excluir teams por profile_id:', teamsByProfileError);
+        }
+
+        const email = targetProfile?.email?.trim();
+        if (email) {
+            const { error: teamsByEmailError } = await supabaseAdmin
+                .from('teams')
+                .delete()
+                .eq('email', email);
+
+            if (teamsByEmailError) {
+                console.error('[delete-user] Erro ao excluir teams por email:', teamsByEmailError);
+            }
+        }
+
+        // ✅ Excluir profile (sem depender de CASCADE em teams)
         const { error: profileDeleteError } = await supabaseAdmin
             .from('profiles')
             .delete()

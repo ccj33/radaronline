@@ -1,6 +1,10 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { getPlatformClient } from '../platformClient';
+import {
+  dedupeManagedRequestsByContentKey,
+  isPendingMemberUserRequestRow,
+} from './requestsService.helpers';
 import type {
   ManagedStatusFilter,
   ProfileSummary,
@@ -17,8 +21,17 @@ const REQUEST_FIELDS = `
   user:profiles!user_requests_user_id_fkey(nome, email, role, municipio, microregiao_id),
   resolver:profiles!user_requests_resolved_by_fkey(nome)
 `;
-const ADMIN_ACTIONABLE_REQUEST_TYPES = ['request', 'feedback', 'support', 'system'];
-const ADMIN_PERSONAL_NOTIFICATION_TYPES = ['announcement', 'mention', 'request', 'feedback', 'support', 'system'];
+// Alinhado ao CHECK `user_requests_request_type_check` (mention, announcement, request, feedback, support).
+// Não usar 'system' em inserts; mantido em PERSONAL só para leitura de linhas legadas.
+const ADMIN_ACTIONABLE_REQUEST_TYPES = ['request', 'feedback', 'support'];
+const ADMIN_PERSONAL_NOTIFICATION_TYPES = [
+  'announcement',
+  'mention',
+  'request',
+  'feedback',
+  'support',
+  'system',
+];
 
 type JoinedRequestRow = UserRequest & {
   resolver?: { nome?: string | null } | Array<{ nome?: string | null }> | null;
@@ -46,13 +59,24 @@ function isPrivilegedRequester(role?: string): boolean {
   return role === 'admin' || role === 'superadmin';
 }
 
+/**
+ * Central de Solicitações: incluir pedidos de usuários comuns e também itens pendentes
+ * cujo `user_id` é admin/superadmin (ex.: alerta de cadastro pendente enviado a cada admin).
+ * Antes, tudo com destinatário privilegiado era removido e a lista ficava vazia.
+ */
 function filterManagedModerationRequests(
   requests: UserRequest[],
   profilesMap: Map<string, ProfileSummary>
 ): UserRequest[] {
   return requests.filter((request) => {
     const role = request.user?.role || profilesMap.get(request.user_id)?.role;
-    return !isPrivilegedRequester(role);
+    if (!isPrivilegedRequester(role)) {
+      return true;
+    }
+    return (
+      request.status === 'pending' &&
+      ADMIN_ACTIONABLE_REQUEST_TYPES.includes(request.request_type)
+    );
   });
 }
 
@@ -198,8 +222,9 @@ export async function countManagedRequests(params: {
 
   const profilesMap = await fetchProfilesMap([...new Set(requests.map((request) => request.user_id))]);
   const scoped = filterManagedModerationRequests(requests, profilesMap);
+  const deduped = dedupeManagedRequestsByContentKey(scoped);
 
-  return scoped.length;
+  return deduped.length;
 }
 
 export async function listManagedRequests(params: {
@@ -227,8 +252,9 @@ export async function listManagedRequests(params: {
 
   const profilesMap = await fetchProfilesMap([...new Set(requests.map((request) => request.user_id))]);
   const scoped = filterManagedModerationRequests(requests, profilesMap);
+  const deduped = dedupeManagedRequestsByContentKey(scoped);
   const start = (params.page - 1) * params.pageSize;
-  return scoped.slice(start, start + params.pageSize);
+  return deduped.slice(start, start + params.pageSize);
 }
 
 export async function countPendingRequestRecords(userId: string, isAdmin: boolean): Promise<number> {
@@ -265,24 +291,89 @@ export async function countPendingRequestRecords(userId: string, isAdmin: boolea
     ...new Set(pendingRequests.map((request) => request.user_id)),
   ]);
 
-  return pendingRequests.filter((request) => {
+  const filtered = pendingRequests.filter((request) => {
     const role = profilesMap.get(request.user_id)?.role;
-    return !isPrivilegedRequester(role);
-  }).length;
+    if (!isPrivilegedRequester(role)) {
+      return true;
+    }
+    return ADMIN_ACTIONABLE_REQUEST_TYPES.includes(request.request_type);
+  });
+
+  return dedupeManagedRequestsByContentKey(filtered).length;
 }
 
 export async function updateRequestRecord(
   requestId: string,
   payload: Record<string, unknown>
 ): Promise<void> {
-  const { error } = await platformClient().from('user_requests').update(payload).eq('id', requestId);
+  const { data: row, error: fetchError } = await platformClient()
+    .from('user_requests')
+    .select('content, request_type, status')
+    .eq('id', requestId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(fetchError.message || 'Falha ao carregar solicitacao');
+  }
+
+  if (!row) {
+    throw new Error('Solicitacao nao encontrada');
+  }
+
+  const snapshot = row as { content: string | null; request_type: string; status: string };
+
+  if (!isPendingMemberUserRequestRow(snapshot)) {
+    const { error } = await platformClient().from('user_requests').update(payload).eq('id', requestId);
+    if (error) {
+      throw new Error(error.message || 'Falha ao atualizar request');
+    }
+    return;
+  }
+
+  const { error } = await platformClient()
+    .from('user_requests')
+    .update(payload)
+    .eq('content', snapshot.content as string)
+    .eq('status', 'pending')
+    .eq('request_type', 'request');
+
   if (error) {
     throw new Error(error.message || 'Falha ao atualizar request');
   }
 }
 
 export async function deleteRequestRecord(requestId: string): Promise<void> {
-  const { error } = await platformClient().from('user_requests').delete().eq('id', requestId);
+  const { data: row, error: fetchError } = await platformClient()
+    .from('user_requests')
+    .select('content, request_type, status')
+    .eq('id', requestId)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(fetchError.message || 'Falha ao carregar solicitacao');
+  }
+
+  if (!row) {
+    return;
+  }
+
+  const snapshot = row as { content: string | null; request_type: string; status: string };
+
+  if (!isPendingMemberUserRequestRow(snapshot)) {
+    const { error } = await platformClient().from('user_requests').delete().eq('id', requestId);
+    if (error) {
+      throw new Error(error.message || 'Falha ao excluir request');
+    }
+    return;
+  }
+
+  const { error } = await platformClient()
+    .from('user_requests')
+    .delete()
+    .eq('content', snapshot.content as string)
+    .eq('status', 'pending')
+    .eq('request_type', 'request');
+
   if (error) {
     throw new Error(error.message || 'Falha ao excluir request');
   }

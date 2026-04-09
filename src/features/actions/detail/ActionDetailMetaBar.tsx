@@ -1,4 +1,4 @@
-﻿import { type Dispatch, type MouseEvent, type SetStateAction } from 'react';
+import { type Dispatch, type MouseEvent, type SetStateAction } from 'react';
 import { Calendar, Check, ChevronDown, Clock, Hash, Heart, Plus, Target, Users, X } from 'lucide-react';
 import { Tooltip } from '../../../components/common/Tooltip';
 import { Action, ActionTag, RaciRole, Status, TeamMember } from '../../../types';
@@ -7,6 +7,8 @@ import { actionDetailRoleLabels, actionDetailRolePriority } from './actionDetail
 
 interface ActionDetailMetaBarProps {
   action: Action;
+  /** Status efetivo (datas + progresso), igual à lista e aos filtros */
+  displayStatus: Status;
   currentStatus: { bg: string; text: string; dot: string };
   draftMicroregiaoId?: string;
   isMobile: boolean;
@@ -47,6 +49,7 @@ interface ActionDetailMetaBarProps {
 
 export function ActionDetailMetaBar({
   action,
+  displayStatus,
   currentStatus,
   draftMicroregiaoId,
   isMobile,
@@ -89,11 +92,11 @@ export function ActionDetailMetaBar({
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1 mb-1.5">
-            <Target size={10} /> Status
+            <Target size={10} /> Situação atual
           </span>
           <div className="relative">
             <select
-              value={action.status}
+              value={displayStatus}
               onChange={(event) => handleFieldChange('status', event.target.value as Status)}
               disabled={!userCanEdit}
               className={`w-full appearance-none pl-7 pr-8 py-2 text-sm font-semibold rounded-lg border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${currentStatus.bg} ${currentStatus.text} border-current/20`}
@@ -108,6 +111,12 @@ export function ActionDetailMetaBar({
             </div>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-current opacity-60 pointer-events-none" size={14} />
           </div>
+          {action.status !== displayStatus ? (
+            <p className="mt-1.5 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+              Cadastro salvo: <span className="font-semibold text-slate-600 dark:text-slate-300">{action.status}</span>
+              . A lista e os filtros usam a situação calculada acima (prazo planejado, progresso e datas).
+            </p>
+          ) : null}
         </div>
 
         <div className="flex-1">

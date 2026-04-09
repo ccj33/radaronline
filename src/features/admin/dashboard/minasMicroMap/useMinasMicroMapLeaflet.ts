@@ -41,6 +41,13 @@ interface LayerFeatureProperties {
 
 type LayerStyle = Pick<L.PathOptions, "color" | "fillColor" | "fillOpacity" | "weight">;
 
+type LeafletOwnedContainer = HTMLElement & { _leaflet_id?: number };
+
+type LeafletMapWithPrivateContainer = L.Map & {
+    _container?: LeafletOwnedContainer;
+    _containerId?: number;
+};
+
 function getMacroIdByName(name: string) {
     const normalizedName = normalize(name);
     return MACRORREGIOES.find((macro) => normalize(macro.nome) === normalizedName)?.id || null;
@@ -81,12 +88,14 @@ export function useMinasMicroMapLeaflet({
     const viewLevelRef = useRef<MapViewLevel>("MACRO");
     const selectedMacroRef = useRef<string | null>(null);
     const resetToMacroViewRef = useRef(resetToMacroView);
+    const initRequestIdRef = useRef(0);
     const processedDataRef = useRef<{ macroFeatures: Array<{ properties: LayerFeatureProperties }> }>({
         macroFeatures: [],
     });
 
     const [hoveredInfo, setHoveredInfo] = useState<HoveredInfo | null>(null);
     const [loading, setLoading] = useState(true);
+    const [mapError, setMapError] = useState<string | null>(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const resolveMacroMapColor = useCallback((macroName?: string) => {
@@ -204,6 +213,90 @@ export function useMinasMicroMapLeaflet({
         });
     }, [isDark]);
 
+    const isMapDomReady = useCallback((map?: L.Map | null) => {
+        const container = map?.getContainer?.();
+        return Boolean(
+            map &&
+            container &&
+            container.isConnected &&
+            container.parentElement,
+        );
+    }, []);
+
+    const safelyMutateLeaflet = useCallback((callback: () => void) => {
+        if (!isMapDomReady(mapInstanceRef.current)) {
+            return false;
+        }
+
+        callback();
+        return true;
+    }, [isMapDomReady]);
+
+    const resetLeafletContainerIfStale = useCallback((container?: HTMLElement | null) => {
+        if (!container) {
+            return;
+        }
+
+        const leafletContainer = container as LeafletOwnedContainer;
+        if (leafletContainer._leaflet_id !== undefined) {
+            delete leafletContainer._leaflet_id;
+        }
+    }, []);
+
+    const safelyRemoveMap = useCallback((map: L.Map | null) => {
+        if (!map) {
+            return;
+        }
+
+        const privateMap = map as LeafletMapWithPrivateContainer;
+        const container = privateMap._container;
+        const expectedContainerId = privateMap._containerId;
+        const containerWasOwnedByMap = Boolean(
+            container &&
+            expectedContainerId !== undefined &&
+            container._leaflet_id === expectedContainerId,
+        );
+
+        try {
+            map.remove();
+        } catch (error) {
+            if (
+                !(error instanceof Error) ||
+                !error.message.includes("Map container is being reused by another instance")
+            ) {
+                logError("MinasMicroMap", "Erro ao remover instancia do mapa", error);
+            }
+        } finally {
+            if (
+                containerWasOwnedByMap &&
+                container &&
+                expectedContainerId !== undefined &&
+                container._leaflet_id === expectedContainerId
+            ) {
+                resetLeafletContainerIfStale(container);
+            }
+
+            if (mapInstanceRef.current === map) {
+                mapInstanceRef.current = null;
+            }
+        }
+    }, [resetLeafletContainerIfStale]);
+
+    const teardownMap = useCallback(() => {
+        hoverLabelRef.current = null;
+        hoveredMacroRef.current = null;
+        layersByMacroRef.current = {};
+        macroCentersRef.current = {};
+        microCentersRef.current = {};
+        processedDataRef.current = { macroFeatures: [] };
+        geoJsonLayerRef.current = null;
+        macroLayerRef.current = null;
+        microBorderLayerRef.current = null;
+        labelsLayerRef.current = null;
+
+        safelyRemoveMap(mapInstanceRef.current);
+    }, [safelyRemoveMap]);
+
     const updateLabels = useCallback(() => {
         if (!labelsLayerRef.current) {
             return;
@@ -280,6 +373,10 @@ export function useMinasMicroMapLeaflet({
     }, [createLabelMarker, selectedMacro, viewLevel]);
 
     const applyStyles = useCallback(() => {
+        if (!isMapDomReady(mapInstanceRef.current)) {
+            return;
+        }
+
         geoJsonLayerRef.current?.eachLayer((layer: any) => {
             layer.setStyle(getLayerStyle(layer.feature?.properties));
         });
@@ -295,7 +392,7 @@ export function useMinasMicroMapLeaflet({
             opacity: viewLevel === "MACRO" ? 0.3 : 0.6,
             weight: viewLevel === "MACRO" ? 0.5 : 1.2,
         });
-    }, [getLayerStyle, themeColors.macroBorder, themeColors.microBorder, viewLevel]);
+    }, [getLayerStyle, isMapDomReady, themeColors.macroBorder, themeColors.microBorder, viewLevel]);
 
     const handleClick = useCallback((props: LayerFeatureProperties) => {
         const macroName = props.macroName;
@@ -452,12 +549,29 @@ export function useMinasMicroMapLeaflet({
 
     useEffect(() => {
         const initMap = async () => {
-            if (!mapContainerRef.current || !mapContainerRef.current.isConnected || mapInstanceRef.current) {
+            const container = mapContainerRef.current;
+            if (!container || !container.isConnected || mapInstanceRef.current) {
                 return;
             }
 
+            resetLeafletContainerIfStale(container);
+
+            const requestId = ++initRequestIdRef.current;
+            let localMap: L.Map | null = null;
+
+            const isStaleInit = () => requestId !== initRequestIdRef.current;
+            const canUseMap = (map: L.Map | null) => Boolean(map && !isStaleInit() && isMapDomReady(map));
+            const disposeLocalMap = () => {
+                if (localMap) {
+                    safelyRemoveMap(localMap);
+                    localMap = null;
+                }
+            };
+
             try {
-                const map = L.map(mapContainerRef.current, {
+                setMapError(null);
+
+                const map = L.map(container, {
                     attributionControl: false,
                     boxZoom: false,
                     center: [-18.5, -44.5],
@@ -476,9 +590,15 @@ export function useMinasMicroMapLeaflet({
                     zoomSnap: 0.1,
                 });
 
+                localMap = map;
                 mapInstanceRef.current = map;
 
                 const mapData = await MapDataLoader.load();
+                if (!canUseMap(map)) {
+                    disposeLocalMap();
+                    return;
+                }
+
                 const microsData = mapData.micros;
                 const macrosData = mapData.macros;
                 const macroLabelAdjustments: Record<string, [number, number]> = {
@@ -574,7 +694,10 @@ export function useMinasMicroMapLeaflet({
                 });
 
                 geoJsonLayerRef.current = geoJsonLayer;
-                geoJsonLayer.addTo(map);
+                if (!safelyMutateLeaflet(() => geoJsonLayer.addTo(map))) {
+                    disposeLocalMap();
+                    return;
+                }
 
                 const nextLayersByMacro: Record<string, L.Layer[]> = {};
                 geoJsonLayer.eachLayer((layer: any) => {
@@ -602,7 +725,11 @@ export function useMinasMicroMapLeaflet({
                         opacity: 0.8,
                         weight: 1.5,
                     },
-                }).addTo(map);
+                });
+                if (!safelyMutateLeaflet(() => microBorderLayerRef.current?.addTo(map))) {
+                    disposeLocalMap();
+                    return;
+                }
 
                 macroLayerRef.current = L.geoJSON(macrosData, {
                     style: {
@@ -611,11 +738,20 @@ export function useMinasMicroMapLeaflet({
                         interactive: false,
                         weight: 2.5,
                     },
-                }).addTo(map);
+                });
+                if (!safelyMutateLeaflet(() => macroLayerRef.current?.addTo(map))) {
+                    disposeLocalMap();
+                    return;
+                }
 
-                labelsLayerRef.current = L.layerGroup().addTo(map);
+                labelsLayerRef.current = L.layerGroup();
+                if (!safelyMutateLeaflet(() => labelsLayerRef.current?.addTo(map))) {
+                    disposeLocalMap();
+                    return;
+                }
                 updateLabels();
                 setLoading(false);
+                localMap = null;
 
                 map.on("click", () => {
                     if (viewLevelRef.current !== "MACRO") {
@@ -624,24 +760,41 @@ export function useMinasMicroMapLeaflet({
                 });
             } catch (error) {
                 logError("MinasMicroMap", "Erro ao carregar mapa", error);
+                setMapError("Nao foi possivel carregar o mapa de microrregioes.");
+                teardownMap();
+                disposeLocalMap();
                 setLoading(false);
             }
         };
 
         void initMap();
-    }, [applyStyles, clearMacroHighlight, handleClick, highlightMacro, themeColors.macroBorder, themeColors.macroFill, themeColors.macroOpacity, themeColors.microBorder, updateLabels]);
+    }, [
+        applyStyles,
+        clearMacroHighlight,
+        handleClick,
+        highlightMacro,
+        isMapDomReady,
+        safelyMutateLeaflet,
+        teardownMap,
+        themeColors.macroBorder,
+        themeColors.macroFill,
+        themeColors.macroOpacity,
+        themeColors.microBorder,
+        updateLabels,
+    ]);
 
     useEffect(() => {
         return () => {
-            mapInstanceRef.current?.remove();
-            mapInstanceRef.current = null;
+            initRequestIdRef.current += 1;
+            teardownMap();
         };
-    }, []);
+    }, [teardownMap]);
 
     return {
         handleBackgroundClick,
         hoveredInfo,
         loading,
+        mapError,
         mapContainerRef,
         mousePos,
     };

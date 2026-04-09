@@ -81,7 +81,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = React.memo(({
                   <ChevronRight size={18} className="text-slate-300 dark:text-slate-600 group-hover:text-teal-500 transition-colors group-hover:translate-x-1 transform duration-200" />
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Gerencie objetivos estratégicos, ações, equipes e indicadores da sua microrregião.
+                  Gerencie objetivos estratégicos, ações, equipes e acompanhamento da sua microrregião.
                 </p>
               </div>
             </div>

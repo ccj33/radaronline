@@ -2,7 +2,6 @@
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Action, ActionComment, Activity, GanttRange, Objective, RaciRole, Status, TeamMember } from '../../types';
 import { ParsedAction } from '../../features/actions/SmartPasteModal';
-import { shouldDisableLegacyHubModules } from '../../services/backendApiConfig';
 
 const Dashboard = lazy(() => import('../../features/dashboard').then(m => ({ default: m.Dashboard })));
 const OptimizedView = lazy(() => import('../../features/dashboard').then(m => ({ default: m.OptimizedView })));
@@ -20,19 +19,6 @@ const RepositoryPage = lazy(() => import('../../features/hub/repository/Reposito
 const sectionFallback = (
   <div className="flex items-center justify-center h-64">
     <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
-  </div>
-);
-
-const hubSecurityFallback = (
-  <div className="mx-auto max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-slate-800 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-slate-100">
-    <h2 className="text-xl font-semibold text-amber-900 dark:text-amber-200">
-      Modulos do Hub temporariamente protegidos
-    </h2>
-    <p className="mt-3 text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">
-      Este ambiente bloqueou os modulos comunitarios que ainda dependem de tabelas legadas
-      fora da trilha autoritativa. A liberacao deve acontecer apenas quando a versao
-      backend-first estiver habilitada.
-    </p>
   </div>
 );
 
@@ -155,20 +141,10 @@ export function MainViewContentSwitch({
   onUpdateObjectiveField,
   onUpdateTeam,
 }: MainViewContentSwitchProps) {
-  const legacyHubModulesDisabled = shouldDisableLegacyHubModules();
-  const isHubNavigation =
-    currentNav === 'hub' ||
-    currentNav === 'forums' ||
-    currentNav === 'mentorship' ||
-    currentNav === 'education' ||
-    currentNav === 'repository';
-
   return (
     <div className="p-4 sm:p-6" ref={chartContainerRef}>
       {/* Hub Community Pages */}
-      {isHubNavigation && legacyHubModulesDisabled ? (
-        hubSecurityFallback
-      ) : currentNav === 'hub' ? (
+      {currentNav === 'hub' ? (
         <ErrorBoundary>
           <Suspense fallback={sectionFallback}>
             <HubHomePage

@@ -150,18 +150,27 @@ export async function fetchActionComments(actionDbId: string): Promise<ActionCom
   return (data as unknown as ActionCommentDTO[] | null) || [];
 }
 
+const MICROREGIAO_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function fetchMicroregiaoName(microregiaoId: string): Promise<string | null> {
+  const staticHit = MICROREGIOES.find((m) => m.id === microregiaoId || m.codigo === microregiaoId);
+  if (staticHit?.nome) {
+    return staticHit.nome;
+  }
+
+  const column = MICROREGIAO_UUID_RE.test(microregiaoId) ? 'id' : 'codigo';
   const { data, error } = await platformClient()
     .from('microregioes')
     .select('nome')
-    .eq('id', microregiaoId)
+    .eq(column, microregiaoId)
     .maybeSingle();
 
   if (error) {
     throw new Error(error.message || 'Falha ao carregar microrregiao');
   }
 
-  return data?.nome || MICROREGIOES.find((m) => m.id === microregiaoId)?.nome || null;
+  return data?.nome ?? null;
 }
 
 export async function syncActionRaci(actionDbId: string, raciMembers: RaciMember[]): Promise<void> {

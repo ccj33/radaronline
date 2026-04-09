@@ -40,7 +40,7 @@ export function AdminOverviewChartsSection({
           <div>
             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-slate-400" />
-              Status da Carteira
+              Status do Plano de Ação
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição percentual</p>
           </div>

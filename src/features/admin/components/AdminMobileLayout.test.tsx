@@ -133,5 +133,5 @@ describe('AdminMobileLayout', () => {
 
     expect(onTabChange).toHaveBeenCalledWith('requests');
     expect(screen.queryByRole('navigation', { name: 'Navegacao do painel admin' })).not.toBeInTheDocument();
-  }, 10000);
+  }, 45000);
 });

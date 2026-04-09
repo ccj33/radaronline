@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Printer, X } from "lucide-react";
 
 import { printReport } from "../../../lib/reportUtils";
@@ -61,7 +61,7 @@ export function KpiDetailModal({
 
     return {
       value: `${statusTotal}`,
-      description: "ações na carteira",
+      description: "ações no planejamento",
     };
   }, [completionRate, completedActions, coverageRate, deadlineTotal, overdueActions.length, statusTotal, totalActions, type]);
 

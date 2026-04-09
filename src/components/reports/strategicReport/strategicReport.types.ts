@@ -22,6 +22,8 @@ export interface StrategicReportStatusDatum {
 export interface StrategicReportObjectiveProgressDatum {
     completed: number;
     count: number;
+    /** Ordem de exibição (1, 2, 3…), igual ao painel — não é o id do banco */
+    displayOrder: number;
     fullName: string;
     id: number;
     name: string;

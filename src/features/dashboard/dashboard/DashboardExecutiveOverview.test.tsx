@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MicroDetailInsights } from "../../../lib/microInsights";
@@ -13,7 +13,7 @@ const baseInsights: MicroDetailInsights = {
         {
             description: "Cadastre as primeiras acoes da micro para liberar acompanhamento, score e alertas operacionais.",
             id: "no-actions",
-            title: "Carteira ainda nao iniciada",
+            title: "Plano de acao ainda nao iniciado",
             tone: "warning",
         },
     ],
@@ -29,7 +29,7 @@ const baseInsights: MicroDetailInsights = {
     },
     recommendation: {
         description: "Escolha os objetivos prioritarios da micro, cadastre as primeiras acoes e defina responsaveis.",
-        title: "Montar a primeira carteira",
+        title: "Montar o primeiro plano de acao",
         tone: "warning",
     },
     responsibleCoverage: 0,
@@ -62,10 +62,11 @@ const baseOperations: DashboardExecutiveOperations = {
 
 describe("DashboardExecutiveOverview", () => {
     afterEach(() => {
+        cleanup();
         vi.useRealTimers();
     });
 
-    it("troca placeholders genericos por informacoes de gestao", () => {
+    it("exibe score, narrativa e recomendacao em layout hierarquico", () => {
         render(
             <DashboardExecutiveOverview
                 insights={baseInsights}
@@ -75,41 +76,21 @@ describe("DashboardExecutiveOverview", () => {
             />,
         );
 
-        expect(screen.getByText("Ritmo recente")).toBeInTheDocument();
-        expect(screen.getByText("0 concluidas em 30d")).toBeInTheDocument();
-        expect(screen.getByText("Cobertura dos objetivos")).toBeInTheDocument();
-        expect(screen.getByText("0/7")).toBeInTheDocument();
-        expect(screen.getByText("7 objetivos ainda sem acao registrada.")).toBeInTheDocument();
-        expect(screen.getByText("Governanca da execucao")).toBeInTheDocument();
-        expect(screen.getByText("3/5")).toBeInTheDocument();
-        expect(screen.getByText("2 cadastros pendentes")).toBeInTheDocument();
-        expect(screen.queryByText("Base local")).not.toBeInTheDocument();
-        expect(screen.queryByText("Ainda nao existe historico suficiente para destacar uma referencia operacional da micro.")).not.toBeInTheDocument();
+        expect(screen.queryByText("Micro Teste")).not.toBeInTheDocument(); // Name is no longer in this specific component
+        expect(screen.getByText("Montar o primeiro plano de acao")).toBeInTheDocument();
+        expect(screen.getByText("Escolha os objetivos prioritarios da micro, cadastre as primeiras acoes e defina responsaveis.")).toBeInTheDocument();
     });
 
-    it("explica no hover como o score operacional e calculado", () => {
-        vi.useFakeTimers();
-
-        render(
+    it("nao renderiza nada se a recomendacao for positiva ou neutra", () => {
+        const { container } = render(
             <DashboardExecutiveOverview
                 insights={{
                     ...baseInsights,
-                    averageProgress: 60,
-                    completionRate: 40,
-                    healthScore: {
-                        label: "Em atencao",
-                        score: 58,
-                        summary: "Execucao exigindo acompanhamento.",
-                        tone: "critical",
+                    recommendation: {
+                        description: "Tudo indo bem.",
+                        title: "Bom trabalho",
+                        tone: "positive",
                     },
-                    responsibleCoverage: 80,
-                    statusBreakdown: {
-                        completed: 8,
-                        inProgress: 10,
-                        late: 2,
-                        notStarted: 0,
-                    },
-                    totalActions: 20,
                 }}
                 isMobile={false}
                 microName="Micro Teste"
@@ -117,19 +98,6 @@ describe("DashboardExecutiveOverview", () => {
             />,
         );
 
-        const scoreTriggers = screen.getAllByLabelText("Como o score operacional e calculado");
-        const scoreTrigger = scoreTriggers[scoreTriggers.length - 1];
-
-        expect(scoreTrigger).toBeTruthy();
-        fireEvent.mouseEnter(scoreTrigger!);
-
-        act(() => {
-            vi.advanceTimersByTime(150);
-        });
-
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Como calculamos");
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Conclusao: 40% x 45%");
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Prazo sem atraso: 90% x 25%");
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Nota final:");
+        expect(container).toBeEmptyDOMElement();
     });
 });
